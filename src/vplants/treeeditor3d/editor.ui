@@ -142,6 +142,26 @@
     <property name="title">
      <string>File</string>
     </property>
+    <widget class="QMenu" name="menuExport_MTG">
+     <property name="title">
+      <string>Export MTG</string>
+     </property>
+     <addaction name="actionExportNodeList"/>
+    </widget>
+    <widget class="QMenu" name="menuExport_View">
+     <property name="title">
+      <string>Export View</string>
+     </property>
+     <addaction name="actionExportGeom"/>
+     <addaction name="actionSaveSnapshot"/>
+    </widget>
+    <widget class="QMenu" name="menuExport_Points">
+     <property name="title">
+      <string>Export Points</string>
+     </property>
+     <addaction name="actionExportPoints"/>
+     <addaction name="actionExportContractedPoints"/>
+    </widget>
     <addaction name="actionOpenMTG"/>
     <addaction name="actionSave"/>
     <addaction name="actionSaveMTG"/>
@@ -149,11 +169,9 @@
     <addaction name="actionImportPoints"/>
     <addaction name="actionImportContractedPoints"/>
     <addaction name="separator"/>
-    <addaction name="actionExportGeom"/>
-    <addaction name="actionExportContractedPoints"/>
-    <addaction name="actionExportNodeList"/>
-    <addaction name="separator"/>
-    <addaction name="actionSaveSnapshot"/>
+    <addaction name="menuExport_MTG"/>
+    <addaction name="menuExport_View"/>
+    <addaction name="menuExport_Points"/>
     <addaction name="separator"/>
     <addaction name="actionExit"/>
    </widget>
@@ -184,24 +202,6 @@
      <addaction name="actionAverageRadius"/>
      <addaction name="actionFilterRadius"/>
     </widget>
-    <widget class="QMenu" name="menuPreuksakarn_et_al">
-     <property name="title">
-      <string>Preuksakarn et al.</string>
-     </property>
-     <addaction name="actionContract"/>
-     <addaction name="actionCreateSkeleton"/>
-    </widget>
-    <widget class="QMenu" name="menuTaper_ici">
-     <property name="title">
-      <string>Taper ici</string>
-     </property>
-    </widget>
-    <widget class="QMenu" name="menuXu_et_al">
-     <property name="title">
-      <string>Xu et al.</string>
-     </property>
-     <addaction name="actionXuReconstruction"/>
-    </widget>
     <widget class="QMenu" name="menuAdd_Root">
      <property name="title">
       <string>Add Root</string>
@@ -209,20 +209,41 @@
      <addaction name="actionRootBottom"/>
      <addaction name="actionRootTop"/>
     </widget>
+    <widget class="QMenu" name="menuReconstruction">
+     <property name="title">
+      <string>Reconstruction</string>
+     </property>
+     <addaction name="actionXuReconstruction"/>
+     <addaction name="actionCreateSkeleton"/>
+    </widget>
+    <widget class="QMenu" name="menuContraction">
+     <property name="title">
+      <string>Contraction</string>
+     </property>
+     <addaction name="actionEuclidianContraction"/>
+     <addaction name="actionRiemannianContraction"/>
+     <addaction name="actionContract"/>
+    </widget>
     <addaction name="menuAdd_Root"/>
     <addaction name="separator"/>
-    <addaction name="menuXu_et_al"/>
-    <addaction name="menuPreuksakarn_et_al"/>
+    <addaction name="actionSubSampling"/>
+    <addaction name="separator"/>
+    <addaction name="menuContraction"/>
+    <addaction name="separator"/>
+    <addaction name="menuReconstruction"/>
     <addaction name="separator"/>
     <addaction name="menuRadius"/>
+    <addaction name="separator"/>
+    <addaction name="actionAngleEstimation"/>
+    <addaction name="separator"/>
     <addaction name="actionCheckMTG"/>
-    <addaction name="menuTaper_ici"/>
    </widget>
    <widget class="QMenu" name="menuEdit">
     <property name="title">
      <string>Edit</string>
     </property>
     <addaction name="actionUndo"/>
+    <addaction name="actionRedo"/>
     <addaction name="separator"/>
     <addaction name="actionRevolveAroundScene"/>
     <addaction name="actionShowAll"/>
@@ -253,10 +274,16 @@
    <property name="text">
     <string>Import Points</string>
    </property>
+   <property name="shortcut">
+    <string>Ctrl+P</string>
+   </property>
   </action>
   <action name="actionOpenMTG">
    <property name="text">
     <string>Open MTG</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+O</string>
    </property>
   </action>
   <action name="actionSaveMTG">
@@ -304,18 +331,24 @@
    </property>
   </action>
   <action name="actionContract">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
    <property name="text">
-    <string>Contraction</string>
+    <string>Preuksakarn et al.</string>
    </property>
   </action>
   <action name="actionCreateSkeleton">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
    <property name="text">
-    <string>Reconstruction</string>
+    <string>Preuksakarn et al.</string>
    </property>
   </action>
   <action name="actionExportGeom">
    <property name="text">
-    <string>Export as Geom</string>
+    <string>As PlantGL file</string>
    </property>
   </action>
   <action name="actionViewContractedPoints">
@@ -327,11 +360,17 @@
    </property>
   </action>
   <action name="actionImportContractedPoints">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
    <property name="text">
     <string>Import Contracted Points</string>
    </property>
   </action>
   <action name="actionExportContractedPoints">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
    <property name="text">
     <string>Export Contracted Points</string>
    </property>
@@ -366,10 +405,13 @@
   </action>
   <action name="actionExportNodeList">
    <property name="text">
-    <string>Export Node List</string>
+    <string>As Node List</string>
    </property>
   </action>
   <action name="actionUndo">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
    <property name="text">
     <string>Undo</string>
    </property>
@@ -411,7 +453,7 @@
   </action>
   <action name="actionSaveSnapshot">
    <property name="text">
-    <string>Save snapshot</string>
+    <string>As snapshot</string>
    </property>
   </action>
   <action name="actionRevolveAroundScene">
@@ -431,7 +473,7 @@
   </action>
   <action name="actionXuReconstruction">
    <property name="text">
-    <string>Reconstruction</string>
+    <string>Xu et al.</string>
    </property>
   </action>
   <action name="actionRootBottom">
@@ -442,6 +484,57 @@
   <action name="actionRootTop">
    <property name="text">
     <string>Top</string>
+   </property>
+  </action>
+  <action name="actionSubSampling">
+   <property name="text">
+    <string>Sub-Sampling</string>
+   </property>
+  </action>
+  <action name="actionTest">
+   <property name="text">
+    <string>test</string>
+   </property>
+  </action>
+  <action name="actionRedo">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Redo</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+Y</string>
+   </property>
+  </action>
+  <action name="actionEuclidianContraction">
+   <property name="text">
+    <string>Euclidian Contraction</string>
+   </property>
+  </action>
+  <action name="actionRiemannianContraction">
+   <property name="text">
+    <string>Riemannian Contraction</string>
+   </property>
+  </action>
+  <action name="actionAngleEstimation">
+   <property name="text">
+    <string>Angle Estimation</string>
+   </property>
+  </action>
+  <action name="actionAs_nothing">
+   <property name="text">
+    <string>As nothing</string>
+   </property>
+  </action>
+  <action name="actionAs_picture">
+   <property name="text">
+    <string>As picture</string>
+   </property>
+  </action>
+  <action name="actionExportPoints">
+   <property name="text">
+    <string>Export Current Points</string>
    </property>
   </action>
  </widget>

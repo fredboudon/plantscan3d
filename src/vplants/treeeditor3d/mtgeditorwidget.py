@@ -34,7 +34,6 @@ def createMTGRepresentation(mtg,segment_inf_material,segment_plus_material,trans
     def choose_mat(mtg,nid,segment_inf_material,segment_plus_material):
         if mtg.edge_type(nid) == '<': return segment_inf_material
         else : return segment_plus_material
-    print 'nodes',mtg.vertices(scale=mtg.max_scale())
     l = [createEdgeRepresentation(mtg.parent(nodeID),nodeID,positions,choose_mat(mtg,nodeID,segment_inf_material,segment_plus_material),translation) for nodeID in mtg.vertices(scale=mtg.max_scale()) if not nodeID in r]
     scene = Scene(l)
     shindex = dict((sh.id,i) for i,sh in enumerate(l))
@@ -62,7 +61,6 @@ def createCtrlPoints(mtg,color,positionproperty = 'position',callback = None):
     return ctrlPoints
 
 def createCtrlPoint(mtg,nodeID,color,positionproperty = 'position',callback = None):
-    print mtg.property(positionproperty)
     ccp = CtrlPoint(mtg.property(positionproperty)[nodeID], Pos3Setter(mtg.property(positionproperty),nodeID),color=color,id=nodeID)
     if callback: ccp.setCallBack(callback)
     return ccp
@@ -120,7 +118,7 @@ class GLMTGEditor(QGLViewer):
                           'NewCtrlPoints' : (30,250,250),
                           'SelectedCtrlPoints' : (30,250,30),
                           'EdgeInf' : (255,255,255),
-                          'EdgePlus' : (255,255,0),
+                          'EdgePlus' : (255,0,0),
                           '3DModel' : (128,64,0),
                           'LocalAttractors' :(255, 255, 0),
                           'Cone' :(255,255,0)}
@@ -137,7 +135,7 @@ class GLMTGEditor(QGLViewer):
                           'LocalAttractors' :(255, 255, 0),
                           'Cone' :(255,255,0)}
                             
-        self.theme = self.whitetheme
+        self.theme = self.greytheme
         
         self.pointMaterial = Material(self.theme['Points'],1)
         self.contractedpointMaterial = Material(self.theme['ContractedPoints'],1)
@@ -183,7 +181,7 @@ class GLMTGEditor(QGLViewer):
         
         self.ctrlPoints = None
         self.ctrlPointPrimitive = None
-        self.nodeWidth = 1
+        self.nodeWidth = 4
         self.ctrlPointsRep = None
         
         if self.mtgfile : self.readMTG(mtgfile)
@@ -213,33 +211,93 @@ class GLMTGEditor(QGLViewer):
         self.frontVisibility = 0
         self.backVisibility = 1.0
 
-        self.backupmtg = []
+        self.backupdata = []
+        self.redodata = []
         self.maxbackup = 4
         
         self.temporaryinfo2D = None
         self.temporaryinfo = None
         
+        self.progressdialog = QProgressDialog('Processing ...','Ok',0,100,self)
+        def showProgress(msg,percent):
+            #print msg % percent
+            self.progressdialog.setValue(percent)
+        try:
+            pgl_register_progressstatus_func(showProgress)
+        except NameError, e:
+            pass
+
+
     def createBackup(self):
         from copy import deepcopy
-        if len(self.backupmtg) == self.maxbackup:
-            del self.backupmtg[0]
-        self.backupmtg.append(deepcopy(self.mtg))
+        if len(self.backupdata) == self.maxbackup:
+            del self.backupdata[0]
+        self.backupdata.append(deepcopy(self.mtg))
         self.emit(SIGNAL('undoAvailable(bool)'),True)
+        self.redodata = []
+        self.emit(SIGNAL('redoAvailable(bool)'),False)
         self.discardTempInfoDisplay()
         
+    def createPointBackup(self):
+        from copy import deepcopy
+        if len(self.backupdata) == self.maxbackup:
+            del self.backupdata[0]
+        self.backupdata.append(PointSet(Point3Array(self.points.pointList),Color4Array(self.points.colorList)))
+        self.emit(SIGNAL('undoAvailable(bool)'),True)
+        self.redodata = []
+        self.emit(SIGNAL('redoAvailable(bool)'),False)
+        self.discardTempInfoDisplay()
+
     def undo(self):
-        if len(self.backupmtg) > 0:
-            self.mtg = self.backupmtg.pop()
-            self.showMessage("Undo to "+repr(self.mtg))
-            self.mtgrep, self.mtgrepindex  = createMTGRepresentation(self.mtg,self.edgeInfMaterial,self.edgePlusMaterial)        
-            self.ctrlPoints = createCtrlPoints(self.mtg,self.ctrlPointColor,self.propertyposition,self.__update_value__)
-            self.createCtrlPointRepresentation()
-            self.updateGL()
-            if len(self.backupmtg) > 0:
+        if len(self.backupdata) > 0:
+            data = self.backupdata.pop()
+            if type(data) == MTG:
+                self.redodata.append(self.mtg)
+                self.mtg = data
+                self.mtgrep, self.mtgrepindex  = createMTGRepresentation(self.mtg,self.edgeInfMaterial,self.edgePlusMaterial)        
+                self.ctrlPoints = createCtrlPoints(self.mtg,self.ctrlPointColor,self.propertyposition,self.__update_value__)
+                self.createCtrlPointRepresentation()
+            elif type(data) == PointSet:
+                self.redodata.append(self.points)
+                self.points = data
+                self.createPointsRepresentation()
+            else:
+                QMessageBox.error(self,'undo',"Bad type for undo data")
+                return
+
+            self.showMessage("Undo "+str(type(data))+" at "+str(id(data)))
+            self.emit(SIGNAL('redoAvailable(bool)'),True)
+            if len(self.backupdata) == 0:
                 self.emit(SIGNAL('undoAvailable(bool)'),False)
+            self.updateGL()
         else:
             self.showMessage("No backup available.")
             self.emit(SIGNAL('undoAvailable(bool)'),False)
+
+    def redo(self):
+        if len(self.redodata) > 0:
+            data = self.redodata.pop()
+            if type(data) == MTG:
+                self.backupdata.append(self.mtg)
+                self.mtg = data
+                self.mtgrep, self.mtgrepindex  = createMTGRepresentation(self.mtg,self.edgeInfMaterial,self.edgePlusMaterial)        
+                self.ctrlPoints = createCtrlPoints(self.mtg,self.ctrlPointColor,self.propertyposition,self.__update_value__)
+                self.createCtrlPointRepresentation()
+            elif type(data) == PointSet:
+                self.backupdata.append(self.points)
+                self.points = data
+                self.createPointsRepresentation()
+            else:
+                QMessageBox.error(self,'undo',"Bad type for undo data")
+                return
+            self.showMessage("Redo "+str(type(data))+" at "+str(id(data)))
+            self.emit(SIGNAL('undoAvailable(bool)'),True)
+            if len(self.redodata) == 0:
+                self.emit(SIGNAL('redoAvailable(bool)'),False)
+            self.updateGL()
+        else:
+            self.showMessage("No redo available.")
+            self.emit(SIGNAL('redoAvailable(bool)'),False)
         
     def enabledClippingPlane(self, enabled):
         self.clippigPlaneEnabled = enabled
@@ -274,7 +332,7 @@ class GLMTGEditor(QGLViewer):
         self.setMode(self.Rotate)
         self.camera().setViewDirection(Vec(0,-1,0))
         self.camera().setUpVector(Vec(0,0,1))
-        self.setBackgroundColor(QColor(255,255,255))
+        self.setBackgroundColor(QColor(*self.theme['BackGround']))
     
     def setFocus(self,point):
         """ Set focus to given control point """
@@ -446,14 +504,16 @@ class GLMTGEditor(QGLViewer):
         self.focus = None
         self.mtg = mtg
         self.mtgfile = fname
-        print 'mtg',len(self.mtg),self.mtg, len(self.mtg.vertices(self.mtg.max_scale()))
+        #print 'mtg',len(self.mtg),self.mtg, len(self.mtg.vertices(self.mtg.max_scale()))
         self.mtgrep, self.mtgrepindex  = createMTGRepresentation(self.mtg,self.edgeInfMaterial,self.edgePlusMaterial)        
         pointsize = self.nodeWidth * self.getUnitCtrlPointSize()
         self.ctrlPointPrimitive = Sphere(pointsize)
         self.ctrlPoints = createCtrlPoints(self.mtg,self.ctrlPointColor,self.propertyposition,self.__update_value__)
         self.createCtrlPointRepresentation()
-        if self.points is None:self.adjustTo(self.ctrlPointsRep)
-        print self.mtg.nb_vertices()
+        if self.points is None: 
+            print 'adjustTo'
+            self.adjustTo(self.ctrlPointsRep)
+        #print self.mtg.nb_vertices()
 
     def updateMTGView(self):
         pt = self.camera().revolveAroundPoint()
@@ -462,7 +522,7 @@ class GLMTGEditor(QGLViewer):
        
     def getUnitCtrlPointSize(self):
         scradius = self.sceneRadius()
-        return  scradius/(10+self.mtg.nb_vertices())
+        return  scradius/400
 
     def setNodeWidth(self, value):
         self.nodeWidth = value
@@ -506,18 +566,28 @@ class GLMTGEditor(QGLViewer):
         self.showMessage("Write MTG in "+repr(fname))
         self.updateGL()
     
-    def filter_points(self, pointset):
-        print 'filter points'
-        if self.pointfilter > 0 and self.mtg:
-            print self.pointfilter
-            nodeids = list(self.mtg.vertices(scale=self.mtg.max_scale()))
+    def filter_points(self, pointset, pointfilter = None, ignorednodes = None):
+        if pointfilter is None:
+            pointfilter = self.pointfilter
+        if not ignorednodes is None:
+            ignorednodes = set(ignorednodes)
+
+        if pointfilter > 0 and self.mtg:
+            if ignorednodes:
+                nodeids = [vid for vid in self.mtg.vertices(scale=self.mtg.max_scale()) if not vid in ignorednodes]
+                nonone = lambda x, y : y if (x is None or x in ignorednodes) else x
+            else:
+                nodeids = list(self.mtg.vertices(scale=self.mtg.max_scale()))
+                nonone = lambda x, y : y if (x is None) else x
+
             pos = self.mtg.property('position')
             nodes = [pos[i] for i in nodeids]
-            nonone = lambda x, y : y if x is None else x
+            
             nodeiddict = dict([(vid,i) for i,vid in enumerate(nodeids)])
             parents = [nodeiddict[nonone(self.mtg.parent(i),i)] for i in nodeids]
-            distantpoints = points_at_distance_from_skeleton(pointset.pointList,nodes, parents, -self.pointfilter,1)
-            print len(distantpoints)
+            print 'points_at_distance_from_skeleton', pointfilter
+            distantpoints = points_at_distance_from_skeleton(pointset.pointList,nodes, parents, -pointfilter,1)
+            #print distantpoints
             if pointset.colorList:
                 return pointset.pointList.subset(distantpoints), pointset.colorList.subset(distantpoints)
             else:
@@ -646,12 +716,28 @@ class GLMTGEditor(QGLViewer):
         fname = str(fname)
         self.saveContractedPoints(fname)
 
+    def saveContractedPoints(self,fname):
+        self.contractedpointsRep.save(fname)
+    
+
+    def exportPoints(self):
+        if self.points is None:
+            QMessageBox.warning(self,'data error','No points to save')
+        initialname = get_shared_data('pointset')
+        fname = QFileDialog.getSaveFileName(self, "Save Points file",
+                                                initialname,
+                                                "Points Files (*.asc;*.xyz;*.pwn;*.pts;*.bgeom);;All Files (*.*)")
+        if not fname: return
+        fname = str(fname)
+        self.savePoints(fname)
+
+    def savePoints(self,fname):
+        Scene([self.points]).save(fname)
+    
+
     def set3DModel(self):
         self.create3DModelRepresentation()
         self.showEntireScene()
-    
-    def saveContractedPoints(self,fname):
-        self.contractedpointsRep.save(fname)
     
     def exportAsGeom(self):
         initialname = 'out.bgeom'
@@ -712,10 +798,11 @@ class GLMTGEditor(QGLViewer):
         stream.close()
         
     def adjustTo(self,obj):
-        d = Discretizer()
-        bbc = BBoxComputer(d)
-        obj.apply(bbc)
-        bbx = bbc.boundingbox
+        bbx = BoundingBox(obj)
+        #d = Discretizer()
+        #bbc = BBoxComputer(d)
+        #obj.apply(bbc)
+        #bbx = bbc.boundingbox
         print bbx.getSize(), norm(bbx.getSize())
         self.setSceneBoundingBox(toVec(bbx.lowerLeftCorner),toVec(bbx.upperRightCorner))
         print self.sceneRadius()
@@ -919,6 +1006,7 @@ class GLMTGEditor(QGLViewer):
         menu.addAction("New child (N)",self.newChild)
         menu.addAction("Reparent (P)",self.beginReparentSelection)
         menu.addAction("Split Edge (E)",self.splitEdge)
+        menu.addMenu(self.mainwindow.menuReconstruction)
         menu.addSeparator()
         menu.addAction("Set Branching Points",self.setBranchingPoint)
         menu.addAction("Set Axial Points (M)",self.setAxialPoint)        
@@ -973,6 +1061,7 @@ class GLMTGEditor(QGLViewer):
         self.showMessage("Remove subtree rooted in "+str(nid)+". Repaint.")
         self.mtg.remove_tree(nid)
         self.updateMTGView()
+        self.updateGL()
     
     def removeSelection(self):
         assert not self.selection is None
@@ -1190,8 +1279,9 @@ class GLMTGEditor(QGLViewer):
         nid = self.selection.id
         props = [ (name,self.mtg.property(name)[nid]) for name in self.mtg.properties().keys() if self.mtg.property(name).has_key(nid)]
         
-        self.showMessage('Node Id :'+str( nid))
-        self.displayMessage('Node Id :'+str( nid)+', Parent :'+str(self.mtg.parent(nid))+', Children:'+str(list(self.mtg.children(nid)))+', '+','.join([str(n)+':'+repr(v) for n,v in props]),60000)
+        msg = 'Node Id :'+str( nid)+', Parent :'+str(self.mtg.parent(nid))+', Children:'+str(list(self.mtg.children(nid)))+', '+','.join([str(n)+':'+repr(v) for n,v in props])
+        self.showMessage(msg)
+        self.displayMessage(msg,60000)
         print
         print 'Node Id :', nid
         print 'Parent :', self.mtg.parent(nid)
@@ -1605,20 +1695,122 @@ class GLMTGEditor(QGLViewer):
         if self.points is None:
             root = Vector3(0,0,0)
         else:
-            root = self.points.pointList[self.points.pointList.getZMinIndex()]
+            root = Vector3(self.points.pointList[self.points.pointList.getZMinIndex()])
         self.addRoot(root)
 
     def addTopRoot(self):
         if self.points is None:
             root = Vector3(0,0,0)
         else:
-            root = self.points.pointList[self.points.pointList.getZMaxIndex()]
+            root = Vector3(self.points.pointList[self.points.pointList.getZMaxIndex()])
         self.addRoot(root)
 
     def addRoot(self, position):
         import mtgmanip as mm
         self.setMTG(mm.initialize_mtg(position), None)
         self.showEntireScene()
+
+
+    def xuReconstruction(self, startfrom = None):
+        print 'Xu Reconstruction'
+        if type(startfrom) != int:
+            if not self.selection is None:
+                startfrom = self.selection.id
+                points = None
+            else:
+                vtx = list(self.mtg.vertices(self.mtg.max_scale()))
+                if len(vtx) > 1 : QMessageBox.warning(self,"Root","Select a node")
+                elif len(vtx) ==0 : QMessageBox.warning(self,"Root","Add a root node")
+                else : startfrom = vtx[0]
+                points = self.points.pointList
+        else:
+            return
+
+        if hasattr(self,'defaultbinratio'):
+            defaultbinratio = self.defaultbinratio
+        else: defaultbinratio = 50
+
+        binratio, ok = QInputDialog.getInt(self,'Bin Ratio','Select a bin ratio',defaultbinratio,10,1000)
+
+        if ok:
+            self.createBackup()
+            self.showMessage("Apply Xu et al. reconstruction from  node "+str(startfrom)+".")
+            self.defaultbinratio = binratio
+            mini,maxi = self.points.pointList.getZMinAndMaxIndex()
+            zdist = self.points.pointList[maxi].z-self.points.pointList[mini].z
+            binlength = zdist / binratio
+            verbose = False
+            if points is None:
+                print 'filter',len(self.points.pointList),'points with distance', binlength
+                points, emptycolor = self.filter_points(PointSet(self.points.pointList),binlength)#,[startfrom])
+                verbose = False
+                if len(points) < 10: 
+                    self.showMessage("Not enough points ("+str(len(points))+") to apply reconstruction from "+str(startfrom)+".")
+                    return
+            from xumethod import xu_method
+            xu_method(self.mtg,startfrom,points,binlength,verbose=verbose)
+            self.updateMTGView()
+            self.updateGL()
+
+    def subSampling(self):
+        nbPoints = len(self.points.pointList)
+        ratio = 50 if nbPoints < 200000 else 20000000./nbPoints
+        pointratio, ok = QInputDialog.getInt(self,'Point Ratio','Select a percentage ratio of points to keep (Actual nb of points: %i)' % nbPoints,ratio,1,100)
+        if ok:
+            from random import sample
+            subset = sample(xrange(nbPoints),nbPoints * pointratio / 100)
+            self.createPointBackup()
+            self.points.pointList = self.points.pointList.subset(subset)
+            self.points.colorList = self.points.colorList.subset(subset)
+            self.createPointsRepresentation()
+            self.updateGL()
+            self.showMessage("Applied sub-sampling. Nb of points : "+str(len(self.points.pointList))+".")
+
+    def euclidianContraction(self):
+        mini,maxi = self.points.pointList.getZMinAndMaxIndex()
+        zdist = self.points.pointList[maxi].z-self.points.pointList[mini].z
+        radius, ok = QInputDialog.getDouble(self,'Contraction Radius','Select a radius of contraction (Pointset height : %f)' % zdist,zdist/100.,0,decimals=3)
+        if ok:
+            self.createPointBackup()
+            self.points.pointList = contract_point3(self.points.pointList,radius)
+            self.createPointsRepresentation()
+            self.updateGL()
+            self.showMessage("Applied contraction.")
+        
+
+    def riemannianContraction(self):
+        mini,maxi = self.points.pointList.getZMinAndMaxIndex()
+        zdist = self.points.pointList[maxi].z-self.points.pointList[mini].z
+        radius, ok = QInputDialog.getDouble(self,'Contraction Radius','Select a radius of contraction (Pointset height : %f)' % zdist,zdist/100.,0,decimals=3)
+        if ok:
+            self.createPointBackup()
+            points = self.points.pointList
+            kclosests = k_closest_points_from_ann(points, 7, True)
+            kclosests = connect_all_connex_components(points,kclosests,True)
+            self.points.pointList = centroids_of_groups(points, r_neighborhoods(points, kclosests, radius))
+            self.createPointsRepresentation()
+            self.updateGL()
+            self.showMessage("Applied contraction.")
+    
+    def angleEstimate(self):
+        from angleanalysis import lines_estimation, phylo_angles, lines_representation, write_phylo_angles
+        tdegree, ok = QInputDialog.getInt(self,'Degree of trunk line','Select a degree for the trunk line estimation',1,1,5)
+        if ok:
+            trunk_line, lateral_lines, nodelength = lines_estimation(self.mtg,tdegree)
+            print type(trunk_line), trunk_line
+            if hasattr(trunk_line,'isValid') and not trunk_line.isValid():
+                QMessage.error(self,'Invalid approximation','Invalid approximation')
+                return
+            self.setTempInfoDisplay(lines_representation(trunk_line, lateral_lines))
+            self.updateGL()
+            phyangles = phylo_angles(trunk_line, lateral_lines)
+            self.setTempInfoDisplay(lines_representation(trunk_line, lateral_lines,phyangles))
+            self.updateGL()
+            fname = QFileDialog.getSaveFileName(self, "Save Angles",
+                                                    'angles.txt',
+                                                    "Txt Files (*.txt);;All Files (*.*)")
+            if fname:
+                write_phylo_angles(fname, phyangles, nodelength)
 
 
 # ---------------------------- End 3D Model ----------------------------------------     

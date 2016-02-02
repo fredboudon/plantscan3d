@@ -162,6 +162,9 @@
      <addaction name="actionExportPoints"/>
      <addaction name="actionExportContractedPoints"/>
     </widget>
+    <addaction name="actionOpen_Project"/>
+    <addaction name="actionSave_Project"/>
+    <addaction name="separator"/>
     <addaction name="actionOpenMTG"/>
     <addaction name="actionSave"/>
     <addaction name="actionSaveMTG"/>
@@ -237,6 +240,8 @@
     <addaction name="actionAngleEstimation"/>
     <addaction name="separator"/>
     <addaction name="actionCheckMTG"/>
+    <addaction name="separator"/>
+    <addaction name="actionTagScale"/>
    </widget>
    <widget class="QMenu" name="menuEdit">
     <property name="title">
@@ -535,6 +540,21 @@
   <action name="actionExportPoints">
    <property name="text">
     <string>Export Current Points</string>
+   </property>
+  </action>
+  <action name="actionOpen_Project">
+   <property name="text">
+    <string>Open Project</string>
+   </property>
+  </action>
+  <action name="actionSave_Project">
+   <property name="text">
+    <string>Save Project</string>
+   </property>
+  </action>
+  <action name="actionTagScale">
+   <property name="text">
+    <string>Tag Scale</string>
    </property>
   </action>
  </widget>

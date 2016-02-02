@@ -1018,6 +1018,8 @@ class GLMTGEditor(QGLViewer):
         menu.addAction("Revolve Around (R)",self.revolveAroundSelection)
         menu.addSeparator()
         menu.addAction("Properties",self.printNodeProperties)
+        menu.addSeparator()
+        menu.addAction("Tag (A)",self.tagNode)
         if not self.nodesinfo is None:
             menu.addSeparator()
             submenu = menu.addMenu('SCA')
@@ -1291,6 +1293,10 @@ class GLMTGEditor(QGLViewer):
         print 'Properties :'
         for name,val in props:
             print ' ',repr(name),':',repr(val)
+
+    def tagNode(self):
+        assert not self.selection is None
+        self.mtg.property(self.currenttagname)[self.selection] = True
    
 # ---------------------------- DEBUG Information ----------------------------------------   
 

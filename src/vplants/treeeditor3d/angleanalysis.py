@@ -20,7 +20,7 @@ class Line:
         extend = max([abs(dot(p-pos,dir)) for p in lpoints])
         return Line(pos,dir,extend)
 
-def NubsEstimate(positions, nodes, degree):
+def NurbsEstimate(positions, nodes, degree):
     from scipy.interpolate import splprep
     lpoints = [positions[n] for n in nodes]
     x,y,z = [[p[i] for p in lpoints] for i in xrange(3)]
@@ -28,7 +28,7 @@ def NubsEstimate(positions, nodes, degree):
     t,c,k = tck
     return NurbsCurve(ctrlPointList = Point4Array([(x,y,z,1) for x,y,z in zip(c[0],c[1],c[2])]),degree=k,knotList=t )   
 
-def NubsEstimate0(positions, nodes, degree):
+def NurbsEstimate0(positions, nodes, degree):
     lpoints = [positions[n] for n in nodes]
     print lpoints
     curve = Fit.nurbsCurve(lpoints, degree, len(lpoints)/10)
@@ -39,7 +39,7 @@ def lines_estimation(mtg, degree = 1):
     positions = mtg.property('position')
     trunk_nodes = mtg.Axis(r)
     if degree > 1:
-        trunk_line = NubsEstimate(positions,trunk_nodes,degree)
+        trunk_line = NurbsEstimate(positions,trunk_nodes,degree)
     else:
         trunk_line = Line.estimate(positions,trunk_nodes)
     lateral_roots = sum([[n for n in mtg.children(i) if mtg.edge_type(n) == '+'] for i in trunk_nodes],[])

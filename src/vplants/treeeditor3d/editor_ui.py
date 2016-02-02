@@ -1,9 +1,8 @@
 # -*- coding: utf-8 -*-
 
-# Form implementation generated from reading ui file 'editor.ui'
+# Form implementation generated from reading ui file '/Users/fboudon/Develop/vplants/branches/treeeditor3d/src/vplants/treeeditor3d/editor.ui'
 #
-# Created: Thu Aug 28 18:20:23 2014
-#      by: PyQt4 UI code generator 4.10.4
+# Created by: PyQt4 UI code generator 4.11.4
 #
 # WARNING! All changes made in this file will be lost!
 
@@ -215,11 +214,20 @@ class Ui_MainWindow(object):
         self.actionAs_picture.setObjectName(_fromUtf8("actionAs_picture"))
         self.actionExportPoints = QtGui.QAction(MainWindow)
         self.actionExportPoints.setObjectName(_fromUtf8("actionExportPoints"))
+        self.actionOpen_Project = QtGui.QAction(MainWindow)
+        self.actionOpen_Project.setObjectName(_fromUtf8("actionOpen_Project"))
+        self.actionSave_Project = QtGui.QAction(MainWindow)
+        self.actionSave_Project.setObjectName(_fromUtf8("actionSave_Project"))
+        self.actionTagScale = QtGui.QAction(MainWindow)
+        self.actionTagScale.setObjectName(_fromUtf8("actionTagScale"))
         self.menuExport_MTG.addAction(self.actionExportNodeList)
         self.menuExport_View.addAction(self.actionExportGeom)
         self.menuExport_View.addAction(self.actionSaveSnapshot)
         self.menuExport_Points.addAction(self.actionExportPoints)
         self.menuExport_Points.addAction(self.actionExportContractedPoints)
+        self.menuFile.addAction(self.actionOpen_Project)
+        self.menuFile.addAction(self.actionSave_Project)
+        self.menuFile.addSeparator()
         self.menuFile.addAction(self.actionOpenMTG)
         self.menuFile.addAction(self.actionSave)
         self.menuFile.addAction(self.actionSaveMTG)
@@ -265,6 +273,8 @@ class Ui_MainWindow(object):
         self.menuProcess.addAction(self.actionAngleEstimation)
         self.menuProcess.addSeparator()
         self.menuProcess.addAction(self.actionCheckMTG)
+        self.menuProcess.addSeparator()
+        self.menuProcess.addAction(self.actionTagScale)
         self.menuEdit.addAction(self.actionUndo)
         self.menuEdit.addAction(self.actionRedo)
         self.menuEdit.addSeparator()
@@ -355,5 +365,8 @@ class Ui_MainWindow(object):
         self.actionAs_nothing.setText(_translate("MainWindow", "As nothing", None))
         self.actionAs_picture.setText(_translate("MainWindow", "As picture", None))
         self.actionExportPoints.setText(_translate("MainWindow", "Export Current Points", None))
+        self.actionOpen_Project.setText(_translate("MainWindow", "Open Project", None))
+        self.actionSave_Project.setText(_translate("MainWindow", "Save Project", None))
+        self.actionTagScale.setText(_translate("MainWindow", "Tag Scale", None))
 
 from mtgeditorwidget import GLMTGEditor

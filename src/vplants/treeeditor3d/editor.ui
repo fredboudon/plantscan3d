@@ -227,6 +227,13 @@
      <addaction name="actionRiemannianContraction"/>
      <addaction name="actionContract"/>
     </widget>
+    <widget class="QMenu" name="menuMultiScale">
+     <property name="title">
+      <string>Multi Scale</string>
+     </property>
+     <addaction name="actionEditScale"/>
+     <addaction name="actionCommitScale"/>
+    </widget>
     <addaction name="menuAdd_Root"/>
     <addaction name="separator"/>
     <addaction name="actionSubSampling"/>
@@ -241,7 +248,7 @@
     <addaction name="separator"/>
     <addaction name="actionCheckMTG"/>
     <addaction name="separator"/>
-    <addaction name="actionTagScale"/>
+    <addaction name="menuMultiScale"/>
    </widget>
    <widget class="QMenu" name="menuEdit">
     <property name="title">
@@ -262,6 +269,7 @@
     <addaction name="actionPuu1"/>
     <addaction name="actionPuu3"/>
     <addaction name="actionCherry"/>
+    <addaction name="actionArabido"/>
    </widget>
    <addaction name="menuFile"/>
    <addaction name="menuEdit"/>
@@ -552,9 +560,19 @@
     <string>Save Project</string>
    </property>
   </action>
-  <action name="actionTagScale">
+  <action name="actionArabido">
    <property name="text">
-    <string>Tag Scale</string>
+    <string>arabido</string>
+   </property>
+  </action>
+  <action name="actionEditScale">
+   <property name="text">
+    <string>Scale Edition</string>
+   </property>
+  </action>
+  <action name="actionCommitScale">
+   <property name="text">
+    <string>Commit Scale</string>
    </property>
   </action>
  </widget>

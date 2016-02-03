@@ -62,6 +62,7 @@ class MTGEditor(QMainWindow, editor_ui.Ui_MainWindow) :
         QObject.connect(self.actionPuu1, SIGNAL('triggered(bool)'),self.mtgeditor.puu1)
         QObject.connect(self.actionPuu3, SIGNAL('triggered(bool)'),self.mtgeditor.puu3)
         QObject.connect(self.actionCherry, SIGNAL('triggered(bool)'),self.mtgeditor.cherry)
+        QObject.connect(self.actionArabido, SIGNAL('triggered(bool)'),self.mtgeditor.arabido)
         QObject.connect(self.actionRevolveAroundScene, SIGNAL('triggered(bool)'),self.mtgeditor.revolveAroundScene)
         QObject.connect(self.actionShowAll, SIGNAL('triggered(bool)'),self.mtgeditor.showEntireScene)
         QObject.connect(self.actionReorient, SIGNAL('triggered(bool)'),self.mtgeditor.reorient)
@@ -72,6 +73,10 @@ class MTGEditor(QMainWindow, editor_ui.Ui_MainWindow) :
         QObject.connect(self.actionEuclidianContraction, SIGNAL('triggered(bool)'),self.mtgeditor.euclidianContraction)
         QObject.connect(self.actionRiemannianContraction, SIGNAL('triggered(bool)'),self.mtgeditor.riemannianContraction)
         QObject.connect(self.actionAngleEstimation, SIGNAL('triggered(bool)'),self.mtgeditor.angleEstimate)
+        QObject.connect(self.actionEditScale, SIGNAL('triggered(bool)'),self.mtgeditor.tagScale)
+        QObject.connect(self.actionCommitScale, SIGNAL('triggered(bool)'),self.mtgeditor.commitScale)
+        self.mtgeditor.actionEditScale = self.actionEditScale
+        self.actionEditScale.setCheckable(True)
         
         self.mtgeditor.mainwindow = self
         

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Form implementation generated from reading ui file '/Users/fboudon/Develop/vplants/branches/treeeditor3d/src/vplants/treeeditor3d/editor.ui'
+# Form implementation generated from reading ui file '/Users/fboudon/Develop/oagit/plantscan3d/src/vplants/treeeditor3d/editor.ui'
 #
 # Created by: PyQt4 UI code generator 4.11.4
 #
@@ -109,6 +109,8 @@ class Ui_MainWindow(object):
         self.menuReconstruction.setObjectName(_fromUtf8("menuReconstruction"))
         self.menuContraction = QtGui.QMenu(self.menuProcess)
         self.menuContraction.setObjectName(_fromUtf8("menuContraction"))
+        self.menuMultiScale = QtGui.QMenu(self.menuProcess)
+        self.menuMultiScale.setObjectName(_fromUtf8("menuMultiScale"))
         self.menuEdit = QtGui.QMenu(self.menubar)
         self.menuEdit.setObjectName(_fromUtf8("menuEdit"))
         self.menuLoad = QtGui.QMenu(self.menubar)
@@ -218,8 +220,12 @@ class Ui_MainWindow(object):
         self.actionOpen_Project.setObjectName(_fromUtf8("actionOpen_Project"))
         self.actionSave_Project = QtGui.QAction(MainWindow)
         self.actionSave_Project.setObjectName(_fromUtf8("actionSave_Project"))
-        self.actionTagScale = QtGui.QAction(MainWindow)
-        self.actionTagScale.setObjectName(_fromUtf8("actionTagScale"))
+        self.actionArabido = QtGui.QAction(MainWindow)
+        self.actionArabido.setObjectName(_fromUtf8("actionArabido"))
+        self.actionEditScale = QtGui.QAction(MainWindow)
+        self.actionEditScale.setObjectName(_fromUtf8("actionEditScale"))
+        self.actionCommitScale = QtGui.QAction(MainWindow)
+        self.actionCommitScale.setObjectName(_fromUtf8("actionCommitScale"))
         self.menuExport_MTG.addAction(self.actionExportNodeList)
         self.menuExport_View.addAction(self.actionExportGeom)
         self.menuExport_View.addAction(self.actionSaveSnapshot)
@@ -260,6 +266,8 @@ class Ui_MainWindow(object):
         self.menuContraction.addAction(self.actionEuclidianContraction)
         self.menuContraction.addAction(self.actionRiemannianContraction)
         self.menuContraction.addAction(self.actionContract)
+        self.menuMultiScale.addAction(self.actionEditScale)
+        self.menuMultiScale.addAction(self.actionCommitScale)
         self.menuProcess.addAction(self.menuAdd_Root.menuAction())
         self.menuProcess.addSeparator()
         self.menuProcess.addAction(self.actionSubSampling)
@@ -274,7 +282,7 @@ class Ui_MainWindow(object):
         self.menuProcess.addSeparator()
         self.menuProcess.addAction(self.actionCheckMTG)
         self.menuProcess.addSeparator()
-        self.menuProcess.addAction(self.actionTagScale)
+        self.menuProcess.addAction(self.menuMultiScale.menuAction())
         self.menuEdit.addAction(self.actionUndo)
         self.menuEdit.addAction(self.actionRedo)
         self.menuEdit.addSeparator()
@@ -285,6 +293,7 @@ class Ui_MainWindow(object):
         self.menuLoad.addAction(self.actionPuu1)
         self.menuLoad.addAction(self.actionPuu3)
         self.menuLoad.addAction(self.actionCherry)
+        self.menuLoad.addAction(self.actionArabido)
         self.menubar.addAction(self.menuFile.menuAction())
         self.menubar.addAction(self.menuEdit.menuAction())
         self.menubar.addAction(self.menuView.menuAction())
@@ -312,6 +321,7 @@ class Ui_MainWindow(object):
         self.menuAdd_Root.setTitle(_translate("MainWindow", "Add Root", None))
         self.menuReconstruction.setTitle(_translate("MainWindow", "Reconstruction", None))
         self.menuContraction.setTitle(_translate("MainWindow", "Contraction", None))
+        self.menuMultiScale.setTitle(_translate("MainWindow", "Multi Scale", None))
         self.menuEdit.setTitle(_translate("MainWindow", "Edit", None))
         self.menuLoad.setTitle(_translate("MainWindow", "Load", None))
         self.actionNodesInfo.setText(_translate("MainWindow", "Import Debug Info", None))
@@ -367,6 +377,8 @@ class Ui_MainWindow(object):
         self.actionExportPoints.setText(_translate("MainWindow", "Export Current Points", None))
         self.actionOpen_Project.setText(_translate("MainWindow", "Open Project", None))
         self.actionSave_Project.setText(_translate("MainWindow", "Save Project", None))
-        self.actionTagScale.setText(_translate("MainWindow", "Tag Scale", None))
+        self.actionArabido.setText(_translate("MainWindow", "arabido", None))
+        self.actionEditScale.setText(_translate("MainWindow", "Scale Edition", None))
+        self.actionCommitScale.setText(_translate("MainWindow", "Commit Scale", None))
 
 from mtgeditorwidget import GLMTGEditor

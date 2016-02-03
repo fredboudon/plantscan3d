@@ -102,7 +102,7 @@ def createConeRepresentation(p1, axises, height, angle, material):
 
 class GLMTGEditor(QGLViewer):
 
-    Edit,Rotate,Selection = range(3)
+    Edit, Selection, TagScale, Rotate = 1,2,4,8
 
     def __init__(self,parent,pointfile = None, mtgfile = None):
         QGLViewer.__init__(self,parent)
@@ -121,7 +121,10 @@ class GLMTGEditor(QGLViewer):
                           'EdgePlus' : (255,0,0),
                           '3DModel' : (128,64,0),
                           'LocalAttractors' :(255, 255, 0),
-                          'Cone' :(255,255,0)}
+                          'Cone' :(255,255,0),
+                          'TaggedCtrlPoint' : (255,0,0),
+                          'UnTaggedCtrlPoint' : (255,255,255),
+                          'UpscaleCtrlPoint' : [(0,255,0),(0,0,255),(255,255,0),(255,0,255),(0,255,255)]}
                             
         self.whitetheme = {'BackGround': (255,255,255), 
                           'Points' : (180,180,180),
@@ -133,7 +136,10 @@ class GLMTGEditor(QGLViewer):
                           'EdgePlus' : (200,200,0),
                           '3DModel' : (128,64,0),
                           'LocalAttractors' :(255, 255, 0),
-                          'Cone' :(255,255,0)}
+                          'Cone' :(255,255,0),
+                          'TaggedCtrlPoint' : (255,0,0),
+                          'UnTaggedCtrlPoint' : (0,0,0),
+                          'UpscaleCtrlPoint' : [(0,255,0),(0,0,255),(255,255,0),(255,0,255),(0,255,255)]}
                             
         self.theme = self.greytheme
         
@@ -227,6 +233,10 @@ class GLMTGEditor(QGLViewer):
         except NameError, e:
             pass
 
+        self.currenttagname = 'ScaleTag'
+
+        if not os.path.exists(get_shared_data('mtg')):
+            self.parent().menuLoad.setEnabled(False)
 
     def createBackup(self):
         from copy import deepcopy
@@ -474,7 +484,10 @@ class GLMTGEditor(QGLViewer):
         
     def cherry(self):
         self.setclassicdata('cherry','cherry','cherry_200k')
-        
+    
+    def arabido(self):
+        self.setclassicdata('arabido','arabido','arabido-yassin-200k')
+        self.reorient()
         
     def openMTG(self):
         initialname = os.path.dirname(self.mtgfile) if self.mtgfile else get_shared_data('mtgdata')
@@ -505,14 +518,22 @@ class GLMTGEditor(QGLViewer):
         self.mtg = mtg
         self.mtgfile = fname
         #print 'mtg',len(self.mtg),self.mtg, len(self.mtg.vertices(self.mtg.max_scale()))
-        self.mtgrep, self.mtgrepindex  = createMTGRepresentation(self.mtg,self.edgeInfMaterial,self.edgePlusMaterial)        
+        self.mtgrep, self.mtgrepindex  = createMTGRepresentation(self.mtg,self.edgeInfMaterial,self.edgePlusMaterial)
+
         pointsize = self.nodeWidth * self.getUnitCtrlPointSize()
+        print self.nodeWidth, pointsize, self.sceneRadius()
+
         self.ctrlPointPrimitive = Sphere(pointsize)
         self.ctrlPoints = createCtrlPoints(self.mtg,self.ctrlPointColor,self.propertyposition,self.__update_value__)
         self.createCtrlPointRepresentation()
         if self.points is None: 
-            print 'adjustTo'
+            print 'adjustTo', self.ctrlPointsRep
             self.adjustTo(self.ctrlPointsRep)
+
+        pointsize = self.nodeWidth * self.getUnitCtrlPointSize()
+        print self.nodeWidth, pointsize, self.sceneRadius()
+        self.ctrlPointPrimitive.radius = self.nodeWidth * self.getUnitCtrlPointSize()
+
         #print self.mtg.nb_vertices()
 
     def updateMTGView(self):
@@ -528,7 +549,8 @@ class GLMTGEditor(QGLViewer):
         self.nodeWidth = value
         if self.ctrlPointPrimitive:
             self.ctrlPointPrimitive.radius = self.nodeWidth * self.getUnitCtrlPointSize()
-        self.showMessage('Set Node Width to '+str(value))
+        print self.sceneRadius()
+        self.showMessage('Set Node Width to '+str(value)+' ('+str(self.ctrlPointPrimitive.radius)+')')
         self.updateGL()
 
     def createCtrlPointRepresentation(self):
@@ -930,7 +952,16 @@ class GLMTGEditor(QGLViewer):
             else check for which point is selected
         """
         nompe = False
-        if self.mode == self.Selection:
+        if self.mode == self.TagScale:
+            cCtrlPoint = self.getSelection(event.pos())
+            if cCtrlPoint:
+                self.setSelection(cCtrlPoint)
+                self.tagNode()
+                self.updateGL()
+            else:
+                self.setMode(self.Rotate | self.TagScale)
+
+        elif self.mode == self.Selection:
             # Selection of a second point to finish a previous action
             cCtrlPoint = self.getSelection(event.pos())
             if cCtrlPoint:
@@ -989,7 +1020,8 @@ class GLMTGEditor(QGLViewer):
         # clear manipulated object
         self.setManipulatedFrame(None)
         self.setFocus(None)
-        self.setMode(self.Rotate)
+        if self.mode & self.TagScale: self.setMode(self.TagScale)
+        else : self.setMode(self.Rotate)
         self.updateGL()
     
     def contextMenu(self,pos):
@@ -1294,10 +1326,6 @@ class GLMTGEditor(QGLViewer):
         for name,val in props:
             print ' ',repr(name),':',repr(val)
 
-    def tagNode(self):
-        assert not self.selection is None
-        self.mtg.property(self.currenttagname)[self.selection] = True
-   
 # ---------------------------- DEBUG Information ----------------------------------------   
 
     def openNodesInfo(self):
@@ -1817,7 +1845,70 @@ class GLMTGEditor(QGLViewer):
                                                     "Txt Files (*.txt);;All Files (*.*)")
             if fname:
                 write_phylo_angles(fname, phyangles, nodelength)
+    def tagColor(self, tag):
+        if tag == True:
+            return self.theme['TaggedCtrlPoint']
+        elif tag == False:
+            return self.theme['UnTaggedCtrlPoint']
+        else:
+            assert tag < 0
+            return self.theme['UpscaleCtrlPoint'][-1-tag]
 
+    def tagNode(self):
+        assert not self.selection is None
+        sid = self.selection.id
+        tagprop = self.mtg.property(self.currenttagname)
+        tagprop[sid] = not tagprop.get(sid,False)
+        tag = tagprop.get(sid,False)
+        self.selection.color = self.tagColor(tag)
+        self.setSelection(None)
+        self.__update_value__(sid)
+        self.showMessage("Tag "+str(sid))
+
+    def tagScale(self):
+        if self.mode != self.TagScale:
+            self.mode = self.TagScale
+            self.tagScaleRepresentation()
+            self.showMessage("Tag Mode.")
+            self.actionEditScale.setChecked(True)
+        else:
+            self.endTagScaleRepresentation()
+            self.actionEditScale.setChecked(False)
+            self.mode = self.Rotate
+        self.updateGL()
+
+    def tagScaleRepresentation(self):
+        tagprop = self.mtg.property(self.currenttagname)
+        if len(tagprop) == 0:
+            mscale = self.mtg.max_scale()
+            for scale in xrange(1,mscale):
+                for uvid in self.mtg.vertices(scale):
+                    for vid in self.mtg.component_roots_at_scale(uvid, mscale):
+                        if not tagprop.has_key(vid):
+                            tagprop[vid] = -(mscale-scale)
+        for cid, cpoint in self.ctrlPoints.items():
+                tag = tagprop.get(cid,False) 
+                cpoint.color = self.tagColor(tag)
+        self.createCtrlPointRepresentation()
+        self.prevVisu = (self.pointDisplay, self.contractedpointDisplay)
+        self.pointDisplay = False
+        self.contractedpointDisplay = False            
+
+    def endTagScaleRepresentation(self):
+        self.pointDisplay, self.contractedpointDisplay = self.prevVisu
+        for cid, cpoint in self.ctrlPoints.items():
+            cpoint.color = self.ctrlPointColor
+        self.createCtrlPointRepresentation()
+
+    def commitScale(self):
+        if not len(self.mtg.property(self.currenttagname)) :
+            QMessageBox.warning(self,'data error','No tagged node to create scale.')
+        
+        self.mtg.insert_scale(self.mtg.max_scale(), lambda vid : self.mtg.property(self.currenttagname).get(vid,False) != False)
+        self.mtg.property(self.currenttagname).clear()
+        self.showMessage("New scale "+str(self.mtg.max_scale()-1)+" commited in the MTG.")
+        self.tagScaleRepresentation()
+        self.updateGL()
 
 # ---------------------------- End 3D Model ----------------------------------------     
     

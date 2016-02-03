@@ -45,6 +45,7 @@ htmlcov/
 nosetests.xml
 coverage.xml
 *,cover
+.hypothesis/
 
 # Translations
 *.mo
@@ -60,3 +61,6 @@ docs/_build/
 target/
 
 .mtgeditor.xml
+
+#Ipython Notebook
+.ipynb_checkpoints

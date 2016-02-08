@@ -17,6 +17,7 @@ ldir    = os.path.dirname(__file__)
 cui.check_ui_generation(os.path.join(ldir, 'contraction.ui'))
 cui.check_ui_generation(os.path.join(ldir, 'reconstruction.ui'))
 cui.check_ui_generation(os.path.join(ldir, 'radius.ui'))
+cui.check_ui_generation(os.path.join(ldir, 'propwidget.ui'))
 
 class Pos3Setter:
     def __init__(self,ctrlpointset,index):
@@ -102,7 +103,7 @@ def createConeRepresentation(p1, axises, height, angle, material):
 
 class GLMTGEditor(QGLViewer):
 
-    Edit, Selection, TagScale, Rotate = 1,2,4,8
+    Edit, Selection, TagScale, TagProperty, Rotate = 1,2,4,8,16
 
     def __init__(self,parent,pointfile = None, mtgfile = None):
         QGLViewer.__init__(self,parent)
@@ -238,6 +239,8 @@ class GLMTGEditor(QGLViewer):
         if not os.path.exists(get_shared_data('mtg')):
             self.parent().menuLoad.setEnabled(False)
 
+        self.propertyeditor = None
+
     def createBackup(self):
         from copy import deepcopy
         if len(self.backupdata) == self.maxbackup:
@@ -258,15 +261,15 @@ class GLMTGEditor(QGLViewer):
         self.emit(SIGNAL('redoAvailable(bool)'),False)
         self.discardTempInfoDisplay()
 
+
     def undo(self):
         if len(self.backupdata) > 0:
             data = self.backupdata.pop()
             if type(data) == MTG:
                 self.redodata.append(self.mtg)
                 self.mtg = data
-                self.mtgrep, self.mtgrepindex  = createMTGRepresentation(self.mtg,self.edgeInfMaterial,self.edgePlusMaterial)        
-                self.ctrlPoints = createCtrlPoints(self.mtg,self.ctrlPointColor,self.propertyposition,self.__update_value__)
-                self.createCtrlPointRepresentation()
+                self.mtgrep, self.mtgrepindex  = createMTGRepresentation(self.mtg,self.edgeInfMaterial,self.edgePlusMaterial)
+                self.createCtrlPoints()
             elif type(data) == PointSet:
                 self.redodata.append(self.points)
                 self.points = data
@@ -291,8 +294,7 @@ class GLMTGEditor(QGLViewer):
                 self.backupdata.append(self.mtg)
                 self.mtg = data
                 self.mtgrep, self.mtgrepindex  = createMTGRepresentation(self.mtg,self.edgeInfMaterial,self.edgePlusMaterial)        
-                self.ctrlPoints = createCtrlPoints(self.mtg,self.ctrlPointColor,self.propertyposition,self.__update_value__)
-                self.createCtrlPointRepresentation()
+                self.createCtrlPoints()
             elif type(data) == PointSet:
                 self.backupdata.append(self.points)
                 self.points = data
@@ -524,8 +526,7 @@ class GLMTGEditor(QGLViewer):
         print self.nodeWidth, pointsize, self.sceneRadius()
 
         self.ctrlPointPrimitive = Sphere(pointsize)
-        self.ctrlPoints = createCtrlPoints(self.mtg,self.ctrlPointColor,self.propertyposition,self.__update_value__)
-        self.createCtrlPointRepresentation()
+        self.createCtrlPoints()
         if self.points is None: 
             print 'adjustTo', self.ctrlPointsRep
             self.adjustTo(self.ctrlPointsRep)
@@ -552,6 +553,13 @@ class GLMTGEditor(QGLViewer):
         print self.sceneRadius()
         self.showMessage('Set Node Width to '+str(value)+' ('+str(self.ctrlPointPrimitive.radius)+')')
         self.updateGL()
+
+    def createCtrlPoints(self):
+        self.ctrlPoints = createCtrlPoints(self.mtg,self.ctrlPointColor,self.propertyposition,self.__update_value__)
+        if self.mode == self.TagScale: self.tagScaleRepresentation()
+        elif self.mode == self.TagProperty: selt.tagPropertyRepresentation()
+        self.createCtrlPointRepresentation()
+
 
     def createCtrlPointRepresentation(self):
         self.ctrlPointsRep = Scene([ ctrlPoint.representation(self.ctrlPointPrimitive) for ctrlPoint in self.ctrlPoints.itervalues() ])
@@ -956,10 +964,19 @@ class GLMTGEditor(QGLViewer):
             cCtrlPoint = self.getSelection(event.pos())
             if cCtrlPoint:
                 self.setSelection(cCtrlPoint)
-                self.tagNode()
+                self.tagScaleToNode()
                 self.updateGL()
             else:
                 self.setMode(self.Rotate | self.TagScale)
+
+        elif self.mode == self.TagProperty:
+            cCtrlPoint = self.getSelection(event.pos())
+            if cCtrlPoint:
+                self.setSelection(cCtrlPoint)
+                self.tagPropertyToNode()
+                self.updateGL()
+            else:
+                self.setMode(self.Rotate | self.TagProperty)
 
         elif self.mode == self.Selection:
             # Selection of a second point to finish a previous action
@@ -1021,6 +1038,7 @@ class GLMTGEditor(QGLViewer):
         self.setManipulatedFrame(None)
         self.setFocus(None)
         if self.mode & self.TagScale: self.setMode(self.TagScale)
+        elif self.mode & self.TagProperty: self.setMode(self.TagProperty)
         else : self.setMode(self.Rotate)
         self.updateGL()
     
@@ -1030,15 +1048,16 @@ class GLMTGEditor(QGLViewer):
         f = QFont()
         f.setBold(True)
         action.setFont(f)
-        menu.addSeparator()
-        menu.addAction("Remove node (DEL)",self.removeSelection)
-        if len(list(self.mtg.children(self.selection.id))) > 0:
-            menu.addAction("Remove subtree",self.removeSubtree)
-        menu.addSeparator()
-        menu.addAction("New child (N)",self.newChild)
-        menu.addAction("Reparent (P)",self.beginReparentSelection)
-        menu.addAction("Split Edge (E)",self.splitEdge)
-        menu.addMenu(self.mainwindow.menuReconstruction)
+        if not self.mode in [self.TagScale, self.TagProperty]:
+            menu.addSeparator()
+            menu.addAction("Remove node (DEL)",self.removeSelection)
+            if len(list(self.mtg.children(self.selection.id))) > 0:
+                menu.addAction("Remove subtree",self.removeSubtree)
+            menu.addSeparator()
+            menu.addAction("New child (N)",self.newChild)
+            menu.addAction("Reparent (P)",self.beginReparentSelection)
+            menu.addAction("Split Edge (E)",self.splitEdge)
+            menu.addMenu(self.mainwindow.menuReconstruction)
         menu.addSeparator()
         menu.addAction("Set Branching Points",self.setBranchingPoint)
         menu.addAction("Set Axial Points (M)",self.setAxialPoint)        
@@ -1049,16 +1068,10 @@ class GLMTGEditor(QGLViewer):
         menu.addSeparator()
         menu.addAction("Revolve Around (R)",self.revolveAroundSelection)
         menu.addSeparator()
-        menu.addAction("Properties",self.printNodeProperties)
-        menu.addSeparator()
-        menu.addAction("Tag (A)",self.tagNode)
-        if not self.nodesinfo is None:
+        menu.addAction("Properties",self.editProperty)
+        if self.mode == self.TagScale:
             menu.addSeparator()
-            submenu = menu.addMenu('SCA')
-            submenu.addAction("Show Attractors",self.showAttractors)
-            submenu.addAction("Show Cone of Creation", self.showConeofCreation)
-            submenu.addAction("Show Conical Perception",self.showConePerception)
-            submenu.addAction("Clean", self.cleanNodeInfo)
+            menu.addAction("Tag (A)",self.tagNode)
         menu.exec_(pos)
         
     def setMode(self,mode):
@@ -1075,8 +1088,8 @@ class GLMTGEditor(QGLViewer):
                 #self.setHandlerKeyboardModifiers(QGLViewer.CAMERA, Qt.AltModifier)
                 #self.setHandlerKeyboardModifiers(QGLViewer.FRAME,  Qt.NoModifier)
                 #self.setHandlerKeyboardModifiers(QGLViewer.CAMERA, Qt.ControlModifier)
-            elif mode == self.Rotate :
-                self.mode = self.Rotate
+            elif mode == self.Rotate or mode == self.TagScale or mode == self.TagProperty:
+                self.mode = mode
    
                 self.setMouseBinding(QtCore.Qt.ControlModifier+QtCore.Qt.LeftButton,QGLViewer.FRAME,QGLViewer.TRANSLATE)
                 self.setMouseBinding(QtCore.Qt.ControlModifier+QtCore.Qt.RightButton,QGLViewer.FRAME,QGLViewer.NO_MOUSE_ACTION)
@@ -1087,6 +1100,8 @@ class GLMTGEditor(QGLViewer):
                 #self.setHandlerKeyboardModifiers(QGLViewer.FRAME, Qt.AltModifier)
                 #self.setHandlerKeyboardModifiers(QGLViewer.CAMERA,  Qt.NoModifier)
                 #self.setHandlerKeyboardModifiers(QGLViewer.FRAME, Qt.ControlModifier)
+            self.actionTagProperty.setChecked(self.mode & self.TagProperty)
+            self.actionEditScale.setChecked(self.mode & self.TagScale)
      
     def removeSubtree(self):
         assert not self.selection is None
@@ -1328,60 +1343,6 @@ class GLMTGEditor(QGLViewer):
 
 # ---------------------------- DEBUG Information ----------------------------------------   
 
-    def openNodesInfo(self):
-        if self.nodesinfo:
-            self.setNodesInfo()
-            return
-        
-        initialname = get_shared_data('dbg')
-        fname = QFileDialog.getOpenFileName(self, "Open Nodes Information file",
-                                                initialname,
-                                                "Nodes Info File (*.dbg);;All Files (*.*)")
-        if not fname: return
-        fname = str(fname)
-        self.readNodesInfo(fname)
-        
-    def readNodesInfo(self, fname):
-        nodesinfo = readfile(fname)
-        self.showMessage("Read "+repr(fname))
-        self.setNodesInfo(nodesinfo)
-    
-    
-    def setNodesInfo(self,nodeinfo):
-        self.nodesinfo = nodeinfo
-        # self.ctrlPoints is dictionary {id: editablectrlpoint}
-        #self.ctrlPointsRepIndex = dict([( sh.id , i) for i,sh in enumerate(self.ctrlPointsRep) ])
-        self.nodesinfoRepIndex = dict([(n.NodeID() ,i) for i, n in enumerate(self.nodesinfo)])
-        s = []
-        for ctrlPoint in self.ctrlPoints.itervalues():
-            shape = ctrlPoint.representation(self.ctrlPointPrimitive)
-            idx = self.getNodeInfoIndex(shape.id)
-            method = self.nodesinfo[idx].Method()
-            if method == eConical:
-                shape.appearance.ambient = (0,255,255) #blue
-            elif method == eCluster:
-                shape.appearance.ambient = (180,70,255) #violet
-                
-            s.append(shape)
-            
-        self.ctrlPointsRep = Scene(s)
-                
-
-    def cleanNodeInfo(self):
-        self.attractors = None
-        self.cones = None
-    
-    def printNodeInfo(self, i):
-        print '------------------------------------------------'
-        print 'NodeID : ', self.nodesinfo[i].NodeID()
-        print 'Attractors len : ', len(self.nodesinfo[i].Attractors())
-        print 'Method : ', self.nodesinfo[i].Method()
-        print 'Density : ', self.nodesinfo[i].Density()
-        print 'Di : ', self.nodesinfo[i].Di()
-        print 'Dk : ', self.nodesinfo[i].Dk()
-        print 'ConeAxis : ', self.nodesinfo[i].ConeAxis()
-        print 'ConeAngle : ', self.nodesinfo[i].ConeAngle()
-        print '------------------------------------------------'
             
     
     def showAttractors(self):
@@ -1398,67 +1359,16 @@ class GLMTGEditor(QGLViewer):
         self.cleanNodeInfo()
         
         if i:
-            self.attractors = self.getAttractors(self.nodesinfo[i].Attractors())
+            self.attractors = self.getAttractorSubset(self.nodesinfo[i].Attractors())
             self.attractorsRep = createAttractorsRepresentation(self.attractors, self.pointWidth, self.attractorsMaterial)
             self.printNodeInfo(i)
         else: QMessageBox.warning(self,'Note','No information of this node.')
         
     
-    def showConePerception(self):
-        assert not self.selection is None
-        if self.nodesinfo is None:
-            QMessageBox.warning(self,'Note','No debug information loaded..')
-            return 
-         
-        nid = self.selection.id
-        i = self.getNodeInfoIndex(nid)
-        self.cleanNodeInfo()
-        
-        if i:
-            if self.nodesinfo[i].Method() == eConical:
-                self.cones = getConeDirections(self.nodesinfo[i].ConeAxis(), self.nodesinfo[i].ConeAngle())
-                self.conesRep = createConeRepresentation(self.nodesinfo[i].Position(), self.cones, 
-                                                     self.nodesinfo[i].Di(), self.nodesinfo[i].ConeAngle(),
-                                                     self.coneMaterial)
-                self.printNodeInfo(i)
-
-        else: QMessageBox.warning(self,'Note','No information of this node.')
-        
-
-
-    def showConeofCreation(self):
-        assert not self.selection is None
-        if self.nodesinfo is None:
-            QMessageBox.warning(self,'Note','No debug information loaded..')
-            return 
- 
-        nid = self.selection.id
-        pid = self.mtg.parent(nid)
-        m = self.getNodeInfoIndex(pid)
-        if self.nodesinfo[m].Method() <> eConical: return
-        
-        i = self.getNodeInfoIndex(nid)
-        self.cleanNodeInfo()
-        
-        if i and m:
-            self.cones = [direction(self.nodesinfo[i].Position() - self.nodesinfo[m].Position())]
-            self.conesRep = createConeRepresentation(self.nodesinfo[m].Position(), self.cones, 
-                                                     self.nodesinfo[m].Di(), self.nodesinfo[m].ConeAngle(),
-                                                     self.coneMaterial)
-            self.printNodeInfo(i)
-        else: QMessageBox.warning(self,'Note','No information of this node.')
     
-    # self.ctrlPointsRepIndex is dictionary
-    # {2:0, 3:1, ..., 4362: 4360}
-    def getNodeInfoIndex(self, nid):
-        if self.nodesinfoRepIndex.has_key(nid):
-            return self.nodesinfoRepIndex[nid]
-        
-        return None
-    
-    def getAttractors(self, attrs):
-        p3list = self.contractedpoints.pointList
-        return [p3list[i] for i in attrs]
+    def getAttractorSubset(self, indices):
+        p3list = self.contractedpoints.pointList.subset(indices)
+
 
 # ---------------------------- End DEBUG Information ----------------------------------------  
 
@@ -1625,9 +1535,8 @@ class GLMTGEditor(QGLViewer):
             self.setNodesInfo(nodesinfo)
         
 
-# ---------------------------- End Reconstruction ----------------------------------------     
+# ---------------------------- Radius Reconstruction ----------------------------------------     
 
-# ------- 3D Model ---------------------------------------- 
     
     def getRadiusParam(self):
         import radius_ui
@@ -1683,6 +1592,8 @@ class GLMTGEditor(QGLViewer):
         nr = NodesRadius(self.mtg, self.points.pointList)    
         self.mtg = nr.filtering()
         self.set3DModel()
+
+# ---------------------------- Check MTG ----------------------------------------     
         
     def correct_labelMTG(self):
         print 'Correcting label in MTG..'
@@ -1724,6 +1635,8 @@ class GLMTGEditor(QGLViewer):
         
         print 'finish check'
 
+# ---------------------------- Root ----------------------------------------     
+
 
     def addBottomRoot(self):
         if self.points is None:
@@ -1744,6 +1657,8 @@ class GLMTGEditor(QGLViewer):
         self.setMTG(mm.initialize_mtg(position), None)
         self.showEntireScene()
 
+
+# ---------------------------- Reconstruction ----------------------------------------     
 
     def xuReconstruction(self, startfrom = None):
         print 'Xu Reconstruction'
@@ -1845,6 +1760,9 @@ class GLMTGEditor(QGLViewer):
                                                     "Txt Files (*.txt);;All Files (*.*)")
             if fname:
                 write_phylo_angles(fname, phyangles, nodelength)
+
+# ---------------------------- Tagging ----------------------------------------     
+    
     def tagColor(self, tag):
         if tag == True:
             return self.theme['TaggedCtrlPoint']
@@ -1854,27 +1772,28 @@ class GLMTGEditor(QGLViewer):
             assert tag < 0
             return self.theme['UpscaleCtrlPoint'][-1-tag]
 
-    def tagNode(self):
+    def tagScaleToNode(self):
         assert not self.selection is None
         sid = self.selection.id
         tagprop = self.mtg.property(self.currenttagname)
-        tagprop[sid] = not tagprop.get(sid,False)
-        tag = tagprop.get(sid,False)
-        self.selection.color = self.tagColor(tag)
-        self.setSelection(None)
-        self.__update_value__(sid)
-        self.showMessage("Tag "+str(sid))
+        tagvalue = tagprop.get(sid,False)
+        if tagvalue in [True,False]:
+            tagvalue = not tagvalue
+            tagprop[sid] = tagvalue
+            self.selection.color = self.tagColor(tagvalue)
+            self.setSelection(None)
+            self.__update_value__(sid)
+            self.showMessage("Tag "+str(sid))
 
     def tagScale(self):
         if self.mode != self.TagScale:
-            self.mode = self.TagScale
+            self.setMode( self.TagScale)
             self.tagScaleRepresentation()
-            self.showMessage("Tag Mode.")
-            self.actionEditScale.setChecked(True)
+            self.tagUpdateVisu()
+            self.showMessage("Tag Scale Mode.")
         else:
-            self.endTagScaleRepresentation()
-            self.actionEditScale.setChecked(False)
-            self.mode = self.Rotate
+            self.endTagRepresentation()
+            self.setMode( self.Rotate)
         self.updateGL()
 
     def tagScaleRepresentation(self):
@@ -1889,12 +1808,14 @@ class GLMTGEditor(QGLViewer):
         for cid, cpoint in self.ctrlPoints.items():
                 tag = tagprop.get(cid,False) 
                 cpoint.color = self.tagColor(tag)
+
+    def tagUpdateVisu(self):
         self.createCtrlPointRepresentation()
         self.prevVisu = (self.pointDisplay, self.contractedpointDisplay)
         self.pointDisplay = False
-        self.contractedpointDisplay = False            
+        self.contractedpointDisplay = False  
 
-    def endTagScaleRepresentation(self):
+    def endTagRepresentation(self):
         self.pointDisplay, self.contractedpointDisplay = self.prevVisu
         for cid, cpoint in self.ctrlPoints.items():
             cpoint.color = self.ctrlPointColor
@@ -1902,13 +1823,150 @@ class GLMTGEditor(QGLViewer):
 
     def commitScale(self):
         if not len(self.mtg.property(self.currenttagname)) :
-            QMessageBox.warning(self,'data error','No tagged node to create scale.')
+            QMessageBox.warning(self,'Data error','No tagged node to create scale.')
         
+        if self.mode != self.TagScale :
+            QMessageBox.warning(self,'Data error','Select Tag Scale Mode first.')
+        
+        self.createBackup()
         self.mtg.insert_scale(self.mtg.max_scale(), lambda vid : self.mtg.property(self.currenttagname).get(vid,False) != False)
         self.mtg.property(self.currenttagname).clear()
         self.showMessage("New scale "+str(self.mtg.max_scale()-1)+" commited in the MTG.")
         self.tagScaleRepresentation()
+        self.createCtrlPointRepresentation()
         self.updateGL()
+
+    def createProperty(self, vid = None):
+        import propwidget_ui
+        main = self
+
+        class PDialog(QDialog):
+            def __init__(self,parent):
+                QDialog.__init__(self,parent)
+                self.main = parent
+
+            def init(self, widget):
+                self.widget = widget
+                self.model = QStandardItemModel(0, 1)
+                self.model.setHorizontalHeaderLabels(["Parameter", "Value" ])
+                self.widget.tableView.setModel(self.model)
+                QObject.connect(widget.actionAdd,SIGNAL('clicked()'),self.add_item)
+                QObject.connect(widget.actionMinus,SIGNAL('clicked()'),self.remove_item)
+                QObject.connect(widget.buttonBox,SIGNAL('accepted()'),self.commit)
+
+            def add_item(self, propname = 'prop', value = 'value'):
+                self.model.appendRow([QStandardItem(propname), QStandardItem(repr(value) if value else '')])
+
+            def remove_item(self):
+                mi = self.widget.tableView.selectedIndexes()
+                if mi:
+                    r = mi[0].row()
+                    print r
+                    self.model.removeRows(r,1)
+
+            def set_properties(self, mtg, vid):
+                for propname, propval in mtg.properties().items():
+                    self.add_item(propname, propval.get(vid))
+
+            def retrieve_properties(self):
+                props = dict()
+                for i in xrange(self.model.rowCount()):
+                    propname = self.model.item(i,0).text()
+                    valuerepr = self.model.item(i,1).text()
+                    if len(valuerepr) > 0:
+                        try:
+                            value = eval(valuerepr)
+                            props[propname] = value
+                        except Exception, e:
+                            QMessageBox.warning(self,'Data error','Error for '+propname+'='+repr(valuerepr)+'\n'+str(e))
+                            raise ValueError(e)
+                    else:
+                        props[propname] = None
+                return props
+
+            def apply_properties(self, vid):
+                mtg = self.main.mtg
+                try:
+                    props = self.retrieve_properties()
+                    main.createBackup()
+                    for pname, pvalue in props.items():
+                        if pvalue is None:
+                            if mtg.property(pname).has_key(vid) : 
+                                del mtg.property(pname)[vid]
+                        else:
+                            mtg.property(pname)[vid] = pvalue
+                    return True
+                except ValueError, ve:
+                    return False
+
+            def edit(self,  vid):
+                self.vid = vid
+                self.set_properties(self.main.mtg, self.vid)
+
+            def commit(self):
+                self.widget.tableView.clearSelection()
+                    
+                if hasattr(self, "vid"):
+                    if not self.apply_properties(self.vid):
+                        return
+
+                self.accept()
+
+        if self.propertyeditor is None:
+            dialog = PDialog(self)
+            widget = propwidget_ui.Ui_Dialog()
+            widget.setupUi(dialog)
+            dialog.init(widget)
+            self.propertyeditor = dialog
+        else:
+            self.propertyeditor.model.clear()
+
+        if not vid is None:
+            self.propertyeditor.edit(vid)
+        self.propertyeditor.show()
+
+    def editProperty(self):
+        assert not self.selection is None
+        self.createProperty(self.selection.id)
+
+    def startTagProperty(self):
+        if self.mode != self.TagProperty:
+            self.createProperty()
+            QObject.connect(self.propertyeditor, SIGNAL("accepted()"), self.launchTagProperty)
+        else:
+            self.endTagRepresentation()
+            self.setMode( self.Rotate)
+        self.updateGL()
+
+    def launchTagProperty(self):
+        self.setMode( self.TagProperty)
+        self.propertiestotag = self.propertyeditor.retrieve_properties()
+        self.tagPropertyRepresentation()
+        self.tagUpdateVisu()
+        self.showMessage("Tag Properties Mode.")
+ 
+    def tagPropertyRepresentation(self):
+        proptarget = self.propertyeditor.retrieve_properties()
+        props = [self.mtg.property(propname) for propname in proptarget.keys()]
+        mscale = self.mtg.max_scale()
+        for cid, cpoint in self.ctrlPoints.items():
+            tag = True
+            for pvalues in props:
+                if not pvalues.has_key(cid):
+                    tag = False
+                    break
+            cpoint.color = self.tagColor(tag)
+
+          
+       
+    def tagPropertyToNode(self):
+        assert not self.selection is None
+        sid = self.selection.id
+        self.propertyeditor.apply_properties(sid)
+        self.selection.color = self.tagColor(True)
+        self.setSelection(None)
+        self.__update_value__(sid)
+        self.showMessage("Tag "+str(sid))
 
 # ---------------------------- End 3D Model ----------------------------------------     
     

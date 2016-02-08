@@ -249,6 +249,8 @@
     <addaction name="actionCheckMTG"/>
     <addaction name="separator"/>
     <addaction name="menuMultiScale"/>
+    <addaction name="separator"/>
+    <addaction name="actionTagProperty"/>
    </widget>
    <widget class="QMenu" name="menuEdit">
     <property name="title">
@@ -573,6 +575,11 @@
   <action name="actionCommitScale">
    <property name="text">
     <string>Commit Scale</string>
+   </property>
+  </action>
+  <action name="actionTagProperty">
+   <property name="text">
+    <string>Tag Property</string>
    </property>
   </action>
  </widget>

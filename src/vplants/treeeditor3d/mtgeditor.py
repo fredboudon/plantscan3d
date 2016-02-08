@@ -46,7 +46,6 @@ class MTGEditor(QMainWindow, editor_ui.Ui_MainWindow) :
         QObject.connect(self.actionAverageRadius, SIGNAL('triggered(bool)'),self.mtgeditor.averageNodesRadius)
         QObject.connect(self.actionFilterRadius, SIGNAL('triggered(bool)'),self.mtgeditor.filterNodesRadius)
         QObject.connect(self.actionCheckMTG, SIGNAL('triggered(bool)'),self.mtgeditor.checkMTG)
-        QObject.connect(self.actionNodesInfo, SIGNAL('triggered(bool)'),self.mtgeditor.openNodesInfo)
         QObject.connect(self.actionExportGeom, SIGNAL('triggered(bool)'),self.mtgeditor.exportAsGeom)
         QObject.connect(self.actionExportNodeList, SIGNAL('triggered(bool)'),self.mtgeditor.exportNodeList)
         QObject.connect(self.visibilityEnabled, SIGNAL('clicked(bool)'),self.mtgeditor.enabledClippingPlane)
@@ -75,8 +74,11 @@ class MTGEditor(QMainWindow, editor_ui.Ui_MainWindow) :
         QObject.connect(self.actionAngleEstimation, SIGNAL('triggered(bool)'),self.mtgeditor.angleEstimate)
         QObject.connect(self.actionEditScale, SIGNAL('triggered(bool)'),self.mtgeditor.tagScale)
         QObject.connect(self.actionCommitScale, SIGNAL('triggered(bool)'),self.mtgeditor.commitScale)
+        QObject.connect(self.actionTagProperty, SIGNAL('triggered(bool)'),self.mtgeditor.startTagProperty)
         self.mtgeditor.actionEditScale = self.actionEditScale
+        self.mtgeditor.actionTagProperty = self.actionTagProperty
         self.actionEditScale.setCheckable(True)
+        self.actionTagProperty.setCheckable(True)
         
         self.mtgeditor.mainwindow = self
         

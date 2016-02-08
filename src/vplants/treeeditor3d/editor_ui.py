@@ -226,6 +226,8 @@ class Ui_MainWindow(object):
         self.actionEditScale.setObjectName(_fromUtf8("actionEditScale"))
         self.actionCommitScale = QtGui.QAction(MainWindow)
         self.actionCommitScale.setObjectName(_fromUtf8("actionCommitScale"))
+        self.actionTagProperty = QtGui.QAction(MainWindow)
+        self.actionTagProperty.setObjectName(_fromUtf8("actionTagProperty"))
         self.menuExport_MTG.addAction(self.actionExportNodeList)
         self.menuExport_View.addAction(self.actionExportGeom)
         self.menuExport_View.addAction(self.actionSaveSnapshot)
@@ -283,6 +285,8 @@ class Ui_MainWindow(object):
         self.menuProcess.addAction(self.actionCheckMTG)
         self.menuProcess.addSeparator()
         self.menuProcess.addAction(self.menuMultiScale.menuAction())
+        self.menuProcess.addSeparator()
+        self.menuProcess.addAction(self.actionTagProperty)
         self.menuEdit.addAction(self.actionUndo)
         self.menuEdit.addAction(self.actionRedo)
         self.menuEdit.addSeparator()
@@ -380,5 +384,6 @@ class Ui_MainWindow(object):
         self.actionArabido.setText(_translate("MainWindow", "arabido", None))
         self.actionEditScale.setText(_translate("MainWindow", "Scale Edition", None))
         self.actionCommitScale.setText(_translate("MainWindow", "Commit Scale", None))
+        self.actionTagProperty.setText(_translate("MainWindow", "Tag Property", None))
 
 from mtgeditorwidget import GLMTGEditor

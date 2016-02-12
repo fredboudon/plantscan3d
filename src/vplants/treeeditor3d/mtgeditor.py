@@ -1,14 +1,29 @@
 
-import openalea.vpltk.qt
-from openalea.vpltk.qt.QtCore import *
-from openalea.vpltk.qt.QtGui import *
+try:
+    import vplants.treeeditor3d.py2exe_release
+    py2exe_release = True
+    print 'Py2ExeRelease'
+except:
+    py2exe_release = False
+    print 'StdRelease'
+
+try:
+    import openalea.vpltk.qt
+    from openalea.vpltk.qt.QtCore import *
+    from openalea.vpltk.qt.QtGui import *
+except ImportError, e:
+    from PyQt4.QtCore import *
+    from PyQt4.QtGui import *
+
+
 
 import os
-import compile_ui as cui
-ldir    = os.path.dirname(__file__)
-cui.check_ui_generation(os.path.join(ldir, 'editor.ui'))
+if not py2exe_release:
+    import compile_ui as cui
+    ldir    = os.path.dirname(__file__)
+    cui.check_ui_generation(os.path.join(ldir, 'editor.ui'))
 
-import editor_ui
+import vplants.treeeditor3d.editor_ui as editor_ui
 
 class MTGEditor(QMainWindow, editor_ui.Ui_MainWindow) :
     def __init__(self, parent=None):

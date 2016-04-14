@@ -191,6 +191,9 @@ class GLMTGEditor(QGLViewer):
         self.nodeWidth = 4
         self.ctrlPointsRep = None
         
+        self.radiusDisplay = False
+        self.radiusRep = None
+
         if self.mtgfile : self.readMTG(mtgfile)
         
         self.focus = None
@@ -433,15 +436,19 @@ class GLMTGEditor(QGLViewer):
                 scid = self.ctrlPointsRepIndex[self.focus.id]
                 self.ctrlPointsRep[scid].apply(self.glrenderer)
             
+        #if self.radiusDisplay and self.radiusRep:    
+        #    self.radiusRep.apply(self.glrenderer)
+
         glEnable(GL_LIGHTING)
         glEnable(GL_BLEND)
         glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA)
         if self.modelDisplay and self.modelRep:
             self.modelRep.apply(self.glrenderer)
-            
+        
 
         if self.conesDisplay and self.cones:
             self.conesRep.apply(self.glrenderer)
+
         glDisable(GL_BLEND)
         glDisable(GL_LIGHTING)
          
@@ -684,7 +691,7 @@ class GLMTGEditor(QGLViewer):
         initialname = get_shared_data('pointset')
         fname = QFileDialog.getOpenFileName(self, "Open Points file",
                                                 initialname,
-                                                "Points Files (*.asc;*.xyz;*.pwn;*.pts;*.bgeom);;All Files (*.*)")
+                                                "Points Files (*.asc;*.xyz;*.pwn;*.pts;*.txt;*.bgeom);;All Files (*.*)")
         if not fname: return
         fname = str(fname)
         self.readPoints(fname)
@@ -1065,6 +1072,8 @@ class GLMTGEditor(QGLViewer):
             menu.addSeparator()
             menu.addAction("S&tick to points (T)",self.stickToPoints)
             menu.addAction("Stick subtree (G)",self.stickSubtree)
+            menu.addSeparator()
+            menu.addAction("Estimate radius",self.estimateRadius)
         menu.addSeparator()
         menu.addAction("Revolve Around (R)",self.revolveAroundSelection)
         menu.addSeparator()
@@ -1537,61 +1546,9 @@ class GLMTGEditor(QGLViewer):
 
 # ---------------------------- Radius Reconstruction ----------------------------------------     
 
-    
-    def getRadiusParam(self):
-        import radius_ui
-        from vplants.plantgl.gui.curve2deditor import FuncConstraint
-        
-        class RadiusDialog(QDialog, radius_ui.Ui_Dialog) :
-            def __init__(self, parent=None):
-                QDialog.__init__(self, parent)
-                radius_ui.Ui_Dialog.__init__(self)
-                self.setupUi(self)
-
-        if hasattr(self,'cached_radius_param'):
-            nc = self.cached_radius_param
-        else:
-            nc = NurbsCurve2D([(0,0,1),(0.3,0.3,1),(0.7,0.7,1),(1,1,1)])
-        qfunc = None
-        cdialog = RadiusDialog(self)
-        cdialog.factorFuncEditor.pointsConstraints = FuncConstraint()
-        cdialog.factorFuncEditor.setCurve(nc)
-        if cdialog.exec_() == QDialog.Accepted:
-            if cdialog.correctionBox.isChecked():
-                qfunc = cdialog.factorFuncEditor.getCurve()
-                self.cached_radius_param = qfunc
-            return qfunc
-        
-        else: return -1
-    
-    def computeNodesRadius(self):
-        if self.points is None:
-            QMessageBox.warning(self,'points','No point loaded ...')
-            return
-        if self.mtg is None:
-            QMessageBox.warning(self,'mtg','No MTG loaded ...')
-            return
-        
-        qfunc = self.getRadiusParam()
-        if qfunc == -1: return
-        
-        from vplants.pointreconstruction.radius import NodesRadius
-        nr = NodesRadius(self.mtg, self.points.pointList)    
-        self.mtg = nr.computing(qfunc)
-        self.set3DModel()
-        
-    def averageNodesRadius(self):
-        from vplants.pointreconstruction.radius import NodesRadius
-        nr = NodesRadius(self.mtg, self.points.pointList)    
-        self.mtg = nr.averaging()
-        self.set3DModel()
-    
-    
-    def filterNodesRadius(self):
-        from vplants.pointreconstruction.radius import NodesRadius
-        nr = NodesRadius(self.mtg, self.points.pointList)    
-        self.mtg = nr.filtering()
-        self.set3DModel()
+    def estimateRadius(self):
+        assert not self.selection is None
+        sid = self.selection.id
 
 # ---------------------------- Check MTG ----------------------------------------     
         
@@ -1828,8 +1785,12 @@ class GLMTGEditor(QGLViewer):
         if self.mode != self.TagScale :
             QMessageBox.warning(self,'Data error','Select Tag Scale Mode first.')
         
+        default_label, ok = QInputDialog.getText(self,'Scale Label','Select a label for nodes at the new scale')
+        default_label = str(default_label)
+        if not ok: return
         self.createBackup()
-        self.mtg.insert_scale(self.mtg.max_scale(), lambda vid : self.mtg.property(self.currenttagname).get(vid,False) != False)
+
+        self.mtg.insert_scale(self.mtg.max_scale(), lambda vid : self.mtg.property(self.currenttagname).get(vid,False) != False,default_label=default_label)
         self.mtg.property(self.currenttagname).clear()
         self.showMessage("New scale "+str(self.mtg.max_scale()-1)+" commited in the MTG.")
         self.tagScaleRepresentation()
@@ -1968,7 +1929,10 @@ class GLMTGEditor(QGLViewer):
         self.__update_value__(sid)
         self.showMessage("Tag "+str(sid))
 
-# ---------------------------- End 3D Model ----------------------------------------     
+
+# ---------------------------- End Property ----------------------------------------     
+
+
     
 def main():
     qapp = QApplication([])

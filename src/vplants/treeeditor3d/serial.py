@@ -98,12 +98,16 @@ def convertToMyMTG(g):
   noderoot = mtg.add_component(branchroot,label='N')
   
   rdic = g.property('radius')
-  
+
+  XXpropname = 'XX' if 'XX' in mtg.properties() else 'X'
+  YYpropname = 'YY' if 'YY' in mtg.properties() else 'Y'
+  ZZpropname = 'ZZ' if 'ZZ' in mtg.properties() else 'Z'
+
   for k,r in rdic.iteritems():
     parentid = g.parent(k)
-    px = g.property('XX')[k]
-    py = g.property('YY')[k]
-    pz = g.property('ZZ')[k]
+    px = g.property(XXpropname)[k]
+    py = g.property(YYpropname)[k]
+    pz = g.property(ZZpropname)[k]
     
     if parentid == None:
       addProperties(mtg, k, px, py, pz, r)

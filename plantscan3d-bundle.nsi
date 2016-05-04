@@ -18,7 +18,7 @@
 
 
 # These will change with different releases.
-!define PSC_VERSION        "0.2.0"
+!define PSC_VERSION        "0.3.0"
 !define PSC_VERSION_EXTRA  "Alpha"
 !define PSC_VERSION_MEXTRA "a"
 !define PSC_LICENSE        "GPL"
@@ -38,7 +38,7 @@ the GPL.\r\n\
 \r\n\
 Click Next to continue."
 
-!define MUI_FINISHPAGE_RUN "$PSC_INSTDIR\bin\lpy.exe"
+!define MUI_FINISHPAGE_RUN "$PSC_INSTDIR\bin\mtgeditor.exe"
 #!define MUI_FINISHPAGE_RUN_TEXT "Run L-Py"
 !define MUI_FINISHPAGE_LINK "Get the latest news of PlantScan3D here"
 !define MUI_FINISHPAGE_LINK_LOCATION "http://openalea.gforge.inria.fr/"

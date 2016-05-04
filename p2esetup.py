@@ -67,7 +67,7 @@ else:
   build_prefix = ''
 
 import glob
-from os.path import splitext,basename
+from os.path import splitext,basename,abspath
 
 
                                      
@@ -82,10 +82,34 @@ goptions = { option_name :
 goptions[option_name].update(extra_options)
 print goptions
 
-pgl_dir = 'C:/Python27/Lib/site-packages/VPlants.PlantGL-2.19.0-py2.7-win32.egg/'
+pgl_dir = 'C:/Python27/Lib/site-packages/VPlants.PlantGL-2.20.0-py2.7-win32.egg/'
 libdirs = pj(pgl_dir,'lib')
 pgl_py = pj(pgl_dir,'openalea/plantgl')
 #libdirs = pj('../vplants/PlantGL',build_prefix,'lib')
+
+import openalea.plantgl as pgl
+pgl_pys = pgl.__path__
+
+import modulefinder
+for p in   pgl.__path__:
+    modulefinder.AddPackagePath('openalea',abspath(pj(p,'..')))
+
+import openalea.mtg as mtg
+for p in   mtg.__path__:
+    modulefinder.AddPackagePath('openalea',abspath(pj(p,'..')))
+
+pgl_py = pgl_pys[0]
+if len(pgl_pys) > 1:
+    pgl_dir = pj(pgl_py,'..','..')
+    pgl_dir = abspath(pgl_dir)
+    libdirs = pj(pgl_dir,'build-scons','lib')
+else:
+    pgl_dir = pj(pgl_py,'..','..')
+    pgl_dir = abspath(pgl_dir)
+    libdirs = pj(pgl_dir,'lib')
+
+    
+print pgl_py
 print libdirs
 
 setup(
@@ -111,8 +135,8 @@ setup(
     # python packages directory
     package_dir = { '' : 'src', 
                     'vplants.treeeditor3d' : 'src/vplants/treeeditor3d', 
-                    'openalea.vpltk' : '../openalea/vpltk/src/openalea/vpltk', 
-                    'openalea.plantgl' : pgl_py},
+                    #'openalea.plantgl' : pgl_py
+                    },
                    
     # Add package platform libraries if any
     include_package_data = True,

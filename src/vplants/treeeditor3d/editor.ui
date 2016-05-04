@@ -185,6 +185,7 @@
     <addaction name="actionViewMTG"/>
     <addaction name="actionViewControlPoints"/>
     <addaction name="actionViewPoints"/>
+    <addaction name="actionViewRadius"/>
     <addaction name="actionViewContractedPoints"/>
     <addaction name="actionView3DModel"/>
     <addaction name="separator"/>
@@ -251,11 +252,21 @@
     <addaction name="menuMultiScale"/>
     <addaction name="separator"/>
     <addaction name="actionTagProperty"/>
+    <addaction name="separator"/>
    </widget>
    <widget class="QMenu" name="menuEdit">
     <property name="title">
      <string>Edit</string>
     </property>
+    <widget class="QMenu" name="menuAlign">
+     <property name="title">
+      <string>Align</string>
+     </property>
+     <addaction name="actionAlignGlobal"/>
+     <addaction name="actionAlignOptimizeAll"/>
+     <addaction name="actionAlignOptimizeOrientation"/>
+     <addaction name="actionAlignOptimizePosition"/>
+    </widget>
     <addaction name="actionUndo"/>
     <addaction name="actionRedo"/>
     <addaction name="separator"/>
@@ -263,6 +274,8 @@
     <addaction name="actionShowAll"/>
     <addaction name="separator"/>
     <addaction name="actionReorient"/>
+    <addaction name="separator"/>
+    <addaction name="menuAlign"/>
    </widget>
    <widget class="QMenu" name="menuLoad">
     <property name="title">
@@ -272,6 +285,7 @@
     <addaction name="actionPuu3"/>
     <addaction name="actionCherry"/>
     <addaction name="actionArabido"/>
+    <addaction name="actionAppleTree"/>
    </widget>
    <addaction name="menuFile"/>
    <addaction name="menuEdit"/>
@@ -400,7 +414,7 @@
   </action>
   <action name="actionComputeRadius">
    <property name="text">
-    <string>Computing</string>
+    <string>Estimate</string>
    </property>
   </action>
   <action name="actionAverageRadius">
@@ -580,6 +594,44 @@
   <action name="actionTagProperty">
    <property name="text">
     <string>Tag Property</string>
+   </property>
+  </action>
+  <action name="actionAlignGlobal">
+   <property name="text">
+    <string>Globally</string>
+   </property>
+  </action>
+  <action name="actionAppleTree">
+   <property name="text">
+    <string>apple tree</string>
+   </property>
+  </action>
+  <action name="actionAlignOptimizeAll">
+   <property name="text">
+    <string>Optimize All</string>
+   </property>
+  </action>
+  <action name="actionAlignOptimizeOrientation">
+   <property name="text">
+    <string>Optimize Orientation</string>
+   </property>
+  </action>
+  <action name="actionAlignOptimizeSize">
+   <property name="text">
+    <string>Optimize Size</string>
+   </property>
+  </action>
+  <action name="actionAlignOptimizePosition">
+   <property name="text">
+    <string>Optimize Position</string>
+   </property>
+  </action>
+  <action name="actionViewRadius">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Radius</string>
    </property>
   </action>
  </widget>

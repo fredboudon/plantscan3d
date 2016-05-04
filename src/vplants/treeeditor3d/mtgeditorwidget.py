@@ -26,12 +26,11 @@ class Pos3Setter:
     def __call__(self,pos):
         self.ctrlpointset[self.index] = toV3(pos)
 
-def createMTGRepresentation(mtg,segment_inf_material,segment_plus_material,translation = None,positionproperty= 'position'):
+def createMTGRepresentation(mtg,segment_inf_material,segment_plus_material,translation = None, positionproperty= 'position'):
     scene = Scene()
     shindex = {}
     positions = mtg.property(positionproperty)
-    i = 0
-    r = list(mtg.component_roots_at_scale(mtg.root,scale=mtg.max_scale()))
+    r = set(mtg.component_roots_at_scale(mtg.root,scale=mtg.max_scale()))
     def choose_mat(mtg,nid,segment_inf_material,segment_plus_material):
         if mtg.edge_type(nid) == '<': return segment_inf_material
         else : return segment_plus_material
@@ -55,8 +54,28 @@ def createEdgeRepresentation(begnode,endnode,positions,material, translation = N
     if translation:
         res = Translated(translation, res)
     return Shape(res,material,endnode)
-    
 
+def createRadiiRepresentation(mtg, material, translation = None, positionproperty= 'position', radiusproperty = 'radius'):
+    scene = Scene()
+    shindex = {}
+    positions = mtg.property(positionproperty)
+    radii = mtg.property(radiusproperty)
+    l = [createRadiusRepresentation(mtg, nodeID, positions, radii, material, translation) for nodeID in radii.keys()]
+    scene = Scene(l)
+    shindex = dict((sh.id,i) for i,sh in enumerate(l))
+            
+    return scene, shindex
+    
+def createRadiusRepresentation(mtg, node, positions, radii, material, translation = None):
+    res = Polyline2D.Circle(radii[node],16)
+    if mtg.parent(node):
+        d = direction(positions[node] - positions[mtg.parent(node)])
+        i = d.anOrthogonalVector()
+        j = d ^ i
+        res = Oriented(i,j,res)
+    res = Translated(positions[node]+ (translation if translation else Vector3(0,0,0)), res)
+    return Shape(res,material,node)
+ 
 def createCtrlPoints(mtg,color,positionproperty = 'position',callback = None):
     ctrlPoints = dict( (nodeID , createCtrlPoint(mtg,nodeID,color,positionproperty,callback)) for nodeID in mtg.vertices(scale=mtg.max_scale()) )
     return ctrlPoints
@@ -120,6 +139,7 @@ class GLMTGEditor(QGLViewer):
                           'SelectedCtrlPoints' : (30,250,30),
                           'EdgeInf' : (255,255,255),
                           'EdgePlus' : (255,0,0),
+                          'Radius' : (200,200,200),
                           '3DModel' : (128,64,0),
                           'LocalAttractors' :(255, 255, 0),
                           'Cone' :(255,255,0),
@@ -135,6 +155,7 @@ class GLMTGEditor(QGLViewer):
                           'SelectedCtrlPoints' : (30,250,30),
                           'EdgeInf' : (0,0,0),
                           'EdgePlus' : (200,200,0),
+                          'Radius' : (100,100,100),
                           '3DModel' : (128,64,0),
                           'LocalAttractors' :(255, 255, 0),
                           'Cone' :(255,255,0),
@@ -151,12 +172,14 @@ class GLMTGEditor(QGLViewer):
         self.edgeInfMaterial = Material(self.theme['EdgeInf'],1)
         self.edgePlusMaterial = Material(self.theme['EdgePlus'],1)
         self.selectedPointColor = Material(self.theme['SelectedCtrlPoints'],1)
+        self.radiusMaterial = Material(self.theme['Radius'],1)
         self.modelMaterial =  Material(self.theme['3DModel'],1)
         self.pointDisplay = True
         self.contractedpointDisplay = True
         self.mtgDisplay = True
         self.ctrlPointDisplay = True
         self.modelDisplay = True
+        self.radiusDisplay = True
         self.pointfilter = 0
         self.pointWidth = 2
         
@@ -176,6 +199,7 @@ class GLMTGEditor(QGLViewer):
         self.contractedpoints = None
         self.mtgfile = mtgfile
         self.propertyposition = 'position'        
+        self.propertyradius = 'radius'        
         
         self.pointsRep = None
         self.contractedpointsRep = None
@@ -191,8 +215,8 @@ class GLMTGEditor(QGLViewer):
         self.nodeWidth = 4
         self.ctrlPointsRep = None
         
-        self.radiusDisplay = False
         self.radiusRep = None
+        self.radiusRepIndex = dict()
 
         if self.mtgfile : self.readMTG(mtgfile)
         
@@ -272,6 +296,7 @@ class GLMTGEditor(QGLViewer):
                 self.redodata.append(self.mtg)
                 self.mtg = data
                 self.mtgrep, self.mtgrepindex  = createMTGRepresentation(self.mtg,self.edgeInfMaterial,self.edgePlusMaterial)
+                self.radiusRep, self.radiusRepIndex = createRadiiRepresentation(self.mtg, self.radiusMaterial, positionproperty= self.propertyposition, radiusproperty = self.propertyradius)
                 self.createCtrlPoints()
             elif type(data) == PointSet:
                 self.redodata.append(self.points)
@@ -297,6 +322,7 @@ class GLMTGEditor(QGLViewer):
                 self.backupdata.append(self.mtg)
                 self.mtg = data
                 self.mtgrep, self.mtgrepindex  = createMTGRepresentation(self.mtg,self.edgeInfMaterial,self.edgePlusMaterial)        
+                self.radiusRep, self.radiusRepIndex = createRadiiRepresentation(self.mtg, self.radiusMaterial, positionproperty= self.propertyposition, radiusproperty = self.propertyradius)
                 self.createCtrlPoints()
             elif type(data) == PointSet:
                 self.backupdata.append(self.points)
@@ -436,8 +462,8 @@ class GLMTGEditor(QGLViewer):
                 scid = self.ctrlPointsRepIndex[self.focus.id]
                 self.ctrlPointsRep[scid].apply(self.glrenderer)
             
-        #if self.radiusDisplay and self.radiusRep:    
-        #    self.radiusRep.apply(self.glrenderer)
+        if self.radiusDisplay and self.radiusRep:    
+            self.radiusRep.apply(self.glrenderer)
 
         glEnable(GL_LIGHTING)
         glEnable(GL_BLEND)
@@ -498,6 +524,11 @@ class GLMTGEditor(QGLViewer):
         self.setclassicdata('arabido','arabido','arabido-yassin-200k')
         self.reorient()
         
+    def appletree(self):
+        self.readMTG("/Users/fboudon/Develop/oagit/plantscan3d/data/LidarPommier/digitmtg/X0342_r1.mtg")
+        self.readPoints("/Users/fboudon/Develop/oagit/plantscan3d/data/LidarPommier/digitmtg/X0342_r1_004.xyz")
+        self.alignGlobally()
+        
     def openMTG(self):
         initialname = os.path.dirname(self.mtgfile) if self.mtgfile else get_shared_data('mtgdata')
         fname = QFileDialog.getOpenFileName(self, "Open MTG file",
@@ -509,17 +540,24 @@ class GLMTGEditor(QGLViewer):
         
     def readMTG(self,fname):
         import os.path
+        import sys
+        import traceback as tb
         
         self.showMessage("Reading "+repr(fname))
-        if os.path.splitext(fname)[1] == '.bmtg':
-           mtg = readfile(fname)
-        else: # .mtg
-            # readable mtg format from openalea.mtg module
-            stdmtg = read_mtg_file(fname)
-            mtg = convertToMyMTG(stdmtg)
-            
-        self.setMTG(mtg,fname)
-        self.showEntireScene()
+        try:
+            if os.path.splitext(fname)[1] == '.bmtg':
+               mtg = readfile(fname)
+            else: # .mtg
+                # readable mtg format from openalea.mtg module
+                stdmtg = read_mtg_file(fname)
+                convertStdMTGWithNode(stdmtg)
+                mtg = stdmtg
+                
+            self.setMTG(mtg,fname)
+            self.showEntireScene()
+        except Exception, e:
+            tb.print_exception(*sys.exc_info())
+            QMessageBox.critical(self, 'Import Error', 'Import Error:'+repr(e))
         
     def setMTG(self,mtg,fname):
         self.selection = None
@@ -541,6 +579,8 @@ class GLMTGEditor(QGLViewer):
         pointsize = self.nodeWidth * self.getUnitCtrlPointSize()
         print self.nodeWidth, pointsize, self.sceneRadius()
         self.ctrlPointPrimitive.radius = self.nodeWidth * self.getUnitCtrlPointSize()
+
+        self.radiusRep, self.radiusRepIndex = createRadiiRepresentation(self.mtg, self.radiusMaterial, positionproperty= self.propertyposition, radiusproperty = self.propertyradius)
 
         #print self.mtg.nb_vertices()
 
@@ -857,38 +897,58 @@ class GLMTGEditor(QGLViewer):
         for son in self.mtg.children(pid):
             mat = self.edgeInfMaterial if self.mtg.edge_type(son) == '<' else self.edgePlusMaterial
             self.mtgrep[self.mtgrepindex[son]] = createEdgeRepresentation(pid,son,positions,mat)
-    
+
+    def __update_radius__(self, pid):
+        positions = self.mtg.property(self.propertyposition)
+        rep = createRadiusRepresentation(self.mtg, pid, positions, self.mtg.property(self.propertyradius), self.radiusMaterial )
+        if self.radiusRepIndex.get(pid):
+            self.radiusRep[self.radiusRepIndex[pid]] = rep
+        else:
+            self.radiusRepIndex[pid] = len(self.radiusRep)
+            self.radiusRep.add(rep)
+
     def __update_value__(self,pid):
         """ update rep of mtg """
         self.__update_ctrlpoint__(pid)
         self.__update_edges__(pid)
-        
-        
+        self.__update_radius__(pid)
+                
     def enablePointDisplay(self,enabled) : 
         if self.pointDisplay != enabled:
             self.pointDisplay = enabled
             self.updateGL()
+
     def enableContractedPointDisplay(self,enabled) : 
         if self.contractedpointDisplay != enabled:
             self.contractedpointDisplay = enabled
             self.updateGL()
+
     def enableMTGDisplay(self,enabled) : 
         if self.mtgDisplay != enabled:
             self.mtgDisplay = enabled
             self.updateGL()
+
     def enableControlPointsDisplay(self,enabled) : 
         if self.ctrlPointDisplay != enabled:
             self.ctrlPointDisplay = enabled
             self.updateGL()
+
     def enable3DModelDisplay(self,enabled): 
         if self.modelDisplay != enabled:
             self.modelDisplay = enabled
             self.updateGL()
+
+    def enableRadiusDisplay(self,enabled): 
+        if self.radiusDisplay != enabled:
+            self.radiusDisplay = enabled
+            self.updateGL()
+
     def isPointDisplayEnabled(self) : return self.pointDisplay
     def isContractedPointDisplayEnabled(self) : return self.contractedpointDisplay
     def isMTGDisplayEnabled(self) : return self.mtgDisplay
     def isControlPointsDisplayEnabled(self) : return self.ctrlPointDisplay
     def is3DModelDisplayEnabled(self): return self.modelDisplay
+    def isRadiusDisplayEnabled(self): return self.radiusDisplay
     
     def adjustView(self):
         self.showEntireScene()
@@ -919,46 +979,33 @@ class GLMTGEditor(QGLViewer):
             p  = p.parent()
             
         mousepos = QCursor.pos() - globalpos
-        if event.key() == Qt.Key_T:            
-            cCtrlPoint = self.getSelection(mousepos)
-            if cCtrlPoint:
-                self.setSelection(cCtrlPoint)
-                self.stickToPoints()
-        elif event.key() == Qt.Key_G:            
-            cCtrlPoint = self.getSelection(mousepos)
-            if cCtrlPoint:
-                self.setSelection(cCtrlPoint)
-                self.stickSubtree()
-        elif event.key() == Qt.Key_R:            
-            cCtrlPoint = self.getSelection(mousepos)
-            if cCtrlPoint:
-                self.setSelection(cCtrlPoint)
-                self.revolveAroundSelection()
-        elif event.key() == Qt.Key_N:            
-            cCtrlPoint = self.getSelection(mousepos)
-            if cCtrlPoint:
-                self.setSelection(cCtrlPoint)
-                self.newChild()
-        elif event.key() == Qt.Key_M:            
-            cCtrlPoint = self.getSelection(mousepos)
-            if cCtrlPoint:
-                self.setSelection(cCtrlPoint)
-                self.setAxialPoint()
-        elif event.key() == Qt.Key_P:            
-            cCtrlPoint = self.getSelection(mousepos)
-            if cCtrlPoint:
-                self.setSelection(cCtrlPoint)
-                self.beginReparentSelection()
-        elif event.key() == Qt.Key_E:            
-            cCtrlPoint = self.getSelection(mousepos)
-            if cCtrlPoint:
-                self.setSelection(cCtrlPoint)
-                self.splitEdge()
-        elif event.key() == Qt.Key_Delete:            
-            cCtrlPoint = self.getSelection(mousepos)
-            if cCtrlPoint:
-                self.setSelection(cCtrlPoint)
-                self.removeSelection()
+        cCtrlPoint = self.getSelection(mousepos)
+        if cCtrlPoint:
+            if event.key() == Qt.Key_T:            
+                    self.setSelection(cCtrlPoint)
+                    self.stickToPoints()
+            elif event.key() == Qt.Key_G:            
+                    self.setSelection(cCtrlPoint)
+                    self.stickSubtree()
+            elif event.key() == Qt.Key_R:            
+                    self.setSelection(cCtrlPoint)
+                    self.revolveAroundSelection()
+            elif event.key() == Qt.Key_N:            
+                    self.setSelection(cCtrlPoint)
+                    self.newChild()
+            elif event.key() == Qt.Key_M:            
+                    self.setSelection(cCtrlPoint)
+                    self.setAxialPoint()
+            elif event.key() == Qt.Key_P:            
+                    self.setSelection(cCtrlPoint)
+                    self.beginReparentSelection()
+            elif event.key() == Qt.Key_E:            
+                    self.setSelection(cCtrlPoint)
+                    self.splitEdge()
+            elif event.key() == Qt.Key_Delete:            
+                    self.setSelection(cCtrlPoint)
+                    self.removeSelection()
+            else: QGLViewer.keyPressEvent(self, event)
         else: QGLViewer.keyPressEvent(self, event)
 
     def mousePressEvent(self,event):
@@ -1350,6 +1397,62 @@ class GLMTGEditor(QGLViewer):
         for name,val in props:
             print ' ',repr(name),':',repr(val)
 
+    def alignGlobally(self):
+        if self.points is None : 
+            QMessageBox.warning(self,'Points','No points loaded')
+            return
+        if self.mtg is None : 
+            QMessageBox.warning(self,'MTG','No mtg loaded')            
+            return
+
+        from alignement import alignGlobally
+        alignGlobally(self.points.pointList, self.mtg)
+
+        self.setMTG(self.mtg,self.mtgfile)
+        self.updateGL()
+
+    def alignOptimizeAll(self):
+        if self.points is None : 
+            QMessageBox.warning(self,'Points','No points loaded')
+            return
+        if self.mtg is None : 
+            QMessageBox.warning(self,'MTG','No mtg loaded')            
+            return
+
+        from alignement import optimizeAlignementAll
+        optimizeAlignementAll(self.points.pointList, self.mtg)
+
+        self.setMTG(self.mtg,self.mtgfile)
+        self.updateGL()
+
+    def alignOptimizeOrientation(self):
+        if self.points is None : 
+            QMessageBox.warning(self,'Points','No points loaded')
+            return
+        if self.mtg is None : 
+            QMessageBox.warning(self,'MTG','No mtg loaded')            
+            return
+
+        from alignement import optimizeAlignementOrientation
+        optimizeAlignementOrientation(self.points.pointList, self.mtg)
+
+        self.setMTG(self.mtg,self.mtgfile)
+        self.updateGL()
+
+    def alignOptimizePosition(self):
+        if self.points is None : 
+            QMessageBox.warning(self,'Points','No points loaded')
+            return
+        if self.mtg is None : 
+            QMessageBox.warning(self,'MTG','No mtg loaded')            
+            return
+
+        from alignement import optimizeAlignementPosition
+        optimizeAlignementPosition(self.points.pointList, self.mtg)
+
+        self.setMTG(self.mtg,self.mtgfile)
+        self.updateGL()
+
 # ---------------------------- DEBUG Information ----------------------------------------   
 
             
@@ -1546,9 +1649,63 @@ class GLMTGEditor(QGLViewer):
 
 # ---------------------------- Radius Reconstruction ----------------------------------------     
 
+    def determine_radius(self, pid):
+        mtg = self.mtg
+
+        nbgs = list(mtg.children(pid))
+        if mtg.parent(pid) : nbgs.append(mtg.parent(pid))
+
+        pos = mtg.property(self.propertyposition)
+        spos = pos[pid]
+
+        meandist = sum([norm(pos[nbg] - spos) for nbg in nbgs]) / len(nbgs)
+
+        selection = points_at_distance_from_skeleton(self.points.pointList,[spos], [0], meandist * 0.75, 1)
+        if selection:
+
+            if mtg.parent(pid):
+                    dir = spos - pos[nbgs[-1]]
+            else :
+                apicalchild = [vid for vid in mtg.children(pid) if mtg.edge_type(vid) == '<']
+                if len(apicalchild) > 0:
+                    dir = direction(Point3Array([pos[vid] - spos for vid in apicalchild]).getCenter())
+                elif len(mtg.children(pid)) > 0:
+                    dir = direction(Point3Array([pos[vid] - spos for vid in mtg.children(pid)]).getCenter())
+                else: 
+                    dir = (0,0,1)
+
+            radius = pointset_mean_radial_distance(spos, dir, self.points.pointList, selection )
+            print 'radius[',pid,']:',radius
+            return radius
+
     def estimateRadius(self):
         assert not self.selection is None
         sid = self.selection.id
+
+        self.mtg.property(self.propertyradius)[sid] = self.determine_radius(sid)
+
+        self.__update_radius__(sid)
+        self.updateGL()
+
+    def estimateAllRadius(self, overwrite = True):
+        assert self.mtg
+
+        from mtgmanip import mtg2pgltree
+
+        nodes, parents, vertex2node = mtg2pgltree(self.mtg)
+        node2vertex = dict([(i,vid) for vid,i in vertex2node.items()])
+
+        estimatedradii = estimate_radii_from_points(self.points.pointList, nodes, parents, maxmethod=True)
+
+        radii = self.mtg.property(self.propertyradius) 
+        for nid, vid in node2vertex.items():
+            if not vid in radii or overwrite:
+                radii[vid] = estimatedradii[nid]
+                print 'radius[',vid,']=',estimatedradii[nid]
+
+        self.radiusRep, self.radiusRepIndex = createRadiiRepresentation(self.mtg, self.radiusMaterial, positionproperty= self.propertyposition, radiusproperty = self.propertyradius)
+        self.updateGL()
+
 
 # ---------------------------- Check MTG ----------------------------------------     
         

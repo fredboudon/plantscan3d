@@ -295,9 +295,7 @@ class GLMTGEditor(QGLViewer):
             if type(data) == MTG:
                 self.redodata.append(self.mtg)
                 self.mtg = data
-                self.mtgrep, self.mtgrepindex  = createMTGRepresentation(self.mtg,self.edgeInfMaterial,self.edgePlusMaterial)
-                self.radiusRep, self.radiusRepIndex = createRadiiRepresentation(self.mtg, self.radiusMaterial, positionproperty= self.propertyposition, radiusproperty = self.propertyradius)
-                self.createCtrlPoints()
+                self.__update_all_mtg__()
             elif type(data) == PointSet:
                 self.redodata.append(self.points)
                 self.points = data
@@ -321,9 +319,7 @@ class GLMTGEditor(QGLViewer):
             if type(data) == MTG:
                 self.backupdata.append(self.mtg)
                 self.mtg = data
-                self.mtgrep, self.mtgrepindex  = createMTGRepresentation(self.mtg,self.edgeInfMaterial,self.edgePlusMaterial)        
-                self.radiusRep, self.radiusRepIndex = createRadiiRepresentation(self.mtg, self.radiusMaterial, positionproperty= self.propertyposition, radiusproperty = self.propertyradius)
-                self.createCtrlPoints()
+                self.__update_all_mtg__()
             elif type(data) == PointSet:
                 self.backupdata.append(self.points)
                 self.points = data
@@ -407,9 +403,7 @@ class GLMTGEditor(QGLViewer):
             #self.points.apply(self.glrenderer)
             self.pointsRep.apply(self.glrenderer)
             
-        if self.contractedpointDisplay and self.contractedpoints:
-             self.contractedpointsRep.apply(self.glrenderer)
-            
+           
         if self.mtgDisplay and self.mtgrep:
             self.mtgrep.apply(self.glrenderer)
 
@@ -449,9 +443,7 @@ class GLMTGEditor(QGLViewer):
             #self.points.apply(self.glrenderer)
             self.pointsRep.apply(self.glrenderer)
             
-        if self.contractedpointDisplay and self.contractedpoints:
-             self.contractedpointsRep.apply(self.glrenderer)
-            
+           
         if self.mtgDisplay and self.mtgrep:
             self.mtgrep.apply(self.glrenderer)
         
@@ -525,9 +517,9 @@ class GLMTGEditor(QGLViewer):
         self.reorient()
         
     def appletree(self):
-        self.readMTG("/Users/fboudon/Develop/oagit/plantscan3d/data/LidarPommier/digitmtg/X0342_r1.mtg")
+        self.readMTG("/Users/fboudon/Develop/oagit/plantscan3d/data/LidarPommier/digitmtg/X0342_r1.mtg", True)
         self.readPoints("/Users/fboudon/Develop/oagit/plantscan3d/data/LidarPommier/digitmtg/X0342_r1_004.xyz")
-        self.alignGlobally()
+        self.alignScaleAndCenter()
         
     def openMTG(self):
         initialname = os.path.dirname(self.mtgfile) if self.mtgfile else get_shared_data('mtgdata')
@@ -538,7 +530,16 @@ class GLMTGEditor(QGLViewer):
         fname = str(fname)
         self.readMTG(fname)
         
-    def readMTG(self,fname):
+    def importMTG(self):
+        initialname = os.path.dirname(self.mtgfile) if self.mtgfile else get_shared_data('mtgdata')
+        fname = QFileDialog.getOpenFileName(self, "Open MTG file",
+                                                initialname,
+                                                "MTG Files (*.mtg);;All Files (*.*)")
+        if not fname: return
+        fname = str(fname)
+        self.readMTG(fname, True)
+        
+    def readMTG(self, fname, fromdigit = False):
         import os.path
         import sys
         import traceback as tb
@@ -550,39 +551,25 @@ class GLMTGEditor(QGLViewer):
             else: # .mtg
                 # readable mtg format from openalea.mtg module
                 stdmtg = read_mtg_file(fname)
-                convertStdMTGWithNode(stdmtg)
+                if fromdigit : convertStdMTGWithNode(stdmtg)
                 mtg = stdmtg
                 
             self.setMTG(mtg,fname)
+            self.modelRep = None
             self.showEntireScene()
         except Exception, e:
             tb.print_exception(*sys.exc_info())
             QMessageBox.critical(self, 'Import Error', 'Import Error:'+repr(e))
         
     def setMTG(self,mtg,fname):
-        self.selection = None
-        self.focus = None
         self.mtg = mtg
         self.mtgfile = fname
-        #print 'mtg',len(self.mtg),self.mtg, len(self.mtg.vertices(self.mtg.max_scale()))
-        self.mtgrep, self.mtgrepindex  = createMTGRepresentation(self.mtg,self.edgeInfMaterial,self.edgePlusMaterial)
 
-        pointsize = self.nodeWidth * self.getUnitCtrlPointSize()
-        print self.nodeWidth, pointsize, self.sceneRadius()
+        self.selection = None
+        self.focus = None
 
-        self.ctrlPointPrimitive = Sphere(pointsize)
-        self.createCtrlPoints()
-        if self.points is None: 
-            print 'adjustTo', self.ctrlPointsRep
-            self.adjustTo(self.ctrlPointsRep)
+        self.__update_all_mtg__()
 
-        pointsize = self.nodeWidth * self.getUnitCtrlPointSize()
-        print self.nodeWidth, pointsize, self.sceneRadius()
-        self.ctrlPointPrimitive.radius = self.nodeWidth * self.getUnitCtrlPointSize()
-
-        self.radiusRep, self.radiusRepIndex = createRadiiRepresentation(self.mtg, self.radiusMaterial, positionproperty= self.propertyposition, radiusproperty = self.propertyradius)
-
-        #print self.mtg.nb_vertices()
 
     def updateMTGView(self):
         pt = self.camera().revolveAroundPoint()
@@ -677,55 +664,40 @@ class GLMTGEditor(QGLViewer):
         pointList, colorList = self.filter_points(self.points)
         self.pointsRep = Scene([Shape(PointSet(pointList,colorList, width = self.pointWidth), self.pointMaterial)])
     
-    def reorient(self):
-        if self.points:
-            self.points.pointList.swapCoordinates(1,2)
-            if self.pointsRep[0].geometry.pointList.getPglId() != self.points.pointList.getPglId():
-               self.pointsRep[0].geometry.pointList.swapCoordinates(1,2)
     
     def setPointFilter(self, value):
         self.pointfilter = self.sceneRadius() * value / 10000.
         self.showMessage("Remove points at a distance "+str(self.pointfilter)+" of the skeleton")
         print self.pointfilter, self.sceneRadius(), value
         if self.points : self.createPointsRepresentation()
-        if self.contractedpoints : self.createContractedPointsRepresentation()
         if self.isVisible(): self.updateGL()
         
     def setPointWidth(self, value):
         self.pointWidth = value
         if self.pointsRep:
             self.pointsRep[0].geometry.width = value
-        if self.contractedpointsRep:
-            self.contractedpointsRep[0].geometry.width = value
         self.showMessage('Set Point Width to '+str(value))
         self.updateGL()
     
-    
-    def createContractedPointsRepresentation(self):
-        pointList, colorList = self.filter_points(PointSet(self.contractedpoints.pointList))
-        self.contractedpointsRep = Scene([Shape(PointSet(pointList, width = self.pointWidth), self.contractedpointMaterial)])
+    def show3DModel(self):
+        self.create3DModelRepresentation()
+        self.modelDisplay = True
+        self.updateGL()
 
     def create3DModelRepresentation(self, translation=None):
         scene = Scene()
-        from vplants.pointreconstruction.mtgdata import MTGData
-        mtgdata = MTGData()
-        mtgdata.initMTG(self.mtg)
         section= Polyline2D.Circle(1,30)
-        if translation:
-            for axe in mtgdata.treeAxes():
-                points = [self.mtg.property('position').get(nodeID) for nodeID in axe]
-                radius = [(self.mtg.property('radius').get(nodeID), self.mtg.property('radius').get(nodeID)) for nodeID in axe]
-                scene += Shape(Translated(translation,Extrusion(Polyline(points), section, radius)), self.modelMaterial)
-            self.modelRep =  scene
-            
-        else:
-            for axe in mtgdata.treeAxes():
-                points = [self.mtg.property('position').get(nodeID) for nodeID in axe]
-                radius = [(self.mtg.property('radius').get(nodeID), self.mtg.property('radius').get(nodeID)) for nodeID in axe]
-                scene += Shape(Extrusion(Polyline(points), section, radius), self.modelMaterial)
-                
-            self.modelRep = scene
         
+        for vid in self.mtg.vertices(scale=self.mtg.max_scale()):
+            if self.mtg.parent(vid) is None or self.mtg.edge_type(vid) == "+":
+                axe = self.mtg.Axis(vid)
+                if not self.mtg.parent(vid) is None: axe.insert(0, self.mtg.parent(vid))
+                points = [self.mtg.property(self.propertyposition)[nodeID] for nodeID in axe]
+                radius = [(self.mtg.property(self.propertyradius).get(nodeID,0), self.mtg.property(self.propertyradius).get(nodeID,0)) for nodeID in axe]
+                geometry = Extrusion(Polyline(points), section, radius)
+                if translation: geometry = Translated(translation,geometry)
+                scene += Shape(geometry, self.modelMaterial)
+        self.modelRep =  scene
     
     def importPoints(self):
         initialname = get_shared_data('pointset')
@@ -751,6 +723,10 @@ class GLMTGEditor(QGLViewer):
         
     def setPoints(self,points):
         self.points = points
+        class PointInfo():
+            def __init__(self): pass
+
+        self.pointinfo = PointInfo()
         if self.points.colorList is None: 
             bbx = BoundingBox(self.points)
             print 'generate color'
@@ -762,40 +738,6 @@ class GLMTGEditor(QGLViewer):
         self.createPointsRepresentation()
         self.showEntireScene()
         
-    def importContractedPoints(self):
-        initialname = get_shared_data('contractdata')
-        fname = QFileDialog.getOpenFileName(self, "Open Points file",
-                                                initialname,
-                                                "Points Files (*.asc;*.xyz;*.pwn;*.pts;*.bgeom);;All Files (*.*)")
-        if not fname: return
-        fname = str(fname)
-        self.readContractedPoints(fname)
-        
-        
-    def readContractedPoints(self,fname):
-        points = Scene(fname)[0].geometry.geometry
-        self.setContractedPoints(points)
-        
-    def setContractedPoints(self,points):
-        self.contractedpoints = points
-        self.adjustTo(points)
-        self.createContractedPointsRepresentation()
-        self.showEntireScene()
-        
-    def exportContractedPoints(self):
-        if self.contractedpointsRep is None:
-            QMessageBox.warning(self,'data error','No contracted points to save')
-        initialname = get_shared_data('contractdata')
-        fname = QFileDialog.getSaveFileName(self, "Save Points file",
-                                                initialname,
-                                                "Points Files (*.asc;*.xyz;*.pwn;*.pts;*.bgeom);;All Files (*.*)")
-        if not fname: return
-        fname = str(fname)
-        self.saveContractedPoints(fname)
-
-    def saveContractedPoints(self,fname):
-        self.contractedpointsRep.save(fname)
-    
 
     def exportPoints(self):
         if self.points is None:
@@ -812,9 +754,6 @@ class GLMTGEditor(QGLViewer):
         Scene([self.points]).save(fname)
     
 
-    def set3DModel(self):
-        self.create3DModelRepresentation()
-        self.showEntireScene()
     
     def exportAsGeom(self):
         initialname = 'out.bgeom'
@@ -876,13 +815,7 @@ class GLMTGEditor(QGLViewer):
         
     def adjustTo(self,obj):
         bbx = BoundingBox(obj)
-        #d = Discretizer()
-        #bbc = BBoxComputer(d)
-        #obj.apply(bbc)
-        #bbx = bbc.boundingbox
-        print bbx.getSize(), norm(bbx.getSize())
         self.setSceneBoundingBox(toVec(bbx.lowerLeftCorner),toVec(bbx.upperRightCorner))
-        print self.sceneRadius()
 
     def __update_ctrlpoint__(self,pid):
         scid = self.ctrlPointsRepIndex[pid]
@@ -900,19 +833,35 @@ class GLMTGEditor(QGLViewer):
 
     def __update_radius__(self, pid):
         positions = self.mtg.property(self.propertyposition)
-        rep = createRadiusRepresentation(self.mtg, pid, positions, self.mtg.property(self.propertyradius), self.radiusMaterial )
-        if self.radiusRepIndex.get(pid):
-            self.radiusRep[self.radiusRepIndex[pid]] = rep
-        else:
-            self.radiusRepIndex[pid] = len(self.radiusRep)
-            self.radiusRep.add(rep)
+        if self.mtg.property(self.propertyradius).get(pid):
+            rep = createRadiusRepresentation(self.mtg, pid, positions, self.mtg.property(self.propertyradius), self.radiusMaterial )
+            if self.radiusRepIndex.get(pid):
+                self.radiusRep[self.radiusRepIndex[pid]] = rep
+            else:
+                self.radiusRepIndex[pid] = len(self.radiusRep)
+                self.radiusRep.add(rep)
 
     def __update_value__(self,pid):
         """ update rep of mtg """
         self.__update_ctrlpoint__(pid)
         self.__update_edges__(pid)
         self.__update_radius__(pid)
-                
+
+    def __update_all_mtg__(self):
+        self.mtgrep, self.mtgrepindex  = createMTGRepresentation(self.mtg,self.edgeInfMaterial,self.edgePlusMaterial)
+
+        pointsize = self.nodeWidth * self.getUnitCtrlPointSize()
+        self.ctrlPointPrimitive = Sphere(pointsize)
+        self.createCtrlPoints()
+
+        if self.points is None: 
+            self.adjustTo(self.ctrlPointsRep)
+
+            pointsize = self.nodeWidth * self.getUnitCtrlPointSize()
+            self.ctrlPointPrimitive.radius = self.nodeWidth * self.getUnitCtrlPointSize()
+
+        self.radiusRep, self.radiusRepIndex = createRadiiRepresentation(self.mtg, self.radiusMaterial, positionproperty= self.propertyposition, radiusproperty = self.propertyradius)
+
     def enablePointDisplay(self,enabled) : 
         if self.pointDisplay != enabled:
             self.pointDisplay = enabled
@@ -1158,6 +1107,27 @@ class GLMTGEditor(QGLViewer):
                 #self.setHandlerKeyboardModifiers(QGLViewer.FRAME, Qt.ControlModifier)
             self.actionTagProperty.setChecked(self.mode & self.TagProperty)
             self.actionEditScale.setChecked(self.mode & self.TagScale)
+
+# ---------------------------- Checking ----------------------------------------   
+    def check_input_points(self):
+        if self.points is None : 
+            QMessageBox.warning(self,'Points','No points loaded')
+            return False
+        return True
+ 
+    def check_input_mtg(self):
+        if self.mtg is None : 
+            QMessageBox.warning(self,'MTG','No mtg loaded')            
+            return False
+        return True
+
+    def check_input_data(self):
+        if not self.check_input_points() : return False
+        return self.check_input_mtg()
+
+
+
+# ---------------------------- MTG edition ----------------------------------------   
      
     def removeSubtree(self):
         assert not self.selection is None
@@ -1380,78 +1350,136 @@ class GLMTGEditor(QGLViewer):
             self.displayMessage(message,timeout)
         print message
         
-    def printNodeProperties(self):
-        nid = self.selection.id
-        props = [ (name,self.mtg.property(name)[nid]) for name in self.mtg.properties().keys() if self.mtg.property(name).has_key(nid)]
+# ---------------------------- Point edition ----------------------------------------   
+
+    def reorient(self):
+        if not self.check_input_points() : return
+
+        self.points.pointList.swapCoordinates(1,2)
+        if self.pointsRep[0].geometry.pointList.getPglId() != self.points.pointList.getPglId():
+           self.pointsRep[0].geometry.pointList.swapCoordinates(1,2)
+        self.updateGL()
+
+    def estimatePointDensity(self):
+        if not self.check_input_points() : return
+
+        if not hasattr(self.pointinfo, 'densities'):
+            points = self.points.pointList
+            kclosests = k_closest_points_from_ann(points, 7, True)
+            kclosests = connect_all_connex_components(points,kclosests,True)
+
+            self.pointinfo.kclosests = kclosests
+
+            densities = densities_from_k_neighborhood(points, kclosests, 7)
+            self.pointinfo.densities = densities
+
+
+
+    def pointDensity(self):
+        self.estimatePointDensity()
+
+        from openalea.plantgl.scenegraph.colormap import PglColorMap
+        p = PglColorMap(0,255)
+        cmap = [p(i) for i in xrange(255)]
+        self.points.colorList = apply_colormap(cmap, self.pointinfo.densities)
+
+        self.createPointsRepresentation()
+        self.updateGL()
+
+
+    def filterPoints(self):
+        self.estimatePointDensity()
+        densityratio, ok = QInputDialog.getInt(self,'Density Ratio','Select a percentage density ratio to select points to remove' ,5, 1, 100)
+
+        if ok:
+            densities = self.pointinfo.densities
+            mind, maxd = min(densities), max(densities)
+            densitythreshold = mind + (maxd-mind) * densityratio / 100
+            self.createPointBackup()
+            nbPoints = len(self.points.pointList)
+            subset = [i for i in xrange(nbPoints) if densities[i] < densitythreshold] 
+            self.points.pointList = self.points.pointList.opposite_subset(subset)
+            self.points.colorList = self.points.colorList.opposite_subset(subset)
+            self.createPointsRepresentation()
+            self.updateGL()
+            self.showMessage("Applied density filtering. Nb of points : "+str(len(self.points.pointList))+".")
+
+    def subSampling(self):
+        nbPoints = len(self.points.pointList)
+        ratio = 50 if nbPoints < 200000 else 20000000./nbPoints
+        pointratio, ok = QInputDialog.getInt(self,'Point Ratio','Select a percentage ratio of points to keep (Actual nb of points: %i)' % nbPoints,ratio,1,100)
+        if ok:
+            from random import sample
+            subset = sample(xrange(nbPoints),nbPoints * pointratio / 100)
+            self.createPointBackup()
+            self.points.pointList = self.points.pointList.subset(subset)
+            self.points.colorList = self.points.colorList.subset(subset)
+            self.createPointsRepresentation()
+            self.updateGL()
+            self.showMessage("Applied sub-sampling. Nb of points : "+str(len(self.points.pointList))+".")
+
+    def euclidianContraction(self):
+        mini,maxi = self.points.pointList.getZMinAndMaxIndex()
+        zdist = self.points.pointList[maxi].z-self.points.pointList[mini].z
+        radius, ok = QInputDialog.getDouble(self,'Contraction Radius','Select a radius of contraction (Pointset height : %f)' % zdist,zdist/100.,0,decimals=3)
+        if ok:
+            self.createPointBackup()
+            self.points.pointList = contract_point3(self.points.pointList,radius)
+            self.createPointsRepresentation()
+            self.updateGL()
+            self.showMessage("Applied contraction.")
         
-        msg = 'Node Id :'+str( nid)+', Parent :'+str(self.mtg.parent(nid))+', Children:'+str(list(self.mtg.children(nid)))+', '+','.join([str(n)+':'+repr(v) for n,v in props])
-        self.showMessage(msg)
-        self.displayMessage(msg,60000)
-        print
-        print 'Node Id :', nid
-        print 'Parent :', self.mtg.parent(nid)
-        print 'Children :', list(self.mtg.children(nid))
-        print 'Complex :', self.mtg.complex(nid)
-        print 'Components :', list(self.mtg.components(nid))
-        print 'Properties :'
-        for name,val in props:
-            print ' ',repr(name),':',repr(val)
+
+    def riemannianContraction(self):
+        mini,maxi = self.points.pointList.getZMinAndMaxIndex()
+        zdist = self.points.pointList[maxi].z-self.points.pointList[mini].z
+        radius, ok = QInputDialog.getDouble(self,'Contraction Radius','Select a radius of contraction (Pointset height : %f)' % zdist,zdist/100.,0,decimals=3)
+        if ok:
+            self.createPointBackup()
+            if hasattr(self.pointinfo,'kclosests'):
+                kclosests = self.pointinfo.kclosests
+            else:
+                points = self.points.pointList
+                kclosests = k_closest_points_from_ann(points, 7, True)
+                kclosests = connect_all_connex_components(points,kclosests,True)
+                self.pointinfo.kclosests = kclosests
+            self.points.pointList = centroids_of_groups(points, r_neighborhoods(points, kclosests, radius))
+            self.createPointsRepresentation()
+            self.updateGL()
+            self.showMessage("Applied contraction.")
+
+# ---------------------------- Align ----------------------------------------   
+
+    def applyAlignement(self, funcname):
+        if not self.check_input_data(): return
+
+        print 'apply', funcname 
+
+        self.createBackup()
+
+        if type(funcname) == str:
+            import alignement
+            func = alignement.__dict__[funcname]
+
+        func(self.points.pointList, self.mtg)
+
+        self.__update_all_mtg__()
+        self.updateGL()
 
     def alignGlobally(self):
-        if self.points is None : 
-            QMessageBox.warning(self,'Points','No points loaded')
-            return
-        if self.mtg is None : 
-            QMessageBox.warning(self,'MTG','No mtg loaded')            
-            return
-
-        from alignement import alignGlobally
-        alignGlobally(self.points.pointList, self.mtg)
-
-        self.setMTG(self.mtg,self.mtgfile)
-        self.updateGL()
+        self.applyAlignement('alignGlobally')
 
     def alignOptimizeAll(self):
-        if self.points is None : 
-            QMessageBox.warning(self,'Points','No points loaded')
-            return
-        if self.mtg is None : 
-            QMessageBox.warning(self,'MTG','No mtg loaded')            
-            return
-
-        from alignement import optimizeAlignementAll
-        optimizeAlignementAll(self.points.pointList, self.mtg)
-
-        self.setMTG(self.mtg,self.mtgfile)
-        self.updateGL()
+        self.applyAlignement('optimizeAlignementAll')
 
     def alignOptimizeOrientation(self):
-        if self.points is None : 
-            QMessageBox.warning(self,'Points','No points loaded')
-            return
-        if self.mtg is None : 
-            QMessageBox.warning(self,'MTG','No mtg loaded')            
-            return
-
-        from alignement import optimizeAlignementOrientation
-        optimizeAlignementOrientation(self.points.pointList, self.mtg)
-
-        self.setMTG(self.mtg,self.mtgfile)
-        self.updateGL()
+        self.applyAlignement('optimizeAlignementOrientation')
 
     def alignOptimizePosition(self):
-        if self.points is None : 
-            QMessageBox.warning(self,'Points','No points loaded')
-            return
-        if self.mtg is None : 
-            QMessageBox.warning(self,'MTG','No mtg loaded')            
-            return
+        self.applyAlignement('optimizeAlignementPosition')
 
-        from alignement import optimizeAlignementPosition
-        optimizeAlignementPosition(self.points.pointList, self.mtg)
-
-        self.setMTG(self.mtg,self.mtgfile)
-        self.updateGL()
+    def alignScaleAndCenter(self):
+        self.applyAlignement('scale_and_center')
 
 # ---------------------------- DEBUG Information ----------------------------------------   
 
@@ -1687,7 +1715,7 @@ class GLMTGEditor(QGLViewer):
         self.__update_radius__(sid)
         self.updateGL()
 
-    def estimateAllRadius(self, overwrite = True):
+    def estimateAllRadius(self, maxmethod=True, overwrite = True):
         assert self.mtg
 
         from mtgmanip import mtg2pgltree
@@ -1695,13 +1723,12 @@ class GLMTGEditor(QGLViewer):
         nodes, parents, vertex2node = mtg2pgltree(self.mtg)
         node2vertex = dict([(i,vid) for vid,i in vertex2node.items()])
 
-        estimatedradii = estimate_radii_from_points(self.points.pointList, nodes, parents, maxmethod=True)
+        estimatedradii = estimate_radii_from_points(self.points.pointList, nodes, parents, maxmethod=maxmethod)
 
         radii = self.mtg.property(self.propertyradius) 
         for nid, vid in node2vertex.items():
             if not vid in radii or overwrite:
                 radii[vid] = estimatedradii[nid]
-                print 'radius[',vid,']=',estimatedradii[nid]
 
         self.radiusRep, self.radiusRepIndex = createRadiiRepresentation(self.mtg, self.radiusMaterial, positionproperty= self.propertyposition, radiusproperty = self.propertyradius)
         self.updateGL()
@@ -1815,45 +1842,7 @@ class GLMTGEditor(QGLViewer):
             self.updateMTGView()
             self.updateGL()
 
-    def subSampling(self):
-        nbPoints = len(self.points.pointList)
-        ratio = 50 if nbPoints < 200000 else 20000000./nbPoints
-        pointratio, ok = QInputDialog.getInt(self,'Point Ratio','Select a percentage ratio of points to keep (Actual nb of points: %i)' % nbPoints,ratio,1,100)
-        if ok:
-            from random import sample
-            subset = sample(xrange(nbPoints),nbPoints * pointratio / 100)
-            self.createPointBackup()
-            self.points.pointList = self.points.pointList.subset(subset)
-            self.points.colorList = self.points.colorList.subset(subset)
-            self.createPointsRepresentation()
-            self.updateGL()
-            self.showMessage("Applied sub-sampling. Nb of points : "+str(len(self.points.pointList))+".")
 
-    def euclidianContraction(self):
-        mini,maxi = self.points.pointList.getZMinAndMaxIndex()
-        zdist = self.points.pointList[maxi].z-self.points.pointList[mini].z
-        radius, ok = QInputDialog.getDouble(self,'Contraction Radius','Select a radius of contraction (Pointset height : %f)' % zdist,zdist/100.,0,decimals=3)
-        if ok:
-            self.createPointBackup()
-            self.points.pointList = contract_point3(self.points.pointList,radius)
-            self.createPointsRepresentation()
-            self.updateGL()
-            self.showMessage("Applied contraction.")
-        
-
-    def riemannianContraction(self):
-        mini,maxi = self.points.pointList.getZMinAndMaxIndex()
-        zdist = self.points.pointList[maxi].z-self.points.pointList[mini].z
-        radius, ok = QInputDialog.getDouble(self,'Contraction Radius','Select a radius of contraction (Pointset height : %f)' % zdist,zdist/100.,0,decimals=3)
-        if ok:
-            self.createPointBackup()
-            points = self.points.pointList
-            kclosests = k_closest_points_from_ann(points, 7, True)
-            kclosests = connect_all_connex_components(points,kclosests,True)
-            self.points.pointList = centroids_of_groups(points, r_neighborhoods(points, kclosests, radius))
-            self.createPointsRepresentation()
-            self.updateGL()
-            self.showMessage("Applied contraction.")
     
     def angleEstimate(self):
         from angleanalysis import lines_estimation, phylo_angles, lines_representation, write_phylo_angles
@@ -1962,82 +1951,112 @@ class GLMTGEditor(QGLViewer):
             def __init__(self,parent):
                 QDialog.__init__(self,parent)
                 self.main = parent
+                self.widget = propwidget_ui.Ui_Dialog()
+                self.widget.setupUi(self)
+                self.init(widget)
 
             def init(self, widget):
-                self.widget = widget
-                self.model = QStandardItemModel(0, 1)
-                self.model.setHorizontalHeaderLabels(["Parameter", "Value" ])
-                self.widget.tableView.setModel(self.model)
                 QObject.connect(widget.actionAdd,SIGNAL('clicked()'),self.add_item)
                 QObject.connect(widget.actionMinus,SIGNAL('clicked()'),self.remove_item)
                 QObject.connect(widget.buttonBox,SIGNAL('accepted()'),self.commit)
 
-            def add_item(self, propname = 'prop', value = 'value'):
-                self.model.appendRow([QStandardItem(propname), QStandardItem(repr(value) if value else '')])
+            def add_item(self, propname = 'prop', value = 'value', model = None):
+                if model is None: model = self.models[self.widget.tabWidget.currentIndex()]
+                model.appendRow([QStandardItem(propname), QStandardItem(repr(value) if value else '')])
 
             def remove_item(self):
-                mi = self.widget.tableView.selectedIndexes()
+                ci = self.widget.tabWidget.currentIndex()
+                mi = self.tableViews[ci].selectedIndexes()
                 if mi:
                     r = mi[0].row()
                     print r
-                    self.model.removeRows(r,1)
+                    self.models[ci].removeRows(r,1)
 
-            def set_properties(self, mtg, vid):
+            def set_properties(self, mtg, vid, model = None):
                 for propname, propval in mtg.properties().items():
-                    self.add_item(propname, propval.get(vid))
+                    if not propval is None:
+                        self.add_item(propname, propval.get(vid), model)
+
+                for propname, propval in mtg.properties().items():
+                    if propval is None:
+                        self.add_item(propname, propval.get(vid), model)
 
             def retrieve_properties(self):
                 props = dict()
-                for i in xrange(self.model.rowCount()):
-                    propname = self.model.item(i,0).text()
-                    valuerepr = self.model.item(i,1).text()
-                    if len(valuerepr) > 0:
-                        try:
-                            value = eval(valuerepr)
-                            props[propname] = value
-                        except Exception, e:
-                            QMessageBox.warning(self,'Data error','Error for '+propname+'='+repr(valuerepr)+'\n'+str(e))
-                            raise ValueError(e)
-                    else:
-                        props[propname] = None
+                for vid, model in zip(self.vids, self.models):
+                    vidprops = dict()
+                    for i in xrange(self.model.rowCount()):
+                        propname = self.model.item(i,0).text()
+                        valuerepr = self.model.item(i,1).text()
+                        if len(valuerepr) > 0:
+                            try:
+                                value = eval(valuerepr)
+                                vidprops[propname] = value
+                            except Exception, e:
+                                QMessageBox.warning(self,'Data error','Error with vertex '+str(vid)+' for '+propname+'='+repr(valuerepr)+'\n'+str(e))
+                                raise ValueError(e)
+                        else:
+                            vidprops[propname] = None
+                    props[vid] = vidprops
                 return props
 
-            def apply_properties(self, vid):
+            def apply_properties(self):
                 mtg = self.main.mtg
                 try:
                     props = self.retrieve_properties()
                     main.createBackup()
-                    for pname, pvalue in props.items():
-                        if pvalue is None:
-                            if mtg.property(pname).has_key(vid) : 
-                                del mtg.property(pname)[vid]
-                        else:
-                            mtg.property(pname)[vid] = pvalue
-                    return True
+                    for vid, vidprop in props.items:
+                        for pname, pvalue in vidprops.items():
+                            if pvalue is None:
+                                if mtg.property(pname).has_key(vid) : 
+                                    del mtg.property(pname)[vid]
+                            else:
+                                mtg.property(pname)[vid] = pvalue
+                        return True
                 except ValueError, ve:
                     return False
 
-            def edit(self,  vid):
-                self.vid = vid
-                self.set_properties(self.main.mtg, self.vid)
+            def create_tab_for_vertex(self, mtg, vid):
+                newwidget = QWidget()
+                gridLayout = QGridLayout(newwidget)
+                newtableview = QTableView(self)
+                gridLayout.addWidget(newtableview, 1, 0, 1, 5)
+                newtableview.setEditTriggers(QAbstractItemView.AllEditTriggers)
+                newtableview.setSortingEnabled(False)
+                
+                newmodel = QStandardItemModel(0, 1)
+                newmodel.setHorizontalHeaderLabels(["Parameter", "Value" ])
+                newtableview.setModel(newmodel)
+
+                self.tableViews.append(newtableview)
+                self.models.append(newmodel)
+                self.vids.append(vid)
+
+                self.set_properties(mtg, vid, newmodel)
+                self.widget.tabWidget.addTab(newwidget, str(mtg.scale(vid))+' : '+str(vid))
+
+            def edit(self, vid):
+                self.widget.tabWidget.clear()
+                self.tableViews = []
+                self.models = []
+                self.vids = []
+
+                while not vid is None and vid != self.main.mtg.root:
+                    self.create_tab_for_vertex(self.main.mtg, vid)
+                    vid = self.main.mtg.complex(vid)
 
             def commit(self):
                 self.widget.tableView.clearSelection()
                     
-                if hasattr(self, "vid"):
-                    if not self.apply_properties(self.vid):
+                if hasattr(self, "vids"):
+                    if not self.apply_properties():
                         return
 
                 self.accept()
 
         if self.propertyeditor is None:
             dialog = PDialog(self)
-            widget = propwidget_ui.Ui_Dialog()
-            widget.setupUi(dialog)
-            dialog.init(widget)
             self.propertyeditor = dialog
-        else:
-            self.propertyeditor.model.clear()
 
         if not vid is None:
             self.propertyeditor.edit(vid)

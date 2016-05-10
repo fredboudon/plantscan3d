@@ -130,7 +130,7 @@ def complete_lines(mtg):
     lines.update(nlines)
 
   
-def convertStdMTGWithNode(g, useHeuristic = True, invertZ = False):
+def convertStdMTGWithNode(g, useHeuristic = True, invertCoord = False):
     from openalea.mtg import MTG
 
     XXpropname = 'XX' if 'XX' in g.properties() else 'X'
@@ -149,16 +149,18 @@ def convertStdMTGWithNode(g, useHeuristic = True, invertZ = False):
     scale = g.max_scale()
     dointerpolation = False
 
+    def toVector3(vtx): return Vector3(XX[vtx] if invertCoord else XX[vtx],YY[vtx], -ZZ[vtx] if invertCoord else ZZ[vtx])
+
     for vtx in g.vertices(scale):
         v = None
         if vtx in XX:
-            v = Vector3(XX[vtx],YY[vtx],-ZZ[vtx] if invertZ else ZZ[vtx])
+            v = toVector3(vtx)
             positions[vtx] = v
 
         for i in xrange(scale+1, 0, -1):
             cpx = g.complex_at_scale(vtx, scale=i)
             if vtx in g.component_roots_at_scale(cpx, scale=scale) and cpx in XX:
-                v = Vector3(XX[cpx],YY[cpx],-ZZ[cpx] if invertZ else ZZ[cpx])
+                v = toVector3(cpx)
                 parent =  g.parent(vtx)
                 if (g.edge_type(vtx) == '+') and (not parent in XX) and (len(g.children(parent)) == 1):
                     positions[parent] = v

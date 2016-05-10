@@ -36,13 +36,20 @@ class MTGEditor(QMainWindow, editor_ui.Ui_MainWindow) :
         self.pointSizeSlider.setValue(self.mtgeditor.pointWidth)
         self.nodeSizeSlider.setValue(self.mtgeditor.nodeWidth)
         QObject.connect(self.actionOpenMTG, SIGNAL('triggered(bool)'),self.mtgeditor.openMTG)
+        QObject.connect(self.actionImportMTG, SIGNAL('triggered(bool)'),self.mtgeditor.importMTG) # TODO
         QObject.connect(self.actionSaveMTG, SIGNAL('triggered(bool)'),self.mtgeditor.saveMTG)
         QObject.connect(self.actionSave, SIGNAL('triggered(bool)'),self.mtgeditor.save)
         QObject.connect(self.actionSaveSnapshot, SIGNAL('triggered(bool)'),self.mtgeditor.saveSnapshot)
         QObject.connect(self.actionImportPoints, SIGNAL('triggered(bool)'),self.mtgeditor.importPoints)
-        QObject.connect(self.actionImportContractedPoints, SIGNAL('triggered(bool)'),self.mtgeditor.importContractedPoints)
-        QObject.connect(self.actionExportContractedPoints, SIGNAL('triggered(bool)'),self.mtgeditor.exportContractedPoints)
         QObject.connect(self.actionExportPoints, SIGNAL('triggered(bool)'),self.mtgeditor.exportPoints)
+        QObject.connect(self.actionExportGeom, SIGNAL('triggered(bool)'),self.mtgeditor.exportAsGeom)
+        QObject.connect(self.actionExportNodeList, SIGNAL('triggered(bool)'),self.mtgeditor.exportNodeList)
+
+        QObject.connect(self.actionPuu1, SIGNAL('triggered(bool)'),self.mtgeditor.puu1)
+        QObject.connect(self.actionPuu3, SIGNAL('triggered(bool)'),self.mtgeditor.puu3)
+        QObject.connect(self.actionCherry, SIGNAL('triggered(bool)'),self.mtgeditor.cherry)
+        QObject.connect(self.actionArabido, SIGNAL('triggered(bool)'),self.mtgeditor.arabido)
+        QObject.connect(self.actionAppleTree, SIGNAL('triggered(bool)'),self.mtgeditor.appletree)
 
         QObject.connect(self.actionUndo, SIGNAL('triggered(bool)'),self.mtgeditor.undo)
         QObject.connect(self.actionRedo, SIGNAL('triggered(bool)'),self.mtgeditor.redo)
@@ -50,11 +57,18 @@ class MTGEditor(QMainWindow, editor_ui.Ui_MainWindow) :
         QObject.connect(self.mtgeditor, SIGNAL('redoAvailable(bool)'),self.actionRedo.setEnabled)
         QObject.connect(self.actionRevolveAroundScene, SIGNAL('triggered(bool)'),self.mtgeditor.revolveAroundScene)
         QObject.connect(self.actionShowAll, SIGNAL('triggered(bool)'),self.mtgeditor.showEntireScene)
+
+
         QObject.connect(self.actionReorient, SIGNAL('triggered(bool)'),self.mtgeditor.reorient)
         QObject.connect(self.actionAlignGlobal, SIGNAL('triggered(bool)'),self.mtgeditor.alignGlobally)
         QObject.connect(self.actionAlignOptimizeAll, SIGNAL('triggered(bool)'),self.mtgeditor.alignOptimizeAll)
         QObject.connect(self.actionAlignOptimizeOrientation, SIGNAL('triggered(bool)'),self.mtgeditor.alignOptimizeOrientation)
         QObject.connect(self.actionAlignOptimizePosition, SIGNAL('triggered(bool)'),self.mtgeditor.alignOptimizePosition)
+        QObject.connect(self.actionScaleAndCenter, SIGNAL('triggered(bool)'),self.mtgeditor.alignScaleAndCenter)
+        QObject.connect(self.actionFilterPoints, SIGNAL('triggered(bool)'),self.mtgeditor.filterPoints) # TODO
+        QObject.connect(self.actionPointDensity, SIGNAL('triggered(bool)'),self.mtgeditor.pointDensity) # TODO
+
+
 
         self.actionViewPoints.setChecked(self.mtgeditor.isPointDisplayEnabled())
         self.actionViewContractedPoints.setChecked(self.mtgeditor.isContractedPointDisplayEnabled())
@@ -74,24 +88,14 @@ class MTGEditor(QMainWindow, editor_ui.Ui_MainWindow) :
 
         QObject.connect(self.actionContract, SIGNAL('triggered(bool)'),self.mtgeditor.contractPoints)
         QObject.connect(self.actionCreateSkeleton, SIGNAL('triggered(bool)'),self.mtgeditor.createSkeleton)
-        QObject.connect(self.actionComputeRadius, SIGNAL('triggered(bool)'),self.mtgeditor.estimateAllRadius)
-        #QObject.connect(self.actionAverageRadius, SIGNAL('triggered(bool)'),self.mtgeditor.averageNodesRadius)
-        #QObject.connect(self.actionFilterRadius, SIGNAL('triggered(bool)'),self.mtgeditor.filterNodesRadius)
-        QObject.connect(self.actionCheckMTG, SIGNAL('triggered(bool)'),self.mtgeditor.checkMTG)
-        QObject.connect(self.actionExportGeom, SIGNAL('triggered(bool)'),self.mtgeditor.exportAsGeom)
-        QObject.connect(self.actionExportNodeList, SIGNAL('triggered(bool)'),self.mtgeditor.exportNodeList)
-        QObject.connect(self.visibilityEnabled, SIGNAL('clicked(bool)'),self.mtgeditor.enabledClippingPlane)
-        QObject.connect(self.backVisibilitySlider, SIGNAL('valueChanged(int)'),self.mtgeditor.setBackVisibility)
-        QObject.connect(self.frontVisibilitySlider, SIGNAL('valueChanged(int)'),self.mtgeditor.setFrontVisibility)
-        QObject.connect(self.pointSizeSlider, SIGNAL('valueChanged(int)'),self.mtgeditor.setPointWidth)
-        QObject.connect(self.nodeSizeSlider, SIGNAL('valueChanged(int)'),self.mtgeditor.setNodeWidth)
-        QObject.connect(self.pointFilterSlider, SIGNAL('valueChanged(int)'),self.mtgeditor.setPointFilter)
+        QObject.connect(self.actionComputeMaxRadius, SIGNAL('triggered(bool)'),lambda : self.mtgeditor.estimateAllRadius(maxmethod = True))
+        QObject.connect(self.actionComputeMeanRadius, SIGNAL('triggered(bool)'),lambda : self.mtgeditor.estimateAllRadius(maxmethod = False))
 
-        QObject.connect(self.actionPuu1, SIGNAL('triggered(bool)'),self.mtgeditor.puu1)
-        QObject.connect(self.actionPuu3, SIGNAL('triggered(bool)'),self.mtgeditor.puu3)
-        QObject.connect(self.actionCherry, SIGNAL('triggered(bool)'),self.mtgeditor.cherry)
-        QObject.connect(self.actionArabido, SIGNAL('triggered(bool)'),self.mtgeditor.arabido)
-        QObject.connect(self.actionAppleTree, SIGNAL('triggered(bool)'),self.mtgeditor.appletree)
+        # QObject.connect(self.actionAverageRadius, SIGNAL('triggered(bool)'),self.mtgeditor.averageNodesRadius) # TODO
+        # QObject.connect(self.actionFilterRadius, SIGNAL('triggered(bool)'),self.mtgeditor.filterNodesRadius) # TODO
+
+        QObject.connect(self.actionCheckMTG, SIGNAL('triggered(bool)'),self.mtgeditor.checkMTG)
+
 
         QObject.connect(self.actionRootBottom, SIGNAL('triggered(bool)'),self.mtgeditor.addBottomRoot)
         QObject.connect(self.actionRootTop, SIGNAL('triggered(bool)'),self.mtgeditor.addTopRoot)
@@ -103,6 +107,14 @@ class MTGEditor(QMainWindow, editor_ui.Ui_MainWindow) :
         QObject.connect(self.actionEditScale, SIGNAL('triggered(bool)'),self.mtgeditor.tagScale)
         QObject.connect(self.actionCommitScale, SIGNAL('triggered(bool)'),self.mtgeditor.commitScale)
         QObject.connect(self.actionTagProperty, SIGNAL('triggered(bool)'),self.mtgeditor.startTagProperty)
+        QObject.connect(self.action3DRepresentation, SIGNAL('triggered(bool)'),self.mtgeditor.show3DModel)
+
+        QObject.connect(self.visibilityEnabled, SIGNAL('clicked(bool)'),self.mtgeditor.enabledClippingPlane)
+        QObject.connect(self.backVisibilitySlider, SIGNAL('valueChanged(int)'),self.mtgeditor.setBackVisibility)
+        QObject.connect(self.frontVisibilitySlider, SIGNAL('valueChanged(int)'),self.mtgeditor.setFrontVisibility)
+        QObject.connect(self.pointSizeSlider, SIGNAL('valueChanged(int)'),self.mtgeditor.setPointWidth)
+        QObject.connect(self.nodeSizeSlider, SIGNAL('valueChanged(int)'),self.mtgeditor.setNodeWidth)
+        QObject.connect(self.pointFilterSlider, SIGNAL('valueChanged(int)'),self.mtgeditor.setPointFilter)
 
         
         self.mtgeditor.actionEditScale = self.actionEditScale

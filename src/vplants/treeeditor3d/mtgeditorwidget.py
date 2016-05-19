@@ -253,13 +253,14 @@ class GLMTGEditor(QGLViewer):
         self.temporaryinfo = None
         
         self.progressdialog = QProgressDialog('Processing ...','Ok',0,100,self)
+        self.progressdialog.setWindowModality(Qt.WindowModal)
+
         def showProgress(msg,percent):
             #print msg % percent
+            if percent < 1 : self.progressdialog.show()
             self.progressdialog.setValue(percent)
-        try:
-            pgl_register_progressstatus_func(showProgress)
-        except NameError, e:
-            pass
+
+        pgl_register_progressstatus_func(showProgress)
 
         self.currenttagname = 'ScaleTag'
 
@@ -298,8 +299,7 @@ class GLMTGEditor(QGLViewer):
                 self.__update_all_mtg__()
             elif type(data) == PointSet:
                 self.redodata.append(self.points)
-                self.points = data
-                self.createPointsRepresentation()
+                self.setPoints(data)
             else:
                 QMessageBox.error(self,'undo',"Bad type for undo data")
                 return
@@ -322,8 +322,7 @@ class GLMTGEditor(QGLViewer):
                 self.__update_all_mtg__()
             elif type(data) == PointSet:
                 self.backupdata.append(self.points)
-                self.points = data
-                self.createPointsRepresentation()
+                self.setPoints(data)
             else:
                 QMessageBox.error(self,'undo',"Bad type for undo data")
                 return
@@ -711,7 +710,9 @@ class GLMTGEditor(QGLViewer):
         
     def readPoints(self,fname):
         sc = Scene(fname)
-        print
+        if len(sc) == 0:
+            QMessageBox.warning(self,'file error','Not able to read points from file '+repr(fname))
+            return
         try:
             points = sc[0].geometry.geometry
             self.translation =  sc[0].geometry.translation
@@ -720,13 +721,14 @@ class GLMTGEditor(QGLViewer):
             points = sc[0].geometry
             self.translation =  Vector3(0,0,0)
         self.setPoints(points)
+        self.showEntireScene()
         
-    def setPoints(self,points):
+    def setPoints(self,points, keepinfo = False):
         self.points = points
         class PointInfo():
             def __init__(self): pass
 
-        self.pointinfo = PointInfo()
+        if not keepinfo: self.pointinfo = PointInfo()
         if self.points.colorList is None: 
             bbx = BoundingBox(self.points)
             print 'generate color'
@@ -736,7 +738,6 @@ class GLMTGEditor(QGLViewer):
             self.points.colorList = colorList
         self.adjustTo(points)
         self.createPointsRepresentation()
-        self.showEntireScene()
         
 
     def exportPoints(self):
@@ -1360,61 +1361,132 @@ class GLMTGEditor(QGLViewer):
            self.pointsRep[0].geometry.pointList.swapCoordinates(1,2)
         self.updateGL()
 
-    def estimatePointDensity(self):
+    def estimateKDensity(self):
         if not self.check_input_points() : return
 
-        if not hasattr(self.pointinfo, 'densities'):
-            points = self.points.pointList
-            kclosests = k_closest_points_from_ann(points, 7, True)
-            kclosests = connect_all_connex_components(points,kclosests,True)
+        kclosests = self.estimateKClosest()
+        densities = densities_from_k_neighborhood(self.points.pointList, kclosests, 7)
+        self.pointinfo.densities = densities
 
+        return densities
+
+    def estimateKClosest(self):
+        if not self.check_input_points() : return
+
+        if hasattr(self.pointinfo,'kclosests'):
+            kclosests = self.pointinfo.kclosests
+        else:
+            kclosests = k_closest_points_from_ann(self.points.pointList, 7, True)
+            kclosests = connect_all_connex_components(self.points.pointList,kclosests,True)
             self.pointinfo.kclosests = kclosests
+        return kclosests
 
-            densities = densities_from_k_neighborhood(points, kclosests, 7)
-            self.pointinfo.densities = densities
+    def estimateRNeigbor(self, radius):
+        if not self.check_input_points() : return
+
+        if not hasattr(self.pointinfo, 'rnbg') or not self.pointinfo.rnbg.has_key(radius):
+            kclosests = self.estimateKClosest()
+
+            rnbgs = r_neighborhoods(self.points.pointList, kclosests, radius, True)
+            if not hasattr(self.pointinfo, 'rnbg') : self.pointinfo.rnbg = dict()
+            self.pointinfo.rnbg[radius] = rnbgs
+        else:
+            rnbgs = self.pointinfo.rnbg[radius]
+        return rnbgs
 
 
+    def pointDensityDisplay(self, densities):
 
-    def pointDensity(self):
-        self.estimatePointDensity()
+        def get_colormap():
+            try : 
+                from matplotlib.cm import get_cmap
+                p = get_cmap('jet')
+                ncmap = [p(i) for i in xrange(p.N)]
+                print 'Use matplotlib'
+                return [Color4(int(round(255*r)),int(round(255*g)),int(round(255*b)),0) for r,g,b,a in ncmap ]
+            except Exception, e:
+                print e
+                print 'use qt colormap'
+                def makeColor4(h) : 
+                    q = QColor()
+                    q.setHsv(h,255,255)
+                    return Color4(q.red(),q.green(),q.blue(),0)
+                minhue, maxhue = 255, 0
+                stephue = -1
+                return [makeColor4(minhue+i*stephue) for i in xrange(256)]
 
-        from openalea.plantgl.scenegraph.colormap import PglColorMap
-        p = PglColorMap(0,255)
-        cmap = [p(i) for i in xrange(255)]
-        self.points.colorList = apply_colormap(cmap, self.pointinfo.densities)
+        cmap = get_colormap()
+        #cmap = list(reversed(cmap))
+        #d += 1        
+        #d = d.log()
+        self.points.colorList = apply_colormap(cmap, densities)
 
         self.createPointsRepresentation()
         self.updateGL()
 
+    def pointKDensity(self):
+        from time import time
+        t = time()
+        densities = self.estimateKDensity()
+        t = time() - t
+        self.pointDensityDisplay(densities)
+        self.showMessage('Density range for K=7 : '+str((min(densities), max(densities)))+'. Computed in {}'.format(t))
 
-    def filterPoints(self):
-        self.estimatePointDensity()
-        densityratio, ok = QInputDialog.getInt(self,'Density Ratio','Select a percentage density ratio to select points to remove' ,5, 1, 100)
 
+    def pointRDensity(self):
+        mini,maxi = self.points.pointList.getZMinAndMaxIndex()
+        zdist = self.points.pointList[maxi].z-self.points.pointList[mini].z
+        radius, ok = QInputDialog.getDouble(self,'Density Radius','Select a radius of density (Pointset height : %f)' % zdist,zdist/100.,0,decimals=3)
         if ok:
+            from time import time
+            t = time()
+            rnbgs = self.estimateRNeigbor(radius)
+            densities = densities_from_k_neighborhood(self.points.pointList, rnbgs)
+            t = time() - t
+            self.pointinfo.densities = densities
+            self.pointDensityDisplay(densities)
+            self.showMessage('Density range for R='+str(radius)+' : '+str((min(densities), max(densities)))+'. Computed in {}'.format(t))
+
+    def filterPointsMin(self):
+        densityratio, ok = QInputDialog.getInt(self,'Density Ratio','Select the minimum density (percentage ratio) to select points to remove' ,5, 1, 100)
+        if ok:
+            if not hasattr(self.pointinfo,'densities'):
+                self.estimatePointDensity()
             densities = self.pointinfo.densities
             mind, maxd = min(densities), max(densities)
             densitythreshold = mind + (maxd-mind) * densityratio / 100
             self.createPointBackup()
             nbPoints = len(self.points.pointList)
             subset = [i for i in xrange(nbPoints) if densities[i] < densitythreshold] 
-            self.points.pointList = self.points.pointList.opposite_subset(subset)
-            self.points.colorList = self.points.colorList.opposite_subset(subset)
-            self.createPointsRepresentation()
+            self.setPoints(PointSet(self.points.pointList.opposite_subset(subset), self.points.colorList.opposite_subset(subset)))
             self.updateGL()
-            self.showMessage("Applied density filtering. Nb of points : "+str(len(self.points.pointList))+".")
+            self.showMessage("Applied density filtering (d<"+str(densitythreshold)+"). Nb of points : "+str(len(self.points.pointList))+".")
+
+    def filterPointsMax(self):
+        densityratio, ok = QInputDialog.getInt(self,'Density Ratio','Select a maximum density (percentage ratio) to select points to remove' ,5, 1, 100)
+
+        if ok:
+            if not hasattr(self.pointinfo,'densities'):
+                self.estimatePointDensity()
+            densities = self.pointinfo.densities
+            mind, maxd = min(densities), max(densities)
+            densitythreshold = mind + (maxd-mind) * densityratio / 100
+            self.createPointBackup()
+            nbPoints = len(self.points.pointList)
+            subset = [i for i in xrange(nbPoints) if densities[i] > densitythreshold] 
+            self.setPoints(PointSet(self.points.pointList.opposite_subset(subset), self.points.colorList.opposite_subset(subset)))
+            self.updateGL()
+            self.showMessage("Applied density filtering (d>"+str(densitythreshold)+"). Nb of points : "+str(len(self.points.pointList))+".")
 
     def subSampling(self):
         nbPoints = len(self.points.pointList)
-        ratio = 50 if nbPoints < 200000 else 20000000./nbPoints
+        ratio = 50 if nbPoints < 2000000 else 2000000./nbPoints
         pointratio, ok = QInputDialog.getInt(self,'Point Ratio','Select a percentage ratio of points to keep (Actual nb of points: %i)' % nbPoints,ratio,1,100)
         if ok:
             from random import sample
             subset = sample(xrange(nbPoints),nbPoints * pointratio / 100)
             self.createPointBackup()
-            self.points.pointList = self.points.pointList.subset(subset)
-            self.points.colorList = self.points.colorList.subset(subset)
-            self.createPointsRepresentation()
+            self.setPoints(PointSet(self.points.pointList.subset(subset), self.points.colorList.subset(subset)))
             self.updateGL()
             self.showMessage("Applied sub-sampling. Nb of points : "+str(len(self.points.pointList))+".")
 
@@ -1424,10 +1496,13 @@ class GLMTGEditor(QGLViewer):
         radius, ok = QInputDialog.getDouble(self,'Contraction Radius','Select a radius of contraction (Pointset height : %f)' % zdist,zdist/100.,0,decimals=3)
         if ok:
             self.createPointBackup()
+            from time import time
+            t = time()
             self.points.pointList = contract_point3(self.points.pointList,radius)
-            self.createPointsRepresentation()
+            t = time() - t
+            self.setPoints(self.points, True )
             self.updateGL()
-            self.showMessage("Applied contraction.")
+            self.showMessage("Applied contraction in {} sec.".format(t))
         
 
     def riemannianContraction(self):
@@ -1436,21 +1511,47 @@ class GLMTGEditor(QGLViewer):
         radius, ok = QInputDialog.getDouble(self,'Contraction Radius','Select a radius of contraction (Pointset height : %f)' % zdist,zdist/100.,0,decimals=3)
         if ok:
             self.createPointBackup()
-            if hasattr(self.pointinfo,'kclosests'):
-                kclosests = self.pointinfo.kclosests
-            else:
-                points = self.points.pointList
-                kclosests = k_closest_points_from_ann(points, 7, True)
-                kclosests = connect_all_connex_components(points,kclosests,True)
-                self.pointinfo.kclosests = kclosests
-            self.points.pointList = centroids_of_groups(points, r_neighborhoods(points, kclosests, radius))
-            self.createPointsRepresentation()
+            from time import time
+            t = time()
+            rnbgs = self.estimateRNeigbor(radius)
+            self.points.pointList = centroids_of_groups(points, nbgs)
+            t = time() - t
+            self.setPoints(self.points, True )
             self.updateGL()
-            self.showMessage("Applied contraction.")
+            self.showMessage("Applied contraction in {} sec.".format(t))
+
+    def laplacianContraction(self):
+            self.createPointBackup()
+            points = self.points.pointList
+            from time import time
+            t = time()
+            kclosests = self.estimateKClosest()
+            self.points.pointList = centroids_of_groups(points, kclosests)
+            t = time() - t
+            self.setPoints(self.points, True )
+            self.updateGL()
+            self.showMessage("Applied contraction in {} sec.".format(t))
+
+    def adaptiveRiemannianContraction(self):
+        mini,maxi = self.points.pointList.getZMinAndMaxIndex()
+        zdist = self.points.pointList[maxi].z-self.points.pointList[mini].z
+        radius, ok = QInputDialog.getDouble(self,'Contraction Radius','Select a radius of contraction (Pointset height : %f)' % zdist,zdist/100.,0,decimals=3)
+        if ok:
+            self.createPointBackup()
+            points = self.points.pointList
+            kclosests = self.estimateKClosest()
+            from time import time
+            t = time()
+            nbgs = r_neighborhoods(points, kclosests, radius)
+            self.points.pointList = centroids_of_groups(points, nbgs)
+            t = time() - t
+            self.setPoints(self.points, True )
+            self.updateGL()
+            self.showMessage("Applied contraction in {} sec.".format(t))
 
 # ---------------------------- Align ----------------------------------------   
 
-    def applyAlignement(self, funcname):
+    def applyAlignement(self, funcname, *params):
         if not self.check_input_data(): return
 
         print 'apply', funcname 
@@ -1461,7 +1562,10 @@ class GLMTGEditor(QGLViewer):
             import alignement
             func = alignement.__dict__[funcname]
 
-        func(self.points.pointList, self.mtg)
+        if len(params):
+            func(self.points.pointList, self.mtg, *params)
+        else:
+            func(self.points.pointList, self.mtg)
 
         self.__update_all_mtg__()
         self.updateGL()
@@ -1476,7 +1580,10 @@ class GLMTGEditor(QGLViewer):
         self.applyAlignement('optimizeAlignementOrientation')
 
     def alignOptimizePosition(self):
-        self.applyAlignement('optimizeAlignementPosition')
+        mtgextent = Point3Array(self.mtg.property(self.propertyposition).values()).getExtent()
+        distanceratio, ok = QInputDialog.getInt(self,'Distance Ratio','Select a percentage ratio of distance to optimize (size={})'.format(str(list(mtgextent))) ,10,1,100)
+        if ok:
+            self.applyAlignement('optimizeAlignementPosition', distanceratio)
 
     def alignScaleAndCenter(self):
         self.applyAlignement('scale_and_center')
@@ -1504,14 +1611,6 @@ class GLMTGEditor(QGLViewer):
             self.printNodeInfo(i)
         else: QMessageBox.warning(self,'Note','No information of this node.')
         
-    
-    
-    def getAttractorSubset(self, indices):
-        p3list = self.contractedpoints.pointList.subset(indices)
-
-
-# ---------------------------- End DEBUG Information ----------------------------------------  
-
 
 # ------- Contraction ---------------------------------------- 
 
@@ -1842,7 +1941,43 @@ class GLMTGEditor(QGLViewer):
             self.updateMTGView()
             self.updateGL()
 
+    def livnyReconstruction(self, startfrom = None):
+        print 'Xu Reconstruction'
+        if type(startfrom) != int:
+            if not self.selection is None:
+                startfrom = self.selection.id
+                points = None
+            else:
+                vtx = list(self.mtg.vertices(self.mtg.max_scale()))
+                if len(vtx) > 1 : QMessageBox.warning(self,"Root","Select a node")
+                elif len(vtx) ==0 : QMessageBox.warning(self,"Root","Add a root node")
+                else : startfrom = vtx[0]
+                points = self.points.pointList
+        else:
+            return
 
+        if hasattr(self,'defaultlivnycontractionnb'):
+            defaultlivnycontractionnb = self.defaultlivnycontractionnb
+        else: defaultlivnycontractionnb = 3
+
+        livnycontractionnb, ok = QInputDialog.getInt(self,'Contraction Number of Steps','Select a number of contraction step',defaultlivnycontractionnb,0,50)
+
+        if ok:
+            self.createBackup()
+            self.showMessage("Apply Livny et al. reconstruction from  node "+str(startfrom)+".")
+            self.defaultlivnycontractionnb = livnycontractionnb
+            verbose = False
+            if points is None:
+                print 'filter',len(self.points.pointList),'points with distance', binlength
+                points, emptycolor = self.filter_points(PointSet(self.points.pointList),binlength)#,[startfrom])
+                verbose = False
+                if len(points) < 10: 
+                    self.showMessage("Not enough points ("+str(len(points))+") to apply reconstruction from "+str(startfrom)+".")
+                    return
+            from livnymethod import livny_method_mtg
+            livny_method_mtg(self.mtg, startfrom, points, livnycontractionnb)
+            self.updateMTGView()
+            self.updateGL()
     
     def angleEstimate(self):
         from angleanalysis import lines_estimation, phylo_angles, lines_representation, write_phylo_angles
@@ -1953,7 +2088,7 @@ class GLMTGEditor(QGLViewer):
                 self.main = parent
                 self.widget = propwidget_ui.Ui_Dialog()
                 self.widget.setupUi(self)
-                self.init(widget)
+                self.init(self.widget)
 
             def init(self, widget):
                 QObject.connect(widget.actionAdd,SIGNAL('clicked()'),self.add_item)

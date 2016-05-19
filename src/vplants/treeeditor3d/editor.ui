@@ -226,6 +226,7 @@
       <string>Skeletization</string>
      </property>
      <addaction name="actionXuReconstruction"/>
+     <addaction name="actionLivnyReconstruction"/>
      <addaction name="actionCreateSkeleton"/>
     </widget>
     <widget class="QMenu" name="menuMultiScale">
@@ -270,8 +271,9 @@
       <string>Contraction</string>
      </property>
      <addaction name="actionEuclidianContraction"/>
+     <addaction name="actionLaplacianContraction"/>
      <addaction name="actionRiemannianContraction"/>
-     <addaction name="actionContract"/>
+     <addaction name="actionAdaptiveRiemannianContraction"/>
     </widget>
     <widget class="QMenu" name="menuAlign">
      <property name="title">
@@ -285,13 +287,27 @@
      <addaction name="actionAlignOptimizeOrientation"/>
      <addaction name="actionAlignOptimizePosition"/>
     </widget>
+    <widget class="QMenu" name="menuDensity">
+     <property name="title">
+      <string>Density</string>
+     </property>
+     <addaction name="actionKDensity"/>
+     <addaction name="actionRDensity"/>
+    </widget>
+    <widget class="QMenu" name="menuFilter">
+     <property name="title">
+      <string>Filter</string>
+     </property>
+     <addaction name="actionFilterMinDensity"/>
+     <addaction name="actionFilterMaxDensity"/>
+    </widget>
     <addaction name="actionReorient"/>
     <addaction name="separator"/>
     <addaction name="actionSubSampling"/>
     <addaction name="separator"/>
-    <addaction name="actionPointDensity"/>
+    <addaction name="menuDensity"/>
     <addaction name="separator"/>
-    <addaction name="actionFilterPoints"/>
+    <addaction name="menuFilter"/>
     <addaction name="separator"/>
     <addaction name="menuContraction"/>
     <addaction name="separator"/>
@@ -554,12 +570,12 @@
   </action>
   <action name="actionEuclidianContraction">
    <property name="text">
-    <string>Euclidian Contraction</string>
+    <string>Euclidian</string>
    </property>
   </action>
   <action name="actionRiemannianContraction">
    <property name="text">
-    <string>Riemannian Contraction</string>
+    <string>Riemannian</string>
    </property>
   </action>
   <action name="actionAngleEstimation">
@@ -676,19 +692,44 @@
     <string>Estimate Mean</string>
    </property>
   </action>
-  <action name="actionFilterPoints">
-   <property name="text">
-    <string>Filter</string>
-   </property>
-  </action>
   <action name="actionImportMTG">
    <property name="text">
     <string>Import Digit MTG</string>
    </property>
   </action>
-  <action name="actionPointDensity">
+  <action name="actionLaplacianContraction">
    <property name="text">
-    <string>Density</string>
+    <string>Laplacian</string>
+   </property>
+  </action>
+  <action name="actionAdaptiveRiemannianContraction">
+   <property name="text">
+    <string>Adaptive Riemannian</string>
+   </property>
+  </action>
+  <action name="actionFilterMinDensity">
+   <property name="text">
+    <string>Filter Min Density</string>
+   </property>
+  </action>
+  <action name="actionFilterMaxDensity">
+   <property name="text">
+    <string>Filter Max Density</string>
+   </property>
+  </action>
+  <action name="actionKDensity">
+   <property name="text">
+    <string>K-Density</string>
+   </property>
+  </action>
+  <action name="actionRDensity">
+   <property name="text">
+    <string>R-Density</string>
+   </property>
+  </action>
+  <action name="actionLivnyReconstruction">
+   <property name="text">
+    <string>Livny et al</string>
    </property>
   </action>
  </widget>

@@ -65,8 +65,15 @@ class MTGEditor(QMainWindow, editor_ui.Ui_MainWindow) :
         QObject.connect(self.actionAlignOptimizeOrientation, SIGNAL('triggered(bool)'),self.mtgeditor.alignOptimizeOrientation)
         QObject.connect(self.actionAlignOptimizePosition, SIGNAL('triggered(bool)'),self.mtgeditor.alignOptimizePosition)
         QObject.connect(self.actionScaleAndCenter, SIGNAL('triggered(bool)'),self.mtgeditor.alignScaleAndCenter)
-        QObject.connect(self.actionFilterPoints, SIGNAL('triggered(bool)'),self.mtgeditor.filterPoints) # TODO
-        QObject.connect(self.actionPointDensity, SIGNAL('triggered(bool)'),self.mtgeditor.pointDensity) # TODO
+        QObject.connect(self.actionFilterMinDensity, SIGNAL('triggered(bool)'),self.mtgeditor.filterPointsMin)
+        QObject.connect(self.actionFilterMaxDensity, SIGNAL('triggered(bool)'),self.mtgeditor.filterPointsMax)
+        QObject.connect(self.actionKDensity, SIGNAL('triggered(bool)'),self.mtgeditor.pointKDensity) # TODO
+        QObject.connect(self.actionRDensity, SIGNAL('triggered(bool)'),self.mtgeditor.pointRDensity) # TODO
+        QObject.connect(self.actionSubSampling, SIGNAL('triggered(bool)'),self.mtgeditor.subSampling)
+        QObject.connect(self.actionEuclidianContraction, SIGNAL('triggered(bool)'),self.mtgeditor.euclidianContraction)
+        QObject.connect(self.actionLaplacianContraction, SIGNAL('triggered(bool)'),self.mtgeditor.laplacianContraction)
+        QObject.connect(self.actionRiemannianContraction, SIGNAL('triggered(bool)'),self.mtgeditor.riemannianContraction)
+        QObject.connect(self.actionAdaptiveRiemannianContraction, SIGNAL('triggered(bool)'),self.mtgeditor.adaptiveRiemannianContraction)
 
 
 
@@ -86,7 +93,6 @@ class MTGEditor(QMainWindow, editor_ui.Ui_MainWindow) :
         QObject.connect(self.actionRefreshView, SIGNAL('triggered(bool)'),self.mtgeditor.refreshView)
         QObject.connect(self.actionAdjustView, SIGNAL('triggered(bool)'),self.mtgeditor.adjustView)
 
-        QObject.connect(self.actionContract, SIGNAL('triggered(bool)'),self.mtgeditor.contractPoints)
         QObject.connect(self.actionCreateSkeleton, SIGNAL('triggered(bool)'),self.mtgeditor.createSkeleton)
         QObject.connect(self.actionComputeMaxRadius, SIGNAL('triggered(bool)'),lambda : self.mtgeditor.estimateAllRadius(maxmethod = True))
         QObject.connect(self.actionComputeMeanRadius, SIGNAL('triggered(bool)'),lambda : self.mtgeditor.estimateAllRadius(maxmethod = False))
@@ -100,9 +106,7 @@ class MTGEditor(QMainWindow, editor_ui.Ui_MainWindow) :
         QObject.connect(self.actionRootBottom, SIGNAL('triggered(bool)'),self.mtgeditor.addBottomRoot)
         QObject.connect(self.actionRootTop, SIGNAL('triggered(bool)'),self.mtgeditor.addTopRoot)
         QObject.connect(self.actionXuReconstruction, SIGNAL('triggered(bool)'),self.mtgeditor.xuReconstruction)
-        QObject.connect(self.actionSubSampling, SIGNAL('triggered(bool)'),self.mtgeditor.subSampling)
-        QObject.connect(self.actionEuclidianContraction, SIGNAL('triggered(bool)'),self.mtgeditor.euclidianContraction)
-        QObject.connect(self.actionRiemannianContraction, SIGNAL('triggered(bool)'),self.mtgeditor.riemannianContraction)
+        QObject.connect(self.actionLivnyReconstruction, SIGNAL('triggered(bool)'),self.mtgeditor.livnyReconstruction)
         QObject.connect(self.actionAngleEstimation, SIGNAL('triggered(bool)'),self.mtgeditor.angleEstimate)
         QObject.connect(self.actionEditScale, SIGNAL('triggered(bool)'),self.mtgeditor.tagScale)
         QObject.connect(self.actionCommitScale, SIGNAL('triggered(bool)'),self.mtgeditor.commitScale)

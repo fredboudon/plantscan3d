@@ -122,11 +122,9 @@ def complete_lines(mtg):
     lines = mtg.property('_line')
     nlines = dict(lines)
     for vid, line in lines.items():
-        print vid, line
         while mtg.parent(vid) and lines.get(mtg.parent(vid)) == None:              
             vid = mtg.parent(vid)
             nlines[vid] = line
-            print 'set', vid, line
     lines.update(nlines)
 
   
@@ -177,7 +175,6 @@ def convertStdMTGWithNode(g, useHeuristic = True, invertCoord = False):
         cparent = dict()
         for vtx in positionned:
             ancestors = g.Ancestors(vtx, EdgeType = '<')
-            if vtx == 548: print 'found', ancestors
             if len(ancestors) == 0: continue
             if ancestors[0] == vtx: ancestors.pop(0)
             if len(ancestors) == 0: continue
@@ -208,8 +205,6 @@ def convertStdMTGWithNode(g, useHeuristic = True, invertCoord = False):
 
         a = [(vtx, lines[vtx], info[2]) for vtx, info in components.items()]
         a.sort(key=lambda v:v[1])
-        for vtx, line, info in a:
-            print '**', vtx, g.label(vtx), line, info
 
         for vtx, info in components.items():
             posi, posj, axe = info
@@ -245,7 +240,6 @@ def convertStdMTGWithNode(g, useHeuristic = True, invertCoord = False):
                     group.append(c)
                 else: break
             groups.append(group)
-        print groups
         for group in groups:
             p = g.parent(group[0])
             initpos = positions[p]

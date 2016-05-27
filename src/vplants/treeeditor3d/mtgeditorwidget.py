@@ -18,6 +18,7 @@ cui.check_ui_generation(os.path.join(ldir, 'contraction.ui'))
 cui.check_ui_generation(os.path.join(ldir, 'reconstruction.ui'))
 cui.check_ui_generation(os.path.join(ldir, 'radius.ui'))
 cui.check_ui_generation(os.path.join(ldir, 'propwidget.ui'))
+cui.check_ui_generation(os.path.join(ldir, 'adpativecontractionparam.ui'))
 
 class Pos3Setter:
     def __init__(self,ctrlpointset,index):
@@ -135,11 +136,13 @@ class GLMTGEditor(QGLViewer):
                           'Points' : (180,180,180),
                           'ContractedPoints' : (255,0,0),
                           'CtrlPoints' : (30,250,30),
+                          #'CtrlPoints' : (250,250,250),
                           'NewCtrlPoints' : (30,250,250),
                           'SelectedCtrlPoints' : (30,250,30),
                           'EdgeInf' : (255,255,255),
-                          'EdgePlus' : (255,0,0),
+                          'EdgePlus' : (255,0,0),                          
                           'Radius' : (200,200,200),
+                          'Direction' : (255,255,255),
                           '3DModel' : (128,64,0),
                           'LocalAttractors' :(255, 255, 0),
                           'Cone' :(255,255,0),
@@ -156,6 +159,7 @@ class GLMTGEditor(QGLViewer):
                           'EdgeInf' : (0,0,0),
                           'EdgePlus' : (200,200,0),
                           'Radius' : (100,100,100),
+                          'Direction' : (0,0,0),
                           '3DModel' : (128,64,0),
                           'LocalAttractors' :(255, 255, 0),
                           'Cone' :(255,255,0),
@@ -174,8 +178,9 @@ class GLMTGEditor(QGLViewer):
         self.selectedPointColor = Material(self.theme['SelectedCtrlPoints'],1)
         self.radiusMaterial = Material(self.theme['Radius'],1)
         self.modelMaterial =  Material(self.theme['3DModel'],1)
+
         self.pointDisplay = True
-        self.contractedpointDisplay = True
+        self.pointAttributeDisplay = True
         self.mtgDisplay = True
         self.ctrlPointDisplay = True
         self.modelDisplay = True
@@ -196,14 +201,14 @@ class GLMTGEditor(QGLViewer):
         self.modelRep = None
         
         self.points = None if pointfile is None else Scene(pointfile)[0].geometry
-        self.contractedpoints = None
         self.mtgfile = mtgfile
         self.propertyposition = 'position'        
         self.propertyradius = 'radius'        
         
         self.pointsRep = None
-        self.contractedpointsRep = None
+        self.pointsAttributeRep = None
         
+        self.k = 7
         self.pointsKDTree = None
         
         self.mtg  = None        
@@ -224,21 +229,6 @@ class GLMTGEditor(QGLViewer):
         self.selection = None
         self.selectionTrigger = None
         
-        # Debug Information
-        self.nodesinfo = None
-        self.nodesinfoRepIndex = {}
-        
-        
-        self.attractorsMaterial = Material(self.theme['LocalAttractors'],1)
-        self.attractorsDisplay = True
-        self.attractors = None
-        self.attractorsRep = Scene() 
-        
-        self.coneMaterial = Material(ambient=self.theme['Cone'], diffuse=1, transparency=0.5)
-        self.conesDisplay = True
-        self.cones = None
-        self.conesRep = Scene()
-        
         self.translation = None
         
         self.clippigPlaneEnabled = False        
@@ -258,6 +248,7 @@ class GLMTGEditor(QGLViewer):
         def showProgress(msg,percent):
             #print msg % percent
             if percent < 1 : self.progressdialog.show()
+            self.progressdialog.setLabelText(msg % percent)
             self.progressdialog.setValue(percent)
 
         pgl_register_progressstatus_func(showProgress)
@@ -268,6 +259,17 @@ class GLMTGEditor(QGLViewer):
             self.parent().menuLoad.setEnabled(False)
 
         self.propertyeditor = None
+
+        self.paramcache = dict()
+
+    def getparamcache(self, name, defaultvalue):
+        if name in self.paramcache:
+            return self.paramcache[name]
+        else :
+            return defaultvalue
+
+    def setparamcache(self, name, value):
+        self.paramcache[name] = value
 
     def createBackup(self):
         from copy import deepcopy
@@ -394,12 +396,8 @@ class GLMTGEditor(QGLViewer):
     def fastDraw(self):
         """ paint in opengl """
         glDisable(GL_LIGHTING)
-        if self.attractorsDisplay and self.attractors:
-            self.attractorsRep.apply(self.glrenderer)
         
         if self.pointDisplay and self.points:
-            #self.pointMaterial.apply(self.glrenderer)
-            #self.points.apply(self.glrenderer)
             self.pointsRep.apply(self.glrenderer)
             
            
@@ -434,13 +432,12 @@ class GLMTGEditor(QGLViewer):
             glDisable(GL_CLIP_PLANE0)
             glDisable(GL_CLIP_PLANE1)
         glDisable(GL_LIGHTING)
-        if self.attractorsDisplay and self.attractors:
-            self.attractorsRep.apply(self.glrenderer)
          
         if self.pointDisplay and self.points:
-            #self.pointMaterial.apply(self.glrenderer)
-            #self.points.apply(self.glrenderer)
             self.pointsRep.apply(self.glrenderer)
+            
+        if self.pointAttributeDisplay and self.pointsAttributeRep:
+            self.pointsAttributeRep.apply(self.glrenderer)
             
            
         if self.mtgDisplay and self.mtgrep:
@@ -463,9 +460,6 @@ class GLMTGEditor(QGLViewer):
             self.modelRep.apply(self.glrenderer)
         
 
-        if self.conesDisplay and self.cones:
-            self.conesRep.apply(self.glrenderer)
-
         glDisable(GL_BLEND)
         glDisable(GL_LIGHTING)
          
@@ -487,6 +481,15 @@ class GLMTGEditor(QGLViewer):
         self.temporaryinfo2D = None
         self.temporaryinfo = None
         
+    def setPointAttribute(self, sc):
+        self.pointsAttributeRep = sc
+        self.setPointAttributeDisplay(True)
+
+    def setPointAttributeDisplay(self, enabled):
+        if enabled != self.pointAttributeDisplay:
+            self.pointAttributeDisplay = enabled
+            self.emit(SIGNAL("PointAttributeDisplay(bool)"), enabled)
+
     
     def setclassicdata(self,dataedit, dataoriginal, pointname = None):
         from os.path import join,exists
@@ -648,6 +651,7 @@ class GLMTGEditor(QGLViewer):
             
             nodeiddict = dict([(vid,i) for i,vid in enumerate(nodeids)])
             parents = [nodeiddict[nonone(self.mtg.parent(i),i)] for i in nodeids]
+
             print 'points_at_distance_from_skeleton', pointfilter
             distantpoints = points_at_distance_from_skeleton(pointset.pointList,nodes, parents, -pointfilter,1)
             #print distantpoints
@@ -728,7 +732,9 @@ class GLMTGEditor(QGLViewer):
         class PointInfo():
             def __init__(self): pass
 
-        if not keepinfo: self.pointinfo = PointInfo()
+        if not keepinfo: 
+            self.pointinfo = PointInfo()
+        self.pointsAttributeRep = None
         if self.points.colorList is None: 
             bbx = BoundingBox(self.points)
             print 'generate color'
@@ -767,35 +773,33 @@ class GLMTGEditor(QGLViewer):
         
     def saveAsGeom(self,fname):
         sc = Scene()
-        if self.attractorsDisplay and self.attractors:
-            #sc += self.attractorsRep
-            pointset = PointSet(self.attractors)
-            pointset.width = self.pointWidth
-            sc += Shape(Translated(self.translation,PointSet(pointset)), self.attractorsMaterial)
         
         if self.pointDisplay and self.points:
-            #sc += self.pointsRep
-            sc += Shape(Translated(self.translation,PointSet(self.points.pointList)), self.pointMaterial)
+            sc += self.pointsRep
+            #sc += Shape(Translated(self.translation,PointSet(self.points.pointList)), self.pointMaterial)
             
-        if self.contractedpointDisplay and self.contractedpoints:
-            #sc += self.contractedpointsRep
-            sc += Shape(Translated(self.translation,PointSet(self.contractedpoints.pointList)), self.contractedpointMaterial)
+        if self.pointAttributeDisplay and self.pointsAttributeRep:
+            sc += self.pointsAttributeRep
             
         if self.mtgDisplay and self.mtgrep:
             #sc +=  self.mtgrep
-            mtgrep, mtgrepindex  = createMTGRepresentation(self.mtg,self.edgeInfMaterial,self.edgePlusMaterial, translation=self.translation)
+            #mtgrep, mtgrepindex  = createMTGRepresentation(self.mtg,self.edgeInfMaterial,self.edgePlusMaterial, translation=self.translation)
             sc += mtgrep
         
-        #if self.conesDisplay and self.cones:
-        #    sc += self.conesRep
          
-        if self.ctrlPointDisplay and self.ctrlPointsRep: pass
-            #sc += self.ctrlPointsRep
+        if self.ctrlPointDisplay and self.ctrlPointsRep:
+            sc += self.ctrlPointsRep
             #sc += Scene([ ctrlPoint.representation(self.ctrlPointPrimitive) for ctrlPoint in self.ctrlPoints.itervalues() ])
             
         if self.modelDisplay and self.modelRep:
-            sc += self.create3DModelRepresentation(self.translation)
+            sc += self.modelRep #self.create3DModelRepresentation(self.translation)
             
+        if self.radiusDisplay and self.radiusRep:    
+            sc += self.radiusRep
+
+        if self.temporaryinfo:
+            sc += self.temporaryinfo
+
         sc.save(fname)
          
     def exportNodeList(self):
@@ -868,9 +872,9 @@ class GLMTGEditor(QGLViewer):
             self.pointDisplay = enabled
             self.updateGL()
 
-    def enableContractedPointDisplay(self,enabled) : 
-        if self.contractedpointDisplay != enabled:
-            self.contractedpointDisplay = enabled
+    def enablePointAttributeDisplay(self,enabled) : 
+        if self.pointAttributeDisplay != enabled:
+            self.pointAttributeDisplay = enabled
             self.updateGL()
 
     def enableMTGDisplay(self,enabled) : 
@@ -894,7 +898,7 @@ class GLMTGEditor(QGLViewer):
             self.updateGL()
 
     def isPointDisplayEnabled(self) : return self.pointDisplay
-    def isContractedPointDisplayEnabled(self) : return self.contractedpointDisplay
+    def isPointAttributeDisplayEnabled(self) : return self.pointAttributeDisplay
     def isMTGDisplayEnabled(self) : return self.mtgDisplay
     def isControlPointsDisplayEnabled(self) : return self.ctrlPointDisplay
     def is3DModelDisplayEnabled(self): return self.modelDisplay
@@ -1116,9 +1120,9 @@ class GLMTGEditor(QGLViewer):
             return False
         return True
  
-    def check_input_mtg(self):
+    def check_input_mtg(self, msg = ''):
         if self.mtg is None : 
-            QMessageBox.warning(self,'MTG','No mtg loaded')            
+            QMessageBox.warning(self,'MTG','No mtg loaded. '+msg)            
             return False
         return True
 
@@ -1335,6 +1339,14 @@ class GLMTGEditor(QGLViewer):
         self.setTempInfoDisplay(Scene([Shape(PointSet(self.pointsRep[0].geometry.pointList.subset(nbg),width = self.pointWidth+2),Material((255,0,255)))]))
         self.showMessage("Stick subtree of "+str(nid)+" to points.")
         self.updateGL()
+
+    def smoothPosition(self):
+        from mtgmanip import gaussian_filter
+        self.createBackup()
+        self.showMessage("Applied gaussian filter to positions.")
+        gaussian_filter(self.mtg,self.propertyposition)
+        self.__update_all_mtg__()
+        self.updateGL()
         
     def revolveAroundSelection(self):
         self.camera().setRevolveAroundPoint(toVec(self.selection.position()))
@@ -1361,11 +1373,18 @@ class GLMTGEditor(QGLViewer):
            self.pointsRep[0].geometry.pointList.swapCoordinates(1,2)
         self.updateGL()
 
+    def sortZ(self):
+        if not self.check_input_points() : return
+        self.createPointBackup()
+        self.points.pointList.sortZ()
+        self.setPoints(PointSet(self.points.pointList))
+        self.updateGL()
+
     def estimateKDensity(self):
         if not self.check_input_points() : return
 
         kclosests = self.estimateKClosest()
-        densities = densities_from_k_neighborhood(self.points.pointList, kclosests, 7)
+        densities = densities_from_k_neighborhood(self.points.pointList, kclosests, self.k)
         self.pointinfo.densities = densities
 
         return densities
@@ -1376,64 +1395,79 @@ class GLMTGEditor(QGLViewer):
         if hasattr(self.pointinfo,'kclosests'):
             kclosests = self.pointinfo.kclosests
         else:
-            kclosests = k_closest_points_from_ann(self.points.pointList, 7, True)
+            kclosests = k_closest_points_from_ann(self.points.pointList, self.k, True)
             kclosests = connect_all_connex_components(self.points.pointList,kclosests,True)
             self.pointinfo.kclosests = kclosests
         return kclosests
 
-    def estimateRNeigbor(self, radius):
+    def estimateRNeigbor(self, radius, multithreaded = False):
         if not self.check_input_points() : return
 
         if not hasattr(self.pointinfo, 'rnbg') or not self.pointinfo.rnbg.has_key(radius):
             kclosests = self.estimateKClosest()
-
-            rnbgs = r_neighborhoods(self.points.pointList, kclosests, radius, True)
+            r_neighborhoods_func = r_neighborhoods_mt if multithreaded else r_neighborhoods
+            rnbgs = r_neighborhoods_func(self.points.pointList, kclosests, radius, True)
             if not hasattr(self.pointinfo, 'rnbg') : self.pointinfo.rnbg = dict()
             self.pointinfo.rnbg[radius] = rnbgs
         else:
             rnbgs = self.pointinfo.rnbg[radius]
         return rnbgs
 
+    def estimateDirections(self, neigbors = None):
+        directions = pointsets_orientations(self.points.pointList, neigbors)
+        self.pointinfo.directions = directions
+        return directions
+
+    def estimateNormals(self, neigbors = None):
+        if neigbors is None: neigbors = self.estimateKClosest()
+        normals = pointsets_normals(self.points.pointList, neigbors)
+        source = 0
+        normals = pgl.pointsets_orient_normals(normals,source,neigbors)
+        self.pointinfo.normals = normals
+        return normals
+
+    def get_colormap(self):
+        try : 
+            from matplotlib.cm import get_cmap
+            p = get_cmap('jet')
+            ncmap = [p(i) for i in xrange(p.N)]
+            print 'Use matplotlib'
+            return [Color4(int(round(255*r)),int(round(255*g)),int(round(255*b)),0) for r,g,b,a in ncmap ]
+        except Exception, e:
+            print e
+            print 'use qt colormap'
+            def makeColor4(h) : 
+                q = QColor()
+                q.setHsv(h,255,255)
+                return Color4(q.red(),q.green(),q.blue(),0)
+            minhue, maxhue = 255, 0
+            stephue = -1
+            return [makeColor4(minhue+i*stephue) for i in xrange(256)]
 
     def pointDensityDisplay(self, densities):
 
-        def get_colormap():
-            try : 
-                from matplotlib.cm import get_cmap
-                p = get_cmap('jet')
-                ncmap = [p(i) for i in xrange(p.N)]
-                print 'Use matplotlib'
-                return [Color4(int(round(255*r)),int(round(255*g)),int(round(255*b)),0) for r,g,b,a in ncmap ]
-            except Exception, e:
-                print e
-                print 'use qt colormap'
-                def makeColor4(h) : 
-                    q = QColor()
-                    q.setHsv(h,255,255)
-                    return Color4(q.red(),q.green(),q.blue(),0)
-                minhue, maxhue = 255, 0
-                stephue = -1
-                return [makeColor4(minhue+i*stephue) for i in xrange(256)]
 
-        cmap = get_colormap()
-        #cmap = list(reversed(cmap))
-        #d += 1        
-        #d = d.log()
+        cmap = self.get_colormap()
         self.points.colorList = apply_colormap(cmap, densities)
 
         self.createPointsRepresentation()
         self.updateGL()
 
     def pointKDensity(self):
-        from time import time
-        t = time()
-        densities = self.estimateKDensity()
-        t = time() - t
-        self.pointDensityDisplay(densities)
-        self.showMessage('Density range for K=7 : '+str((min(densities), max(densities)))+'. Computed in {}'.format(t))
+        if not self.check_input_points() : return
+        k, ok = QInputDialog.getInt(self,'K Neighborhood','Select a k for neighborhood' ,self.k,0,100)
+        if ok:
+            self.k = k
+            from time import time
+            t = time()
+            densities = self.estimateKDensity()
+            t = time() - t
+            self.pointDensityDisplay(densities)
+            self.showMessage('Density range for K='+str(self.k)+' : '+str((min(densities), max(densities)))+'. Computed in {}'.format(t))
 
 
     def pointRDensity(self):
+        if not self.check_input_points() : return
         mini,maxi = self.points.pointList.getZMinAndMaxIndex()
         zdist = self.points.pointList[maxi].z-self.points.pointList[mini].z
         radius, ok = QInputDialog.getDouble(self,'Density Radius','Select a radius of density (Pointset height : %f)' % zdist,zdist/100.,0,decimals=3)
@@ -1441,19 +1475,83 @@ class GLMTGEditor(QGLViewer):
             from time import time
             t = time()
             rnbgs = self.estimateRNeigbor(radius)
-            densities = densities_from_k_neighborhood(self.points.pointList, rnbgs)
+            densities = densities_from_r_neighborhood(rnbgs, radius)
             t = time() - t
             self.pointinfo.densities = densities
             self.pointDensityDisplay(densities)
-            self.showMessage('Density range for R='+str(radius)+' : '+str((min(densities), max(densities)))+'. Computed in {}'.format(t))
+            self.showMessage('Density range for R='+str(radius)+' : '+str(densities.getMinAndMax(True))+'. Computed in {}'.format(t))
+            return True
+        return False
+
+    def pointRDensityMT(self):
+        if not self.check_input_points() : return
+        mini,maxi = self.points.pointList.getZMinAndMaxIndex()
+        zdist = self.points.pointList[maxi].z-self.points.pointList[mini].z
+        radius, ok = QInputDialog.getDouble(self,'Density Radius','Select a radius of density (Pointset height : %f)' % zdist,zdist/100.,0,decimals=3)
+        if ok:
+            from time import time
+            t = time()
+            rnbgs = self.estimateRNeigbor(radius, True)
+            densities = densities_from_r_neighborhood(rnbgs, radius)
+            t = time() - t
+            self.pointinfo.densities = densities
+            self.pointDensityDisplay(densities)
+            self.showMessage('Density range for R='+str(radius)+' : '+str(densities.getMinAndMax(True))+'. Computed in {}'.format(t))
+
+    def densityHistogram(self):
+        if not self.check_input_points() : return
+        try:
+            import matplotlib.pyplot as plt 
+        except ImportError, e:
+            QMessageBox.critical(self, "MatPlotLib","MatPlotLib not available !")
+            return
+        if not hasattr(self.pointinfo,'densities') : 
+            if not self.pointRDensity(): return
+        densities = self.pointinfo.densities
+        n, bins, patches = plt.hist(densities)
+        cmap = self.get_colormap()
+        nbcolor = len(cmap)
+        itcol = nbcolor / (len(bins))
+        for i,p in enumerate(patches):
+            col = cmap[int(itcol * (i+0.5))]
+            col = (col.red/255.,col.green/255.,col.blue/255.,1-col.alpha/255.)
+            p.set_facecolor(col)
+        plt.show()
+
+    def pointDirections(self):
+        if not self.check_input_points() : return
+        mini,maxi = self.points.pointList.getZMinAndMaxIndex()
+        zdist = self.points.pointList[maxi].z-self.points.pointList[mini].z
+        radius, ok = QInputDialog.getDouble(self,'Direction Radius','Select a radius to estimate point direction (Pointset height : %f)' % zdist,zdist/100.,0,decimals=3)
+        if ok:
+            rnbgs = self.estimateRNeigbor(radius)
+            directions = self.estimateDirections(rnbgs)
+            dl = zdist / 200
+            s = Scene([Shape(Group([Polyline([p+d*dl , p-d*dl]) for p,d in zip(self.points.pointList, directions)]), Material(self.theme['Direction'],1))])
+            self.setPointAttribute(s)
+            self.updateGL()
+            return True
+        else:
+            return False
+
+    def pointNormals(self):
+        kclosests = self.estimateKClosest()
+        directions = self.estimateNormals(kclosests)
+        mini,maxi = self.points.pointList.getZMinAndMaxIndex()
+        zdist = self.points.pointList[maxi].z-self.points.pointList[mini].z
+        dl = zdist / 200
+        s = Scene([Shape(Group([Polyline([p+d*dl , p-d*dl]) for p,d in zip(self.points.pointList, directions)]), Material(self.theme['Direction'],1))])
+        self.setPointAttribute(s)
+        self.updateGL()
 
     def filterPointsMin(self):
+        if not self.check_input_points() : return
+        if not hasattr(self.pointinfo,'densities'):
+            self.pointRDensity()
         densityratio, ok = QInputDialog.getInt(self,'Density Ratio','Select the minimum density (percentage ratio) to select points to remove' ,5, 1, 100)
         if ok:
-            if not hasattr(self.pointinfo,'densities'):
-                self.estimatePointDensity()
             densities = self.pointinfo.densities
-            mind, maxd = min(densities), max(densities)
+            mind, maxd = densities.getMinAndMax(True)
             densitythreshold = mind + (maxd-mind) * densityratio / 100
             self.createPointBackup()
             nbPoints = len(self.points.pointList)
@@ -1463,14 +1561,15 @@ class GLMTGEditor(QGLViewer):
             self.showMessage("Applied density filtering (d<"+str(densitythreshold)+"). Nb of points : "+str(len(self.points.pointList))+".")
 
     def filterPointsMax(self):
+        if not self.check_input_points() : return
+        if not hasattr(self.pointinfo,'densities'):
+            self.pointRDensity()
         densityratio, ok = QInputDialog.getInt(self,'Density Ratio','Select a maximum density (percentage ratio) to select points to remove' ,5, 1, 100)
 
         if ok:
-            if not hasattr(self.pointinfo,'densities'):
-                self.estimatePointDensity()
             densities = self.pointinfo.densities
-            mind, maxd = min(densities), max(densities)
-            densitythreshold = mind + (maxd-mind) * densityratio / 100
+            mind, maxd = densities.getMinAndMax(True)
+            densitythreshold = maxd - (maxd-mind) * densityratio / 100
             self.createPointBackup()
             nbPoints = len(self.points.pointList)
             subset = [i for i in xrange(nbPoints) if densities[i] > densitythreshold] 
@@ -1479,6 +1578,7 @@ class GLMTGEditor(QGLViewer):
             self.showMessage("Applied density filtering (d>"+str(densitythreshold)+"). Nb of points : "+str(len(self.points.pointList))+".")
 
     def subSampling(self):
+        if not self.check_input_points() : return
         nbPoints = len(self.points.pointList)
         ratio = 50 if nbPoints < 2000000 else 2000000./nbPoints
         pointratio, ok = QInputDialog.getInt(self,'Point Ratio','Select a percentage ratio of points to keep (Actual nb of points: %i)' % nbPoints,ratio,1,100)
@@ -1491,6 +1591,7 @@ class GLMTGEditor(QGLViewer):
             self.showMessage("Applied sub-sampling. Nb of points : "+str(len(self.points.pointList))+".")
 
     def euclidianContraction(self):
+        if not self.check_input_points() : return
         mini,maxi = self.points.pointList.getZMinAndMaxIndex()
         zdist = self.points.pointList[maxi].z-self.points.pointList[mini].z
         radius, ok = QInputDialog.getDouble(self,'Contraction Radius','Select a radius of contraction (Pointset height : %f)' % zdist,zdist/100.,0,decimals=3)
@@ -1506,6 +1607,7 @@ class GLMTGEditor(QGLViewer):
         
 
     def riemannianContraction(self):
+        if not self.check_input_points() : return
         mini,maxi = self.points.pointList.getZMinAndMaxIndex()
         zdist = self.points.pointList[maxi].z-self.points.pointList[mini].z
         radius, ok = QInputDialog.getDouble(self,'Contraction Radius','Select a radius of contraction (Pointset height : %f)' % zdist,zdist/100.,0,decimals=3)
@@ -1514,38 +1616,147 @@ class GLMTGEditor(QGLViewer):
             from time import time
             t = time()
             rnbgs = self.estimateRNeigbor(radius)
-            self.points.pointList = centroids_of_groups(points, nbgs)
+            self.points.pointList = centroids_of_groups(self.points.pointList, rnbgs)
             t = time() - t
             self.setPoints(self.points, True )
             self.updateGL()
             self.showMessage("Applied contraction in {} sec.".format(t))
 
     def laplacianContraction(self):
+        if not self.check_input_points() : return
+        self.createPointBackup()
+        points = self.points.pointList
+        from time import time
+        t = time()
+        kclosests = self.estimateKClosest()
+        self.points.pointList = centroids_of_groups(points, kclosests)
+        t = time() - t
+        self.setPoints(self.points, True )
+        self.updateGL()
+        self.showMessage("Applied contraction in {} sec.".format(t))
+
+    def adaptiveRadialContractionParam(self):
+        import adpativecontractionparam_ui
+        from vplants.plantgl.gui.curve2deditor import FuncConstraint
+        
+        class ContractionDialog(QDialog, adpativecontractionparam_ui.Ui_Dialog) :
+                def __init__(self, parent=None):
+                    QDialog.__init__(self, parent)
+                    adpativecontractionparam_ui.Ui_Dialog.__init__(self)
+                    self.setupUi(self)
+                    self.funcEditor.pointsConstraints = FuncConstraint()
+
+        cdialog = ContractionDialog(self)
+
+        kclosests = self.estimateKClosest()
+        points = self.points.pointList
+
+        from numpy import mean
+        mini,maxi = points.getZMinAndMaxIndex()
+        zdist = points[maxi].z-points[mini].z
+        mdistance = mean(pointset_mean_distances(points, points, kclosests))
+
+        cdialog.widthBox.setValue(mdistance)
+        cdialog.minRadiusBox.setValue(zdist/200)
+        cdialog.maxRadiusBox.setValue(zdist/50)
+
+        Rfunc = NurbsCurve2D([(0,0,1),(0.3,0.3,1),(0.7,0.7,1),(1,1,1)])
+        cdialog.funcEditor.setCurve(Rfunc)
+
+        if cdialog.exec_() == QDialog.Accepted:
+            return cdialog.widthBox.value(), cdialog.minRadiusBox.value(), cdialog.maxRadiusBox.value(), cdialog.funcEditor.getCurve()
+
+    def adaptiveRadialContraction(self):
+        if not self.check_input_points() : return
+        if not hasattr(self.pointinfo,'densities'):
+            self.pointRDensity()
+        if not hasattr(self.pointinfo, 'directions'):
+            if not self.pointDirections(): return
+        param = self.adaptiveRiemannianContractionParam()
+        if not param is None:
+            sectionwidth, minradius, maxradius, radiusfunc = param
             self.createPointBackup()
             points = self.points.pointList
+            kclosests = self.estimateKClosest()
+            from math import pi
             from time import time
             t = time()
-            kclosests = self.estimateKClosest()
-            self.points.pointList = centroids_of_groups(points, kclosests)
+            orientations =  self.pointinfo.directions
+            densities = self.pointinfo.densities
+            radiusfunc = NurbsCurve2D(radiusfunc.ctrlPointList, degree=radiusfunc.degree, knotList=radiusfunc.knotList, stride=radiusfunc.stride, width=radiusfunc.width)
+            densityradiusmap = pgl.QuantisedFunction(radiusfunc)
+            radii = pgl.adaptive_radii(densities, minradius*pi, maxradius*pi, densityradiusmap)
+            cpoints2, radii2 = adaptive_section_circles(points, kclosests, orientations, sectionwidth, radii)
+
+            self.points.pointList = cpoints2
             t = time() - t
             self.setPoints(self.points, True )
             self.updateGL()
             self.showMessage("Applied contraction in {} sec.".format(t))
 
-    def adaptiveRiemannianContraction(self):
-        mini,maxi = self.points.pointList.getZMinAndMaxIndex()
-        zdist = self.points.pointList[maxi].z-self.points.pointList[mini].z
-        radius, ok = QInputDialog.getDouble(self,'Contraction Radius','Select a radius of contraction (Pointset height : %f)' % zdist,zdist/100.,0,decimals=3)
+
+
+    def pathBasedContraction(self):
+        self.check_input_mtg('Require a root position.')
+        livnycontractionnb, ok = QInputDialog.getInt(self,'Number of Contraction Steps','Select a number of contraction step', self.getparamcache('livnycontractionnb',3),0,50)
         if ok:
+            self.setparamcache('livnycontractionnb',livnycontractionnb)
             self.createPointBackup()
             points = self.points.pointList
-            kclosests = self.estimateKClosest()
+            if self.mtg:
+                startfrom = self.mtg.component_roots_at_scale(self.mtg.root, self.mtg.max_scale())[0]
+                rootpos = Vector3(self.mtg.property('position')[startfrom])
+                root = len(points)
+                points.append(rootpos)
+            else:
+                root = 0
             from time import time
+            from livnymethod import livny_contraction
             t = time()
-            nbgs = r_neighborhoods(points, kclosests, radius)
-            self.points.pointList = centroids_of_groups(points, nbgs)
+            newPointList = points
+            for i in xrange(livnycontractionnb):
+                newPointList, parents, weights = livny_contraction(newPointList, root)
+            if self.mtg:
+                del newPointList[root]
+            self.points.pointList = newPointList
             t = time() - t
             self.setPoints(self.points, True )
+            self.updateGL()
+            self.showMessage("Applied contraction in {} sec.".format(t))
+
+    def rosaContraction(self):
+        if not hasattr(self.pointinfo, 'directions'):
+            if not self.pointDirections(): return
+
+        import numpy as np
+        
+        kclosests = self.estimateKClosest()
+        points = self.points.pointList
+        mdistance = np.mean(pointset_mean_distances(points, points, kclosests))
+
+        rosastepnb, ok = QInputDialog.getInt(self,'Number of Steps','Select a number of step',self.getparamcache('rosastepnb',3),0,50)
+        if not ok: return
+
+        radius, ok = QInputDialog.getDouble(self,'Section Width','Select a section width of contraction (Pointset neigborhood mean distance : %f)' % mdistance,mdistance,0,decimals=3)
+
+        if ok:
+            self.setparamcache('rosastepnb',rosastepnb)
+            
+            self.createPointBackup()
+            from time import time
+            t = time()
+            normals = self.estimateNormals()
+            directions =  self.pointinfo.directions
+            sections = points_sections(points, kclosests, directions, radius)
+            for i in xrange(rosastepnb):
+                directions = sections_normals(normals, sections)
+                sections = points_sections(points, kclosests, directions, radius)
+
+            newPointList = centroids_of_groups(points, sections)
+            self.points.pointList = newPointList
+            t = time() - t
+            self.setPoints(self.points, True )
+            self.pointinfo.directions = directions
             self.updateGL()
             self.showMessage("Applied contraction in {} sec.".format(t))
 
@@ -1588,195 +1799,11 @@ class GLMTGEditor(QGLViewer):
     def alignScaleAndCenter(self):
         self.applyAlignement('scale_and_center')
 
-# ---------------------------- DEBUG Information ----------------------------------------   
-
-            
-    
-    def showAttractors(self):
-        assert not self.selection is None
-        if self.contractedpoints is None or not self.contractedpointDisplay: 
-            QMessageBox.warning(self,'contracted points','No contracted points loaded OR contracted points view is disable')
-            return
-        if self.nodesinfo is None:
-            QMessageBox.warning(self,'Note','No debug information loaded..')
-            return 
-        
-        nid = self.selection.id
-        i = self.getNodeInfoIndex(nid)
-        self.cleanNodeInfo()
-        
-        if i:
-            self.attractors = self.getAttractorSubset(self.nodesinfo[i].Attractors())
-            self.attractorsRep = createAttractorsRepresentation(self.attractors, self.pointWidth, self.attractorsMaterial)
-            self.printNodeInfo(i)
-        else: QMessageBox.warning(self,'Note','No information of this node.')
-        
-
-# ------- Contraction ---------------------------------------- 
-
-    def getContractParam(self):
-        import contraction_ui
-        from vplants.plantgl.gui.curve2deditor import FuncConstraint
-        
-        class ContractionDialog(QDialog, contraction_ui.Ui_Dialog) :
-                def __init__(self, parent=None):
-                    QDialog.__init__(self, parent)
-                    contraction_ui.Ui_Dialog.__init__(self)
-                    self.setupUi(self)
-                    
-     
-        cdialog = ContractionDialog(self)
-        nbN = 7
-        denR = 10
-        min_conR = 10
-        max_conR = 25
-        Rfunc = NurbsCurve2D([(0,0,1),(0.3,0.3,1),(0.7,0.7,1),(1,1,1)])
-        geom_system = True 
-        if hasattr(self,'cached_contraction_params'):
-             nbN, denR, min_conR, max_conR, Rfunc, geom_system = self.cached_contraction_params
-        
-        if geom_system:
-          cdialog.Z_radioButton.setChecked(True)
-        else:
-          cdialog.Y_radioButton.setChecked(True)
-  
-        cdialog.nbNeighborEditor.setValue(nbN)
-        cdialog.densityRadiusEditor.setValue(denR)
-        cdialog.min_contractRadiusEditor.setValue(min_conR)
-        cdialog.max_contractRadiusEditor.setValue(max_conR)
-        cdialog.radiusFuncEditor.pointsConstraints = FuncConstraint()
-        cdialog.radiusFuncEditor.setCurve(Rfunc)
-        if cdialog.exec_() == QDialog.Accepted:
-            if cdialog.Y_radioButton.isChecked(): 
-                geom_system = False
-            elif cdialog.Z_radioButton.isChecked():
-                geom_system = True
-            nbN = cdialog.nbNeighborEditor.value()
-            denR = cdialog.densityRadiusEditor.value()
-            min_conR = cdialog.min_contractRadiusEditor.value()
-            max_conR = cdialog.max_contractRadiusEditor.value()
-            Rfunc = cdialog.radiusFuncEditor.getCurve()
-            
-            # check values
-            # if 
-            
-            params = nbN, denR, min_conR, max_conR, Rfunc, geom_system
-            self.cached_contraction_params = params 
-            return params
-
-    
-    def contractPoints(self):
-        if self.points is None: 
-            QMessageBox.warning(self,'points','No point loaded ...')
-            return
-        
-
-        from vplants.pointreconstruction.contractpoints import PointsContraction
-        params = self.getContractParam()
-        if not params is None:
-            nbN, denR, min_conR, max_conR, Rfunc, geom_system = params
-            progress = QProgressDialog(self)
-            progress.setLabelText('Contraction')
-            progress.setWindowModality(Qt.WindowModal)
-            progress.setMinimumDuration(0)
-            
-            contraction = PointsContraction(self.points.pointList, nbN, denR, min_conR, max_conR, Rfunc, geom_system)
-            contractPoints = contraction.run(progress)
-            self.setContractedPoints(PointSet(contractPoints))
-        
-        
-
-# ---------------------------- End Contraction ----------------------------------------     
-
-
-
-# ------- Reconstruction ---------------------------------------- 
-
-    def getSkeletonParam(self):
-        import reconstruction_ui, math
-        from vplants.plantgl.gui.curve2deditor import FuncConstraint
-        
-        class ReconstructionDialog(QDialog, reconstruction_ui.Ui_Dialog) :
-            def __init__(self, parent=None):
-                QDialog.__init__(self, parent)
-                reconstruction_ui.Ui_Dialog.__init__(self)
-                self.setupUi(self)
-
-        nbNeighbor = 15
-        pcaRadius = 10
-        min_D = 6
-        max_D = 8
-        Di = 2.0
-        Dk = 1.2
-        delta = 20
-        angleratio = 2
-        Rfunc = NurbsCurve2D([(0,0,1),(0.3,0.3,1),(0.7,0.7,1),(1,1,1)])
-        geom_system = True 
-        if hasattr(self,'cached_reconstruction_params'):
-            nbNeighbor, pcaRadius, Rfunc, min_D, max_D, Di, Dk, angleratio, geom_system, delta, denthreshold = self.cached_reconstruction_params
-           
-        cdialog = ReconstructionDialog(self)
-        if geom_system:
-          cdialog.Z_radioButton.setChecked(True)
-        else:
-          cdialog.Y_radioButton.setChecked(True)
-        cdialog.nbNeighborEditor.setValue(nbNeighbor)
-        cdialog.pcaRadiusEditor.setValue(pcaRadius)
-        cdialog.min_DEditor.setValue(min_D)
-        cdialog.max_DEditor.setValue(max_D)
-        cdialog.DiEditor.setValue(Di)
-        cdialog.DkEditor.setValue(Dk)
-        cdialog.deltaEditor.setValue(delta)
-        cdialog.distanceFuncEditor.pointsConstraints = FuncConstraint()
-        cdialog.distanceFuncEditor.setCurve(Rfunc)
-        cdialog.angleSlider.setValue(angleratio)
-        
-        if cdialog.exec_() == QDialog.Accepted:
-            if cdialog.Y_radioButton.isChecked(): 
-                geom_system = False
-            elif cdialog.Z_radioButton.isChecked():
-                geom_system = True
-            nbNeighbor = cdialog.nbNeighborEditor.value()
-            pcaRadius = cdialog.pcaRadiusEditor.value()
-            min_D = cdialog.min_DEditor.value()
-            max_D = cdialog.max_DEditor.value()
-            Di = cdialog.DiEditor.value()
-            Dk = cdialog.DkEditor.value()
-            angleratio = cdialog.angleSlider.value()
-            Rfunc = cdialog.distanceFuncEditor.getCurve()
-            delta = cdialog.deltaEditor.value()
-            denthreshold = cdialog.methodSlider.value()
-            self.cached_reconstruction_params = nbNeighbor, pcaRadius, Rfunc, min_D, max_D, Di, Dk, angleratio, geom_system, delta, denthreshold
-            
-            angle = math.pi/angleratio
-            return nbNeighbor, pcaRadius, Rfunc, min_D, max_D, Di, Dk, angle, geom_system, delta, denthreshold
-
-    
-    def createSkeleton(self):
-        if self.contractedpoints is None: 
-            QMessageBox.warning(self,'points','No contraction point loaded ...')
-            return
-        
-        from vplants.pointreconstruction.scaskeleton import SCASkeleton
-        params = self.getSkeletonParam()
-        if not params is None:
-            nbN, pcaR, Rfunc, min_D, max_D, Di, Dk, angle, geom_system, delta, denthreshold = params
-            progress = QProgressDialog(self)
-            progress.setLabelText('Reconstruction')
-            progress.setWindowModality(Qt.WindowModal)
-            progress.setMinimumDuration(0)
-            
-            skeleton = SCASkeleton(self.contractedpoints.pointList, nbN, pcaR,Rfunc, min_D, max_D, Di, Dk, angle, geom_system, delta, denthreshold)
-            mtg, nodesinfo = skeleton.run(progress)
-            progress.setRange(0,100)
-            progress.setValue(100)
-            self.setMTG(mtg,None)
-            self.setNodesInfo(nodesinfo)
-        
-
 # ---------------------------- Radius Reconstruction ----------------------------------------     
 
     def determine_radius(self, pid):
+        if not self.check_input_data(): return
+
         mtg = self.mtg
 
         nbgs = list(mtg.children(pid))
@@ -1805,7 +1832,7 @@ class GLMTGEditor(QGLViewer):
             print 'radius[',pid,']:',radius
             return radius
 
-    def estimateRadius(self):
+    def estimateRadius(self):        
         assert not self.selection is None
         sid = self.selection.id
 
@@ -1815,23 +1842,61 @@ class GLMTGEditor(QGLViewer):
         self.updateGL()
 
     def estimateAllRadius(self, maxmethod=True, overwrite = True):
-        assert self.mtg
+        if not self.check_input_data(): return
 
         from mtgmanip import mtg2pgltree
 
         nodes, parents, vertex2node = mtg2pgltree(self.mtg)
-        node2vertex = dict([(i,vid) for vid,i in vertex2node.items()])
 
         estimatedradii = estimate_radii_from_points(self.points.pointList, nodes, parents, maxmethod=maxmethod)
 
         radii = self.mtg.property(self.propertyradius) 
-        for nid, vid in node2vertex.items():
+        for vid, nid in vertex2node.items():
             if not vid in radii or overwrite:
                 radii[vid] = estimatedradii[nid]
 
         self.radiusRep, self.radiusRepIndex = createRadiiRepresentation(self.mtg, self.radiusMaterial, positionproperty= self.propertyposition, radiusproperty = self.propertyradius)
         self.updateGL()
 
+    def smoothRadius(self):
+        from mtgmanip import gaussian_filter
+        self.createBackup()
+        self.showMessage("Applied gaussian filter to radius.")
+        gaussian_filter(self.mtg,self.propertyradius, False)
+        self.__update_all_mtg__()
+        self.updateGL()
+
+    def thresholdRadius(self):
+        from mtgmanip import threshold_filter
+        self.createBackup()
+        self.showMessage("Applied threshold filter to radius.")
+        threshold_filter(self.mtg,self.propertyradius)
+        self.__update_all_mtg__()
+        self.updateGL()
+
+    def pipeModel(self):
+        pass
+
+    def pipeModelAverageDistance(self):
+        pipeexponent, ok = QInputDialog.getDouble(self,'Pipe Exponent','Select a pipe exponent',self.getparamcache('pipeexponent',2.0),0.5,4,2)
+        if ok:
+            self.setparamcache('pipeexponent', pipeexponent)
+            from mtgmanip import mtg2pgltree
+            nodes, parents, vertex2node = mtg2pgltree(self.mtg)
+            avgradius = average_radius(self.points.pointList, nodes, parents)
+            print 'average distance to points :',avgradius
+            weights = carried_length(nodes, parents)
+            weights += 1
+            print 'compute radii'
+            estimatedradii = estimate_radii_from_pipemodel(nodes, parents, weights.log(), avgradius , pipeexponent )
+ 
+            radii = self.mtg.property(self.propertyradius) 
+            for vid, nid in vertex2node.items():
+                radii[vid] = estimatedradii[nid]
+            print estimatedradii[0]
+
+            self.radiusRep, self.radiusRepIndex = createRadiiRepresentation(self.mtg, self.radiusMaterial, positionproperty= self.propertyposition, radiusproperty = self.propertyradius)
+            self.updateGL()
 
 # ---------------------------- Check MTG ----------------------------------------     
         
@@ -1915,34 +1980,71 @@ class GLMTGEditor(QGLViewer):
         else:
             return
 
-        if hasattr(self,'defaultbinratio'):
-            defaultbinratio = self.defaultbinratio
-        else: defaultbinratio = 50
-
-        binratio, ok = QInputDialog.getInt(self,'Bin Ratio','Select a bin ratio',defaultbinratio,10,1000)
+        binratio, ok = QInputDialog.getInt(self,'Bin Ratio','Select a bin ratio',self.getparamcache('binratio',50),10,1000)
 
         if ok:
+            self.setparamcache('binratio',binratio)
             self.createBackup()
             self.showMessage("Apply Xu et al. reconstruction from  node "+str(startfrom)+".")
-            self.defaultbinratio = binratio
             mini,maxi = self.points.pointList.getZMinAndMaxIndex()
             zdist = self.points.pointList[maxi].z-self.points.pointList[mini].z
             binlength = zdist / binratio
-            verbose = False
             if points is None:
                 print 'filter',len(self.points.pointList),'points with distance', binlength
                 points, emptycolor = self.filter_points(PointSet(self.points.pointList),binlength)#,[startfrom])
-                verbose = False
                 if len(points) < 10: 
                     self.showMessage("Not enough points ("+str(len(points))+") to apply reconstruction from "+str(startfrom)+".")
                     return
             from xumethod import xu_method
-            xu_method(self.mtg,startfrom,points,binlength,verbose=verbose)
+            xu_method(self.mtg,startfrom,points,binlength)
             self.updateMTGView()
             self.updateGL()
 
-    def livnyReconstruction(self, startfrom = None):
-        print 'Xu Reconstruction'
+    def preuksakarnReconstructionParam(self):
+        import adpativecontractionparam_ui
+        from vplants.plantgl.gui.curve2deditor import FuncConstraint
+
+        mini,maxi = self.points.pointList.getZMinAndMaxIndex()
+        zdist = self.points.pointList[maxi].z-self.points.pointList[mini].z
+        
+        class ContractionDialog(QDialog, adpativecontractionparam_ui.Ui_Dialog) :
+                def __init__(self, parent=None):
+                    QDialog.__init__(self, parent)
+                    adpativecontractionparam_ui.Ui_Dialog.__init__(self)
+                    self.setupUi(self)
+                    self.funcEditor.pointsConstraints = FuncConstraint()
+                    self.sectionLabel.hide()
+                    self.widthBox.hide()
+                    self.minRadiusLabel.setText('Minimum Bin Length')
+                    self.maxRadiusLabel.setText('Maximum Bin Length')
+
+
+        cdialog = ContractionDialog(self)
+
+        kclosests = self.estimateKClosest()
+        points = self.points.pointList
+
+        from numpy import mean
+        mini,maxi = points.getZMinAndMaxIndex()
+        zdist = points[maxi].z-points[mini].z
+        mdistance = mean(pointset_mean_distances(points, points, kclosests))
+
+        cdialog.minRadiusBox.setValue(zdist/200)
+        cdialog.maxRadiusBox.setValue(zdist/50)
+
+        Rfunc = NurbsCurve2D([(0,0,1),(0.3,0.3,1),(0.7,0.7,1),(1,1,1)])
+        cdialog.funcEditor.setCurve(Rfunc)
+
+        if cdialog.exec_() == QDialog.Accepted:
+            return cdialog.minRadiusBox.value(), cdialog.maxRadiusBox.value(), cdialog.funcEditor.getCurve()
+
+
+    def preuksakarnReconstruction(self, startfrom = None):
+        if not self.check_input_points() : return
+        if not hasattr(self.pointinfo,'densities'):
+            self.pointRDensityMT()
+
+        print 'Preuksakarn Reconstruction'
         if type(startfrom) != int:
             if not self.selection is None:
                 startfrom = self.selection.id
@@ -1956,28 +2058,68 @@ class GLMTGEditor(QGLViewer):
         else:
             return
 
-        if hasattr(self,'defaultlivnycontractionnb'):
-            defaultlivnycontractionnb = self.defaultlivnycontractionnb
-        else: defaultlivnycontractionnb = 3
-
-        livnycontractionnb, ok = QInputDialog.getInt(self,'Contraction Number of Steps','Select a number of contraction step',defaultlivnycontractionnb,0,50)
-
-        if ok:
+        param = self.preuksakarnReconstructionParam()
+        if not param is None:
+            minlength, maxlength, radiusfunc = param
             self.createBackup()
-            self.showMessage("Apply Livny et al. reconstruction from  node "+str(startfrom)+".")
-            self.defaultlivnycontractionnb = livnycontractionnb
-            verbose = False
+            self.showMessage("Apply Preuksakarn et al. reconstruction from  node "+str(startfrom)+".")
             if points is None:
-                print 'filter',len(self.points.pointList),'points with distance', binlength
-                points, emptycolor = self.filter_points(PointSet(self.points.pointList),binlength)#,[startfrom])
-                verbose = False
+                print 'filter',len(self.points.pointList),'points with distance', maxlength
+                points, emptycolor = self.filter_points(PointSet(self.points.pointList),maxlength)#,[startfrom])
                 if len(points) < 10: 
                     self.showMessage("Not enough points ("+str(len(points))+") to apply reconstruction from "+str(startfrom)+".")
                     return
-            from livnymethod import livny_method_mtg
-            livny_method_mtg(self.mtg, startfrom, points, livnycontractionnb)
+            from xumethod import preuksakarn_method
+            densities = self.pointinfo.densities
+            preuksakarn_method(self.mtg, startfrom, points, densities, minlength, maxlength, radiusfunc)
             self.updateMTGView()
             self.updateGL()
+
+
+
+    def livnyReconstruction(self, startfrom = None):
+        print 'Livny Reconstruction'
+        if type(startfrom) != int:
+            if not self.selection is None:
+                startfrom = self.selection.id
+                points = None
+            else:
+                vtx = list(self.mtg.vertices(self.mtg.max_scale()))
+                if len(vtx) > 1 : QMessageBox.warning(self,"Root","Select a node")
+                elif len(vtx) ==0 : QMessageBox.warning(self,"Root","Add a root node")
+                else : startfrom = vtx[0]
+                points = self.points.pointList
+        else:
+            return
+
+        livnycontractionnb, ok = QInputDialog.getInt(self,'Number of Contraction Steps','Select a number of contraction step',self.getparamcache('livnycontractionnb',3),0,50)
+        if ok:
+
+            livnyfilteringnb, ok = QInputDialog.getInt(self,'Number of Filtering Steps','Select a number of filtering step',self.getparamcache('livnyfilteringnb',5),0,50)
+            if ok:
+                livnyminedgeratio, ok = QInputDialog.getInt(self,'Ratio for min edge size','Select a ratio for min edge size filter',self.getparamcache('livnyminedgeratio',15),0,100)
+
+                if ok:
+                    self.createBackup()
+                    self.showMessage("Apply Livny et al. reconstruction from  node "+str(startfrom)+".")
+                    self.setparamcache('livnycontractionnb',livnycontractionnb)
+                    self.setparamcache('livnyfilteringnb',livnyfilteringnb)
+                    self.setparamcache('livnyminedgeratio',livnyminedgeratio)
+                    verbose = False
+                    if points is None:
+                        print 'filter',len(self.points.pointList),'points with distance', binlength
+                        points, emptycolor = self.filter_points(PointSet(self.points.pointList),binlength)#,[startfrom])
+                        verbose = False
+                        if len(points) < 10: 
+                            self.showMessage("Not enough points ("+str(len(points))+") to apply reconstruction from "+str(startfrom)+".")
+                            return
+                    from livnymethod import livny_method_mtg
+                    livny_method_mtg(self.mtg, startfrom, points, livnycontractionnb, livnyfilteringnb, livnyminedgeratio/100. )
+                    self.updateMTGView()
+                    self.updateGL()
+
+
+# ---------------------------- Tagging ----------------------------------------     
     
     def angleEstimate(self):
         from angleanalysis import lines_estimation, phylo_angles, lines_representation, write_phylo_angles

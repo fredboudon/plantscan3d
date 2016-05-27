@@ -16,12 +16,12 @@ def mtg2pgltree(mtg):
     vertex2node = dict([(vid,i) for i,vid in enumerate(vertices)])
     positions = mtg.property('position')
     nodes = [positions[vid] for vid in vertices]
-    parents = [vertex2node[mtg.parent(vid)] if mtg.parent(vid) else vid for vid in vertices]
+    parents = [vertex2node[mtg.parent(vid)] if mtg.parent(vid) else vertex2node[vid] for vid in vertices]
     return nodes, parents, vertex2node
 
 from openalea.plantgl.all import *
 
-def pgltree2mtg(mtg, startfrom, parents, positions, radii = dict(), filter_short_branch = False, angle_between_trunk_and_lateral = 60):
+def pgltree2mtg(mtg, startfrom, parents, positions, radii = None, filter_short_branch = False, angle_between_trunk_and_lateral = 60):
     from math import degrees, acos
 
     rootpos = Vector3(mtg.property('position')[startfrom])
@@ -44,7 +44,10 @@ def pgltree2mtg(mtg, startfrom, parents, positions, radii = dict(), filter_short
     while len(toprocess) > 0:
         nid, parent, edge_type = toprocess.pop(0)
         pos = positions[nid]
-        mtgnode = mtg.add_child(parent = parent, label='N',edge_type = edge_type, position = pos, radius = radii.get(nid))
+        parameters = dict(parent = parent, label='N', edge_type = edge_type, position = pos)
+        if radii :
+            parameters['radius'] = radii[nid]
+        mtgnode = mtg.add_child(**parameters)
         mchildren = list(children[nid])
         if len(mchildren) > 0:
             if len(mchildren) >= 2 and filter_short_branch:
@@ -61,3 +64,44 @@ def pgltree2mtg(mtg, startfrom, parents, positions, radii = dict(), filter_short
                 toprocess += [(c,mtgnode,e) for c,e in zip(mchildren,edges_types)]
     print 'Remove short nodes ',','.join(map(str,removed))
     return mtg
+
+def gaussian_weight(x,var): 
+    from math import exp, sqrt, pi
+    return exp(-x**2/(2*var))/sqrt(2*pi*var*var)
+
+def gaussian_filter(mtg, propname, considerapicalonly = True):
+    prop = mtg.property(propname)
+    nprop = dict()
+    gw0 = gaussian_weight(0,1)
+    gw1 = gaussian_weight(1,1)
+    for vid, value in prop.items():
+        nvalues = [value*gw0]
+        parent   = mtg.parent(vid)
+        if parent and prop.has_key(parent):
+            nvalues.append(prop[parent]*gw1)
+        children = mtg.children(vid)
+        if considerapicalonly: children = [child for child in children if mtg.edge_type(child) == '<']
+        for child in children:
+            if child in prop:
+                nvalues.append(prop[child]*gw1)
+
+        nvalue = sum(nvalues[1:],nvalues[0]) / sum([gw0 + (len(nvalues)-1)*gw1])
+        nprop[vid] = nvalue
+
+    prop.update(nprop)
+
+
+def threshold_filter(mtg, propname):
+    from openalea.mtg.traversal import iter_mtg2
+
+    prop = mtg.property(propname)
+    nprop = dict()
+    for vid in iter_mtg2(mtg, mtg.root):
+        if vid in prop:
+            parent   = mtg.parent(vid)
+            if parent and parent in prop:
+                pvalue = nprop.get(parent,prop[parent])
+                if pvalue  < prop[vid]:            
+                    nprop[vid] = pvalue
+
+    prop.update(nprop)

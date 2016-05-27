@@ -189,6 +189,7 @@
      <string>View</string>
     </property>
     <addaction name="actionViewPoints"/>
+    <addaction name="actionViewPointAttributes"/>
     <addaction name="separator"/>
     <addaction name="actionViewMTG"/>
     <addaction name="actionViewControlPoints"/>
@@ -211,8 +212,11 @@
      <addaction name="actionComputeMaxRadius"/>
      <addaction name="actionComputeMeanRadius"/>
      <addaction name="separator"/>
-     <addaction name="actionAverageRadius"/>
-     <addaction name="actionFilterRadius"/>
+     <addaction name="actionSmoothRadius"/>
+     <addaction name="actionThresholdRadius"/>
+     <addaction name="separator"/>
+     <addaction name="actionPipeModel"/>
+     <addaction name="actionPipeModelAverageDistance"/>
     </widget>
     <widget class="QMenu" name="menuAdd_Root">
      <property name="title">
@@ -227,7 +231,7 @@
      </property>
      <addaction name="actionXuReconstruction"/>
      <addaction name="actionLivnyReconstruction"/>
-     <addaction name="actionCreateSkeleton"/>
+     <addaction name="actionPreuksakarnReconstruction"/>
     </widget>
     <widget class="QMenu" name="menuMultiScale">
      <property name="title">
@@ -236,9 +240,21 @@
      <addaction name="actionEditScale"/>
      <addaction name="actionCommitScale"/>
     </widget>
+    <widget class="QMenu" name="menuSkeleton">
+     <property name="enabled">
+      <bool>true</bool>
+     </property>
+     <property name="title">
+      <string>Skeleton</string>
+     </property>
+     <addaction name="actionSmoothPosition"/>
+     <addaction name="actionCheckMTG"/>
+    </widget>
     <addaction name="menuAdd_Root"/>
     <addaction name="separator"/>
     <addaction name="menuSkeletization"/>
+    <addaction name="separator"/>
+    <addaction name="menuSkeleton"/>
     <addaction name="separator"/>
     <addaction name="menuRadius"/>
     <addaction name="separator"/>
@@ -250,7 +266,6 @@
     <addaction name="separator"/>
     <addaction name="actionAngleEstimation"/>
     <addaction name="separator"/>
-    <addaction name="actionCheckMTG"/>
    </widget>
    <widget class="QMenu" name="menuEdit">
     <property name="title">
@@ -273,7 +288,9 @@
      <addaction name="actionEuclidianContraction"/>
      <addaction name="actionLaplacianContraction"/>
      <addaction name="actionRiemannianContraction"/>
-     <addaction name="actionAdaptiveRiemannianContraction"/>
+     <addaction name="actionAdaptiveRadialContraction"/>
+     <addaction name="actionPathBasedContraction"/>
+     <addaction name="actionROSAContraction"/>
     </widget>
     <widget class="QMenu" name="menuAlign">
      <property name="title">
@@ -293,6 +310,9 @@
      </property>
      <addaction name="actionKDensity"/>
      <addaction name="actionRDensity"/>
+     <addaction name="actionRDensity_MT"/>
+     <addaction name="separator"/>
+     <addaction name="actionDensityHistogram"/>
     </widget>
     <widget class="QMenu" name="menuFilter">
      <property name="title">
@@ -301,11 +321,23 @@
      <addaction name="actionFilterMinDensity"/>
      <addaction name="actionFilterMaxDensity"/>
     </widget>
+    <widget class="QMenu" name="menuDirections">
+     <property name="title">
+      <string>Directions</string>
+     </property>
+     <addaction name="actionPointDirections"/>
+     <addaction name="actionAverageDirections"/>
+    </widget>
     <addaction name="actionReorient"/>
+    <addaction name="actionSortZ"/>
     <addaction name="separator"/>
     <addaction name="actionSubSampling"/>
     <addaction name="separator"/>
     <addaction name="menuDensity"/>
+    <addaction name="separator"/>
+    <addaction name="menuDirections"/>
+    <addaction name="separator"/>
+    <addaction name="actionPointNormals"/>
     <addaction name="separator"/>
     <addaction name="menuFilter"/>
     <addaction name="separator"/>
@@ -393,9 +425,9 @@
     <string>Preuksakarn et al.</string>
    </property>
   </action>
-  <action name="actionCreateSkeleton">
+  <action name="actionPreuksakarnReconstruction">
    <property name="enabled">
-    <bool>false</bool>
+    <bool>true</bool>
    </property>
    <property name="text">
     <string>Preuksakarn et al.</string>
@@ -443,17 +475,17 @@
     <string>Estimate Max</string>
    </property>
   </action>
-  <action name="actionAverageRadius">
+  <action name="actionSmoothRadius">
    <property name="enabled">
-    <bool>false</bool>
+    <bool>true</bool>
    </property>
    <property name="text">
-    <string>Averaging</string>
+    <string>Smooth</string>
    </property>
   </action>
-  <action name="actionFilterRadius">
+  <action name="actionThresholdRadius">
    <property name="enabled">
-    <bool>false</bool>
+    <bool>true</bool>
    </property>
    <property name="text">
     <string>Filtering</string>
@@ -461,7 +493,7 @@
   </action>
   <action name="actionCheckMTG">
    <property name="text">
-    <string>CheckMTG</string>
+    <string>Check Validity</string>
    </property>
   </action>
   <action name="actionExportNodeList">
@@ -702,9 +734,9 @@
     <string>Laplacian</string>
    </property>
   </action>
-  <action name="actionAdaptiveRiemannianContraction">
+  <action name="actionAdaptiveRadialContraction">
    <property name="text">
-    <string>Adaptive Riemannian</string>
+    <string>Adaptive Radial</string>
    </property>
   </action>
   <action name="actionFilterMinDensity">
@@ -730,6 +762,84 @@
   <action name="actionLivnyReconstruction">
    <property name="text">
     <string>Livny et al</string>
+   </property>
+  </action>
+  <action name="actionRDensity_MT">
+   <property name="text">
+    <string>R-Density MT</string>
+   </property>
+  </action>
+  <action name="actionPathBasedContraction">
+   <property name="text">
+    <string>Path Based (Livny et al)</string>
+   </property>
+  </action>
+  <action name="actionPointNormals">
+   <property name="text">
+    <string>Normals</string>
+   </property>
+  </action>
+  <action name="actionROSAContraction">
+   <property name="text">
+    <string>ROSA (Tagliasacchi et al.)</string>
+   </property>
+  </action>
+  <action name="actionViewPointAttributes">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Point Attributes</string>
+   </property>
+  </action>
+  <action name="actionSortZ">
+   <property name="text">
+    <string>Sort Z</string>
+   </property>
+  </action>
+  <action name="actionSmoothPosition">
+   <property name="enabled">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Smooth</string>
+   </property>
+  </action>
+  <action name="actionPipeModelAverageDistance">
+   <property name="enabled">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Pipe Model from Av. Dist</string>
+   </property>
+  </action>
+  <action name="actionPipeModel">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Pipe Model</string>
+   </property>
+  </action>
+  <action name="actionDensityHistogram">
+   <property name="enabled">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Histogram</string>
+   </property>
+  </action>
+  <action name="actionPointDirections">
+   <property name="text">
+    <string>Estimate</string>
+   </property>
+  </action>
+  <action name="actionAverageDirections">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Average</string>
    </property>
   </action>
  </widget>

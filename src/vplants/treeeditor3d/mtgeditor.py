@@ -20,10 +20,12 @@ except ImportError, e:
 import os
 if not py2exe_release:
     import compile_ui as cui
-    ldir    = os.path.dirname(__file__)
+    ldir    = os.path.dirname(__file__) 
     cui.check_ui_generation(os.path.join(ldir, 'editor.ui'))
 
 import vplants.treeeditor3d.editor_ui as editor_ui
+from mtgeditorwidget import WhiteTheme, BlackTheme
+
 
 class MTGEditor(QMainWindow, editor_ui.Ui_MainWindow) :
     def __init__(self, parent=None):
@@ -57,6 +59,8 @@ class MTGEditor(QMainWindow, editor_ui.Ui_MainWindow) :
         QObject.connect(self.mtgeditor, SIGNAL('redoAvailable(bool)'),self.actionRedo.setEnabled)
         QObject.connect(self.actionRevolveAroundScene, SIGNAL('triggered(bool)'),self.mtgeditor.revolveAroundScene)
         QObject.connect(self.actionShowAll, SIGNAL('triggered(bool)'),self.mtgeditor.showEntireScene)
+        QObject.connect(self.actionWhiteTheme, SIGNAL('triggered(bool)'),lambda : self.mtgeditor.updateTheme(WhiteTheme))
+        QObject.connect(self.actionBlackTheme, SIGNAL('triggered(bool)'),lambda : self.mtgeditor.updateTheme(BlackTheme))
 
 
         QObject.connect(self.actionReorient, SIGNAL('triggered(bool)'),self.mtgeditor.reorient)
@@ -83,7 +87,7 @@ class MTGEditor(QMainWindow, editor_ui.Ui_MainWindow) :
 
         QObject.connect(self.actionPointDirections, SIGNAL('triggered(bool)'),self.mtgeditor.pointDirections)
         QObject.connect(self.actionPointNormals, SIGNAL('triggered(bool)'),self.mtgeditor.pointNormals)
-
+        QObject.connect(self.actionPointClusters, SIGNAL('triggered(bool)'),self.mtgeditor.pointClusters)
 
 
         self.actionViewPoints.setChecked(self.mtgeditor.isPointDisplayEnabled())
@@ -125,7 +129,9 @@ class MTGEditor(QMainWindow, editor_ui.Ui_MainWindow) :
 
         QObject.connect(self.actionXuReconstruction, SIGNAL('triggered(bool)'),self.mtgeditor.xuReconstruction)
         QObject.connect(self.actionLivnyReconstruction, SIGNAL('triggered(bool)'),self.mtgeditor.livnyReconstruction)
-        QObject.connect(self.actionPreuksakarnReconstruction, SIGNAL('triggered(bool)'),self.mtgeditor.preuksakarnReconstruction)
+        QObject.connect(self.actionAdaptiveScaReconstruction, SIGNAL('triggered(bool)'),self.mtgeditor.adaptivescaReconstruction)
+        QObject.connect(self.actionScaReconstruction, SIGNAL('triggered(bool)'),self.mtgeditor.scaReconstruction)
+        QObject.connect(self.actionGraphColonization, SIGNAL('triggered(bool)'),self.mtgeditor.graphColonization)
 
         QObject.connect(self.actionAngleEstimation, SIGNAL('triggered(bool)'),self.mtgeditor.angleEstimate)
         QObject.connect(self.actionEditScale, SIGNAL('triggered(bool)'),self.mtgeditor.tagScale)
@@ -140,18 +146,20 @@ class MTGEditor(QMainWindow, editor_ui.Ui_MainWindow) :
         QObject.connect(self.nodeSizeSlider, SIGNAL('valueChanged(int)'),self.mtgeditor.setNodeWidth)
         QObject.connect(self.pointFilterSlider, SIGNAL('valueChanged(int)'),self.mtgeditor.setPointFilter)
 
-        
         self.mtgeditor.actionEditScale = self.actionEditScale
         self.mtgeditor.actionTagProperty = self.actionTagProperty
         self.actionEditScale.setCheckable(True)
         self.actionTagProperty.setCheckable(True)
         
         self.mtgeditor.mainwindow = self
+        self.mtgeditor.filehistory.setMenu(self.menuRecents)
         
         self.mtgeditor.statusBar = QStatusBar(self)
         self.setStatusBar(self.mtgeditor.statusBar)
         self.setWindowTitle('PlantScan3D')
 
+    def closeEvent(self, event):
+        self.mtgeditor.closeEvent(event)
         
 def main():
     #os.chdir(r'D:\Fred\Mes Documents\Develop\vplants\mbranches\pointreconstruction\data\pointset')

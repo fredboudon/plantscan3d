@@ -13,7 +13,7 @@ def xu_method(mtg, startfrom, pointList, binlength, k = 20, filter_short_branch 
 
     return mtg
 
-def preuksakarn_method(mtg, startfrom, pointList, densities, minbinlength, maxbinlength, binlengthfunc, k = 20, filter_short_branch = False, angle_between_trunk_and_lateral = 60):
+def graphcolonization_method(mtg, startfrom, pointList, densities, minbinlength, maxbinlength, binlengthfunc, k = 20, filter_short_branch = False, angle_between_trunk_and_lateral = 60):
     rootpos = Vector3(mtg.property('position')[startfrom])
     root = len(pointList)
     connect_all_points = False if mtg.nb_vertices(mtg.max_scale()) > 1 else True
@@ -24,10 +24,10 @@ def preuksakarn_method(mtg, startfrom, pointList, densities, minbinlength, maxbi
 
     mindensity, maxdensity = densities.getMinAndMax()
     deltadensity = maxdensity - mindensity + 1e-4
-    normeddensity = lambda x : abs(x - mindensity)/deltadensity
+    normeddensity = lambda x : binlengthfunc(abs(x - mindensity)/deltadensity)
 
     deltabinlength = maxbinlength-minbinlength
-    binlength = lambda x: minbinlength + deltabinlength * (normeddensity(x) - minbinlength)
+    binlength = lambda x: minbinlength + deltabinlength * normeddensity(x)
 
     class CustomSCA(GraphColonization):
         def __init__(self, *args):
@@ -35,6 +35,7 @@ def preuksakarn_method(mtg, startfrom, pointList, densities, minbinlength, maxbi
             self.use_jonction_points = True
           
         def node_buds_preprocess(self,nid):
+              #print 'node_buds_preprocess', nid
               pos = self.node_position(nid)
               components = self.node_components(nid)
               # print nid, self.parents[nid], pos, components

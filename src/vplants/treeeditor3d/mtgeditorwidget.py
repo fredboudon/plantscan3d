@@ -10,6 +10,8 @@ import os
 from math import pi
 from serial import *
 from shareddata import *
+from history import FileHistory
+from settings import PSSettings
 
 import os
 import compile_ui as cui
@@ -18,7 +20,7 @@ cui.check_ui_generation(os.path.join(ldir, 'contraction.ui'))
 cui.check_ui_generation(os.path.join(ldir, 'reconstruction.ui'))
 cui.check_ui_generation(os.path.join(ldir, 'radius.ui'))
 cui.check_ui_generation(os.path.join(ldir, 'propwidget.ui'))
-cui.check_ui_generation(os.path.join(ldir, 'adpativecontractionparam.ui'))
+#cui.check_ui_generation(os.path.join(ldir, 'adpativecontractionparam.ui'))
 
 class Pos3Setter:
     def __init__(self,ctrlpointset,index):
@@ -62,20 +64,23 @@ def createRadiiRepresentation(mtg, material, translation = None, positionpropert
     positions = mtg.property(positionproperty)
     radii = mtg.property(radiusproperty)
     l = [createRadiusRepresentation(mtg, nodeID, positions, radii, material, translation) for nodeID in radii.keys()]
+    l = filter(lambda x: not x is None, l)
     scene = Scene(l)
     shindex = dict((sh.id,i) for i,sh in enumerate(l))
             
     return scene, shindex
     
 def createRadiusRepresentation(mtg, node, positions, radii, material, translation = None):
-    res = Polyline2D.Circle(radii[node],16)
-    if mtg.parent(node):
-        d = direction(positions[node] - positions[mtg.parent(node)])
-        i = d.anOrthogonalVector()
-        j = d ^ i
-        res = Oriented(i,j,res)
-    res = Translated(positions[node]+ (translation if translation else Vector3(0,0,0)), res)
-    return Shape(res,material,node)
+    radius = radii[node]
+    if radius > 1e-5:
+        res = Scaled(radius,Polyline2D.Circle(1,16))
+        if mtg.parent(node):
+            d = direction(positions[node] - positions[mtg.parent(node)])
+            i = direction(d.anOrthogonalVector())
+            j = d ^ i
+            res = Oriented(i,j,res)
+        res = Translated(positions[node]+ (translation if translation else Vector3(0,0,0)), res)
+        return Shape(res,material,node)
  
 def createCtrlPoints(mtg,color,positionproperty = 'position',callback = None):
     ctrlPoints = dict( (nodeID , createCtrlPoint(mtg,nodeID,color,positionproperty,callback)) for nodeID in mtg.vertices(scale=mtg.max_scale()) )
@@ -92,93 +97,69 @@ def createAttractorsRepresentation(attractors, width, material):
     return Scene([Shape(pointset, material)])
 
 
-def getConeDirections(u, angle):
-    return ConePerception().getConeAxis(u, angle)
 
-def createCone(p1, p2, angle, resolution=20):
-    from math import tan
-    o = Vector3(p2)
-    nz = Vector3(p1) - Vector3(p2)
-    h = nz.normalize()
-    ny = cross(nz,Vector3.OX)
-    if  norm(ny) < 1e-3:
-        ny = cross(nz,Vector3.OY)
-    ny.normalize()
-    nx = cross(ny,nz)
-    nx.normalize()
-    radius = tan(angle/2)*h
-    return Translated(o,Oriented(nx,ny,Cone(radius,h,slices=resolution)))
+        # shape and material to display the object
+BlackTheme = {'Name':'Black',
+              'BackGround': (0,0,0), 
+              'Points' : (180,180,180),
+              'ContractedPoints' : (255,0,0),
+              'CtrlPoints' : (30,250,30),
+              #'CtrlPoints' : (250,250,250),
+              'NewCtrlPoints' : (30,250,250),
+              'SelectedCtrlPoints' : (30,250,30),
+              'EdgeInf' : (255,255,255),
+              'EdgePlus' : (255,0,0),                          
+              'Radius' : (200,200,200),
+              'Direction' : (255,255,255),
+              '3DModel' : (128,64,0),
+              'LocalAttractors' :(255, 255, 0),
+              'Cone' :(255,255,0),
+              'TaggedCtrlPoint' : (255,0,0),
+              'UnTaggedCtrlPoint' : (255,255,255),
+              'UpscaleCtrlPoint' : [(0,255,0),(0,0,255),(255,255,0),(255,0,255),(0,255,255)]}
+                            
+WhiteTheme = {'Name':'White',
+              'BackGround': (255,255,255), 
+              'Points' : (180,180,180),
+              'ContractedPoints' : (255,0,0),
+              'CtrlPoints' : (250,30,30),
+              'NewCtrlPoints' : (30,250,250),
+              'SelectedCtrlPoints' : (30,250,30),
+              'EdgeInf' : (0,0,0),
+              'EdgePlus' : (200,200,0),
+              'Radius' : (100,100,100),
+              'Direction' : (0,0,0),
+              '3DModel' : (128,64,0),
+              'LocalAttractors' :(255, 255, 0),
+              'Cone' :(255,255,0),
+              'TaggedCtrlPoint' : (255,0,0),
+              'UnTaggedCtrlPoint' : (0,0,0),
+              'UpscaleCtrlPoint' : [(0,255,0),(0,0,255),(255,255,0),(255,0,255),(0,255,255)]}
 
-def createConeRepresentation(p1, axises, height, angle, material):
-    p2list = [ p1 + (height*u) for u in axises]
-    
-    res = Scene()
-    for p2 in p2list:
-        c = createCone(p1, p2, angle)
-        res += Scene([Shape(c, material)])
-    
-    return res
-
-
+ThemeDict = {'Black' : BlackTheme , 'White' : WhiteTheme}
 
 class GLMTGEditor(QGLViewer):
 
     Edit, Selection, TagScale, TagProperty, Rotate = 1,2,4,8,16
 
-    def __init__(self,parent,pointfile = None, mtgfile = None):
+    def __init__(self, parent, pointfile = None, mtgfile = None):
         QGLViewer.__init__(self,parent)
-        self.setStateFileName('.mtgeditor.xml') 
+        self.setStateFileName('.plantscan3d.xml') 
         
         self.mode = None
         
-        # shape and material to display the object
-        self.greytheme = {'BackGround': (0,0,0), 
-                          'Points' : (180,180,180),
-                          'ContractedPoints' : (255,0,0),
-                          'CtrlPoints' : (30,250,30),
-                          #'CtrlPoints' : (250,250,250),
-                          'NewCtrlPoints' : (30,250,250),
-                          'SelectedCtrlPoints' : (30,250,30),
-                          'EdgeInf' : (255,255,255),
-                          'EdgePlus' : (255,0,0),                          
-                          'Radius' : (200,200,200),
-                          'Direction' : (255,255,255),
-                          '3DModel' : (128,64,0),
-                          'LocalAttractors' :(255, 255, 0),
-                          'Cone' :(255,255,0),
-                          'TaggedCtrlPoint' : (255,0,0),
-                          'UnTaggedCtrlPoint' : (255,255,255),
-                          'UpscaleCtrlPoint' : [(0,255,0),(0,0,255),(255,255,0),(255,0,255),(0,255,255)]}
-                            
-        self.whitetheme = {'BackGround': (255,255,255), 
-                          'Points' : (180,180,180),
-                          'ContractedPoints' : (255,0,0),
-                          'CtrlPoints' : (250,30,30),
-                          'NewCtrlPoints' : (30,250,250),
-                          'SelectedCtrlPoints' : (30,250,30),
-                          'EdgeInf' : (0,0,0),
-                          'EdgePlus' : (200,200,0),
-                          'Radius' : (100,100,100),
-                          'Direction' : (0,0,0),
-                          '3DModel' : (128,64,0),
-                          'LocalAttractors' :(255, 255, 0),
-                          'Cone' :(255,255,0),
-                          'TaggedCtrlPoint' : (255,0,0),
-                          'UnTaggedCtrlPoint' : (0,0,0),
-                          'UpscaleCtrlPoint' : [(0,255,0),(0,0,255),(255,255,0),(255,0,255),(0,255,255)]}
-                            
-        self.theme = self.greytheme
-        
-        self.pointMaterial = Material(self.theme['Points'],1)
-        self.contractedpointMaterial = Material(self.theme['ContractedPoints'],1)
-        self.ctrlPointColor = self.theme['CtrlPoints']
-        self.newCtrlPointColor = self.theme['NewCtrlPoints']
-        self.edgeInfMaterial = Material(self.theme['EdgeInf'],1)
-        self.edgePlusMaterial = Material(self.theme['EdgePlus'],1)
-        self.selectedPointColor = Material(self.theme['SelectedCtrlPoints'],1)
-        self.radiusMaterial = Material(self.theme['Radius'],1)
-        self.modelMaterial =  Material(self.theme['3DModel'],1)
+        self.filehistory = FileHistory(None, self.openFile)
 
+        print 'retrieve'
+        settings = PSSettings()
+        self.filehistory.retrieveSettings(settings)
+        settings.beginGroup("Theme")
+        themename = settings.value("Name",'Black')
+        print themename
+        settings.endGroup()
+
+        self.setTheme(ThemeDict[themename])
+        
         self.pointDisplay = True
         self.pointAttributeDisplay = True
         self.mtgDisplay = True
@@ -192,7 +173,7 @@ class GLMTGEditor(QGLViewer):
         self.discretizer = Discretizer()
         self.glrenderer = GLRenderer(self.discretizer)
         self.glrenderer.renderingMode = GLRenderer.Dynamic
-        self.ctrlrenderer=GLCtrlPointRenderer(self.discretizer)
+
         try:
             self.glrenderer.setGLFrame(self)
         except:
@@ -203,7 +184,8 @@ class GLMTGEditor(QGLViewer):
         self.points = None if pointfile is None else Scene(pointfile)[0].geometry
         self.mtgfile = mtgfile
         self.propertyposition = 'position'        
-        self.propertyradius = 'radius'        
+        self.propertyradius = 'radius'
+        self.nodelabel = 'N'
         
         self.pointsRep = None
         self.pointsAttributeRep = None
@@ -261,6 +243,41 @@ class GLMTGEditor(QGLViewer):
         self.propertyeditor = None
 
         self.paramcache = dict()
+
+
+    def closeEvent(self, event):
+        print 'save settings'
+        settings = PSSettings()
+        self.filehistory.setSettings(settings)
+        settings.beginGroup("Theme")
+        settings.setValue("Name",self.theme['Name'])
+        if self.theme['Name'] == 'Custom':
+            for name, val in self.theme.items():
+                if name != 'Name':
+                    settings.setValue(name,val)
+        settings.endGroup()
+        event.accept()
+
+
+    def setTheme(self, theme = BlackTheme):
+        self.theme = theme
+
+        self.setBackgroundColor(QColor(*self.theme['BackGround']))
+
+        self.pointMaterial = Material(self.theme['Points'],1)
+        self.contractedpointMaterial = Material(self.theme['ContractedPoints'],1)
+        self.ctrlPointColor = self.theme['CtrlPoints']
+        self.newCtrlPointColor = self.theme['NewCtrlPoints']
+        self.edgeInfMaterial = Material(self.theme['EdgeInf'],1)
+        self.edgePlusMaterial = Material(self.theme['EdgePlus'],1)
+        self.selectedPointColor = Material(self.theme['SelectedCtrlPoints'],1)
+        self.radiusMaterial = Material(self.theme['Radius'],1)
+        self.modelMaterial =  Material(self.theme['3DModel'],1, transparency=0.2)
+
+    def updateTheme(self, theme = BlackTheme):
+        self.setTheme(theme)
+        if self.mtg : self.updateMTGView()
+        self.updateGL()
 
     def getparamcache(self, name, defaultvalue):
         if name in self.paramcache:
@@ -522,7 +539,14 @@ class GLMTGEditor(QGLViewer):
         self.readMTG("/Users/fboudon/Develop/oagit/plantscan3d/data/LidarPommier/digitmtg/X0342_r1.mtg", True)
         self.readPoints("/Users/fboudon/Develop/oagit/plantscan3d/data/LidarPommier/digitmtg/X0342_r1_004.xyz")
         self.alignScaleAndCenter()
-        
+    
+    def openFile(self, fname, ftype):
+        if ftype == 'MTG': self.readMTG(fname)
+        elif ftype == 'iMTG': self.readMTG(fname, True)
+        elif ftype == 'PTS' : self.readPoints(fname)
+        else: 
+            QMessageBox.warning(self,'Unknow File','Cannot read file '+repr(fname))
+
     def openMTG(self):
         initialname = os.path.dirname(self.mtgfile) if self.mtgfile else get_shared_data('mtgdata')
         fname = QFileDialog.getOpenFileName(self, "Open MTG file",
@@ -530,6 +554,7 @@ class GLMTGEditor(QGLViewer):
                                                 "MTG Files (*.mtg;*.bmtg);;All Files (*.*)")
         if not fname: return
         fname = str(fname)
+        self.filehistory.add(fname, 'MTG')
         self.readMTG(fname)
         
     def importMTG(self):
@@ -539,6 +564,7 @@ class GLMTGEditor(QGLViewer):
                                                 "MTG Files (*.mtg);;All Files (*.*)")
         if not fname: return
         fname = str(fname)
+        self.filehistory.add(fname, 'iMTG')
         self.readMTG(fname, True)
         
     def readMTG(self, fname, fromdigit = False):
@@ -615,6 +641,7 @@ class GLMTGEditor(QGLViewer):
                                                 "MTG Files (*.mtg;*.bmtg);;All Files (*.*)")
         if not fname: return
         fname = str(fname)
+        self.filehistory.add(fname, 'MTG')
         self.writeMTG(fname)
         
     def writeMTG(self,fname):
@@ -693,13 +720,15 @@ class GLMTGEditor(QGLViewer):
         
         for vid in self.mtg.vertices(scale=self.mtg.max_scale()):
             if self.mtg.parent(vid) is None or self.mtg.edge_type(vid) == "+":
+                print 'consider', vid
                 axe = self.mtg.Axis(vid)
                 if not self.mtg.parent(vid) is None: axe.insert(0, self.mtg.parent(vid))
-                points = [self.mtg.property(self.propertyposition)[nodeID] for nodeID in axe]
-                radius = [(self.mtg.property(self.propertyradius).get(nodeID,0), self.mtg.property(self.propertyradius).get(nodeID,0)) for nodeID in axe]
-                geometry = Extrusion(Polyline(points), section, radius)
-                if translation: geometry = Translated(translation,geometry)
-                scene += Shape(geometry, self.modelMaterial)
+                if len(axe) > 2:
+                    points = [self.mtg.property(self.propertyposition)[nodeID] for nodeID in axe]
+                    radius = [(self.mtg.property(self.propertyradius).get(nodeID,0), self.mtg.property(self.propertyradius).get(nodeID,0)) for nodeID in axe]
+                    geometry = Extrusion(Polyline(points), section, radius)
+                    if translation: geometry = Translated(translation,geometry)
+                    scene += Shape(geometry, self.modelMaterial, vid)
         self.modelRep =  scene
     
     def importPoints(self):
@@ -709,6 +738,7 @@ class GLMTGEditor(QGLViewer):
                                                 "Points Files (*.asc;*.xyz;*.pwn;*.pts;*.txt;*.bgeom);;All Files (*.*)")
         if not fname: return
         fname = str(fname)
+        self.filehistory.add(fname, 'PTS')
         self.readPoints(fname)
         
         
@@ -755,6 +785,7 @@ class GLMTGEditor(QGLViewer):
                                                 "Points Files (*.asc;*.xyz;*.pwn;*.pts;*.bgeom);;All Files (*.*)")
         if not fname: return
         fname = str(fname)
+        self.filehistory.add(fname, 'PTS')
         self.savePoints(fname)
 
     def savePoints(self,fname):
@@ -782,9 +813,9 @@ class GLMTGEditor(QGLViewer):
             sc += self.pointsAttributeRep
             
         if self.mtgDisplay and self.mtgrep:
-            #sc +=  self.mtgrep
+            sc +=  self.mtgrep
             #mtgrep, mtgrepindex  = createMTGRepresentation(self.mtg,self.edgeInfMaterial,self.edgePlusMaterial, translation=self.translation)
-            sc += mtgrep
+            #sc += mtgrep
         
          
         if self.ctrlPointDisplay and self.ctrlPointsRep:
@@ -830,7 +861,7 @@ class GLMTGEditor(QGLViewer):
         eid = self.mtgrepindex.get(pid)
         positions = self.mtg.property(self.propertyposition)
         mat = self.edgeInfMaterial if self.mtg.edge_type(pid) == '<' else self.edgePlusMaterial
-        if eid:
+        if not eid is None:
             self.mtgrep[eid] = createEdgeRepresentation(self.mtg.parent(pid),pid,positions,mat)
         for son in self.mtg.children(pid):
             mat = self.edgeInfMaterial if self.mtg.edge_type(son) == '<' else self.edgePlusMaterial
@@ -840,7 +871,7 @@ class GLMTGEditor(QGLViewer):
         positions = self.mtg.property(self.propertyposition)
         if self.mtg.property(self.propertyradius).get(pid):
             rep = createRadiusRepresentation(self.mtg, pid, positions, self.mtg.property(self.propertyradius), self.radiusMaterial )
-            if self.radiusRepIndex.get(pid):
+            if not self.radiusRepIndex.get(pid) is None:
                 self.radiusRep[self.radiusRepIndex[pid]] = rep
             else:
                 self.radiusRepIndex[pid] = len(self.radiusRep)
@@ -1131,6 +1162,85 @@ class GLMTGEditor(QGLViewer):
         return self.check_input_mtg()
 
 
+    def createParamDialog(self, text, listparam):
+        class MDialog(QDialog):
+            def __init__(self, parent):
+                QDialog.__init__(self, parent)
+                self.resultgetter = []
+                self.mparent = parent
+            def getParams(self):
+                result = [box() for box in self.resultgetter]
+                self.mparent.setparamcache(text, result)
+                return result
+
+        prevparam = self.getparamcache(text, None)
+        if prevparam and len(prevparam) != len(listparam): 
+            prevparam = None
+
+
+        Dialog = MDialog(self)
+        gridLayout = QGridLayout(Dialog)
+        sectionLabel = QLabel(Dialog)
+        sectionLabel.setText(text)
+        gridLayout.addWidget(sectionLabel, 0, 0, 1, 2)
+        space = QSpacerItem(1,10)
+        gridLayout.addItem(space, 1, 0, 1, 2)
+        row = 2
+        
+        nbparam = 0
+        for paraminfo in listparam:
+            if len(paraminfo) == 3:
+                pname, ptype, pdefvalue = paraminfo
+                pparam = {}
+            else:
+                pname, ptype, pdefvalue, pparam = paraminfo
+            if prevparam: 
+                pdefvalue = prevparam[nbparam]
+            sectionLabel = QLabel(Dialog)
+            sectionLabel.setText(pname)
+            gridLayout.addWidget(sectionLabel, row, 0, 1, 1)
+            if ptype == int:
+                valuebox = QSpinBox(Dialog)
+                valuebox.setValue(pdefvalue)
+                if pparam.has_key('range') :valuebox.setRange(*pparam['range'])
+                gridLayout.addWidget(valuebox, row, 1, 1, 1)
+                Dialog.resultgetter.append(valuebox.value)
+            elif ptype == float:
+                valuebox = QDoubleSpinBox(Dialog)
+                if pparam.has_key('decimals') :valuebox.setDecimals(pparam['decimals'])
+                else:valuebox.setDecimals(5)
+                valuebox.setValue(pdefvalue)
+                gridLayout.addWidget(valuebox, row, 1, 1, 1)
+                Dialog.resultgetter.append(valuebox.value)
+            elif ptype == bool:
+                valuebox = QCheckBox(Dialog)
+                valuebox.setValue(pdefvalue)
+                gridLayout.addWidget(valuebox, row, 1, 1, 1)
+                Dialog.resultgetter.append(valuebox.isChecked)
+            elif ptype == str:
+                valuebox = QTextEdit(Dialog)
+                gridLayout.addWidget(valuebox, row, 1, 1, 1)
+                valuebox.setPlainText(pdefvalue)
+                Dialog.resultgetter.append(valuebox.toPlainText)
+            elif ptype == QuantisedFunction:
+                from openalea.plantgl.gui.curve2deditor import Curve2DEditor, FuncConstraint
+                valuebox = Curve2DEditor(Dialog)
+                valuebox.pointsConstraints = FuncConstraint()
+                if pdefvalue: valuebox.setCurve(pdefvalue)
+                row += 1
+                gridLayout.addWidget(valuebox, row, 0, 1, 2)
+                Dialog.resultgetter.append(valuebox.getCurve)
+            row += 1
+            nbparam += 1
+
+        buttonBox = QDialogButtonBox(Dialog)
+        buttonBox.setOrientation(Qt.Horizontal)
+        buttonBox.setStandardButtons(QDialogButtonBox.Cancel|QDialogButtonBox.Ok)
+        QtCore.QObject.connect(buttonBox, SIGNAL("accepted()"), Dialog.accept)
+        QtCore.QObject.connect(buttonBox, SIGNAL("rejected()"), Dialog.reject)
+        gridLayout.addWidget(buttonBox, row, 1, 1, 1)
+
+        return Dialog
 
 # ---------------------------- MTG edition ----------------------------------------   
      
@@ -1209,9 +1319,9 @@ class GLMTGEditor(QGLViewer):
             npos = candidates[cmplist[0][0]]
             
         if self.mtg.is_leaf(nid):
-            cid = self.mtg.add_child(nid,position=npos,edge_type='<',label='N')
+            cid = self.mtg.add_child(nid,position=npos, edge_type='<', label= self.nodelabel)
         else:
-            cid = self.mtg.add_child(nid,position=npos,edge_type='+',label='B')
+            cid = self.mtg.add_child(nid,position=npos, edge_type='+', label=self.nodelabel)
         
         ctrlPoint = createCtrlPoint(self.mtg,cid,self.ctrlPointColor,self.propertyposition,self.__update_value__)
         self.ctrlPoints[cid] = ctrlPoint
@@ -1234,7 +1344,7 @@ class GLMTGEditor(QGLViewer):
         pposition = positions[self.mtg.parent(nid)]
         newposition = (cposition+pposition)/2
         edge_type = self.mtg.edge_type(nid)
-        cid = self.mtg.insert_parent(nid, edge_type = edge_type, position = newposition, label = 'N' if edge_type == '<' else 'B')
+        cid = self.mtg.insert_parent(nid, edge_type = edge_type, position = newposition, label = self.nodelabel)
         self.mtg.property('edge_type')[nid] = '<'        
         ctrlPoint = createCtrlPoint(self.mtg,cid,self.ctrlPointColor,self.propertyposition,self.__update_value__)
         self.ctrlPoints[cid] = ctrlPoint
@@ -1263,10 +1373,9 @@ class GLMTGEditor(QGLViewer):
         self.mtg.replace_parent(nid,node.id)
         if len(ndirectsons) > 0:
             self.mtg.property('edge_type')[nid] = '+'
-            self.mtg.property('label')[nid] = 'B'
         else:
             self.mtg.property('edge_type')[nid] = '<'
-            self.mtg.property('edge_type')[nid] = 'N'
+        self.mtg.property('label')[nid] = self.nodelabel
         self.showMessage("Parent selected : "+str(node.id)+".")
         self.__update_value__(nid)
         self.updateGL()
@@ -1277,7 +1386,7 @@ class GLMTGEditor(QGLViewer):
         self.createBackup()
         nid = self.selection.id
         self.mtg.property('edge_type')[nid] = '+'
-        self.mtg.property('label')[nid] = 'B'
+        self.mtg.property('label')[nid] = self.nodelabel
         self.__update_value__(nid)
         self.updateGL()
         
@@ -1287,13 +1396,13 @@ class GLMTGEditor(QGLViewer):
         nid = self.selection.id
         edge_type = self.mtg.property('edge_type')
         edge_type[nid] = '<'
-        self.mtg.property('label')[nid] = 'N'
+        self.mtg.property('label')[nid] = self.nodelabel
         siblings = self.mtg.siblings(nid)
         self.__update_value__(nid)
         for sib in siblings:
             if edge_type[sib] == '<' :
                 edge_type[sib] = '+'
-                self.mtg.property('label')[sib] = 'B'
+                self.mtg.property('label')[sib] = self.nodelabel
                 self.__update_value__(sib)
             
         self.updateGL()
@@ -1498,6 +1607,18 @@ class GLMTGEditor(QGLViewer):
             self.pointDensityDisplay(densities)
             self.showMessage('Density range for R='+str(radius)+' : '+str(densities.getMinAndMax(True))+'. Computed in {}'.format(t))
 
+    def pointClusters(self):
+        if not self.check_input_data(): return
+
+        points = self.points.pointList
+        nodes = self.mtg.property(self.propertyposition).values()
+        from numpy.random import shuffle
+        shuffle(nodes)
+        clusterid = points_clusters(points, nodes)
+        self.pointDensityDisplay(clusterid)
+        self.showMessage('Show point clusters')
+
+
     def densityHistogram(self):
         if not self.check_input_points() : return
         try:
@@ -1635,18 +1756,13 @@ class GLMTGEditor(QGLViewer):
         self.updateGL()
         self.showMessage("Applied contraction in {} sec.".format(t))
 
-    def adaptiveRadialContractionParam(self):
-        import adpativecontractionparam_ui
-        from vplants.plantgl.gui.curve2deditor import FuncConstraint
-        
-        class ContractionDialog(QDialog, adpativecontractionparam_ui.Ui_Dialog) :
-                def __init__(self, parent=None):
-                    QDialog.__init__(self, parent)
-                    adpativecontractionparam_ui.Ui_Dialog.__init__(self)
-                    self.setupUi(self)
-                    self.funcEditor.pointsConstraints = FuncConstraint()
 
-        cdialog = ContractionDialog(self)
+    def adaptiveRadialContraction(self):
+        if not self.check_input_points() : return
+        if not hasattr(self.pointinfo,'densities'):
+            self.pointRDensity()
+        if not hasattr(self.pointinfo, 'directions'):
+            if not self.pointDirections(): return
 
         kclosests = self.estimateKClosest()
         points = self.points.pointList
@@ -1656,24 +1772,14 @@ class GLMTGEditor(QGLViewer):
         zdist = points[maxi].z-points[mini].z
         mdistance = mean(pointset_mean_distances(points, points, kclosests))
 
-        cdialog.widthBox.setValue(mdistance)
-        cdialog.minRadiusBox.setValue(zdist/200)
-        cdialog.maxRadiusBox.setValue(zdist/50)
-
         Rfunc = NurbsCurve2D([(0,0,1),(0.3,0.3,1),(0.7,0.7,1),(1,1,1)])
-        cdialog.funcEditor.setCurve(Rfunc)
+        dialog = self.createParamDialog('Parameterizing the Adaptive Radial Contraction', [('Section Width',float,mdistance),
+                                                                                           ('Minimum Contraction Radius',float,zdist/200),
+                                                                                           ('Maximum Contraction Radius',float,zdist/50),
+                                                                                           ('Density - Radius Relationship',QuantisedFunction, Rfunc) ] )
 
-        if cdialog.exec_() == QDialog.Accepted:
-            return cdialog.widthBox.value(), cdialog.minRadiusBox.value(), cdialog.maxRadiusBox.value(), cdialog.funcEditor.getCurve()
-
-    def adaptiveRadialContraction(self):
-        if not self.check_input_points() : return
-        if not hasattr(self.pointinfo,'densities'):
-            self.pointRDensity()
-        if not hasattr(self.pointinfo, 'directions'):
-            if not self.pointDirections(): return
-        param = self.adaptiveRiemannianContractionParam()
-        if not param is None:
+        if dialog.exec_() :
+            param = dialog.getParams()
             sectionwidth, minradius, maxradius, radiusfunc = param
             self.createPointBackup()
             points = self.points.pointList
@@ -1683,8 +1789,7 @@ class GLMTGEditor(QGLViewer):
             t = time()
             orientations =  self.pointinfo.directions
             densities = self.pointinfo.densities
-            radiusfunc = NurbsCurve2D(radiusfunc.ctrlPointList, degree=radiusfunc.degree, knotList=radiusfunc.knotList, stride=radiusfunc.stride, width=radiusfunc.width)
-            densityradiusmap = pgl.QuantisedFunction(radiusfunc)
+            densityradiusmap = QuantisedFunction(radiusfunc.__deepcopy__({}))
             radii = pgl.adaptive_radii(densities, minradius*pi, maxradius*pi, densityradiusmap)
             cpoints2, radii2 = adaptive_section_circles(points, kclosests, orientations, sectionwidth, radii)
 
@@ -1697,7 +1802,7 @@ class GLMTGEditor(QGLViewer):
 
 
     def pathBasedContraction(self):
-        self.check_input_mtg('Require a root position.')
+        if not self.check_input_mtg('Require a root position.'): return
         livnycontractionnb, ok = QInputDialog.getInt(self,'Number of Contraction Steps','Select a number of contraction step', self.getparamcache('livnycontractionnb',3),0,50)
         if ok:
             self.setparamcache('livnycontractionnb',livnycontractionnb)
@@ -1734,13 +1839,12 @@ class GLMTGEditor(QGLViewer):
         points = self.points.pointList
         mdistance = np.mean(pointset_mean_distances(points, points, kclosests))
 
-        rosastepnb, ok = QInputDialog.getInt(self,'Number of Steps','Select a number of step',self.getparamcache('rosastepnb',3),0,50)
-        if not ok: return
+        dialog = self.createParamDialog('Parameterizing the Rosa Contraction. (Pointset neigborhood mean distance : %f)' % mdistance, [('Section Width',float,mdistance),
+                                                                                 ('Number of Steps',int,3,{'range':(0,50)}) ] )
 
-        radius, ok = QInputDialog.getDouble(self,'Section Width','Select a section width of contraction (Pointset neigborhood mean distance : %f)' % mdistance,mdistance,0,decimals=3)
-
-        if ok:
-            self.setparamcache('rosastepnb',rosastepnb)
+        if dialog.exec_() :
+            param = dialog.getParams()
+            sectionwidth,  rosastepnb = param
             
             self.createPointBackup()
             from time import time
@@ -1759,6 +1863,9 @@ class GLMTGEditor(QGLViewer):
             self.pointinfo.directions = directions
             self.updateGL()
             self.showMessage("Applied contraction in {} sec.".format(t))
+
+
+
 
 # ---------------------------- Align ----------------------------------------   
 
@@ -1875,8 +1982,29 @@ class GLMTGEditor(QGLViewer):
         self.updateGL()
 
     def pipeModel(self):
-        pass
+        from mtgmanip import get_first_param_value, pipemodel
+        self.check_input_mtg()
+        pipeparamcache = self.getparamcache('pipemodel',None)
+        if pipeparamcache:
+            defrootradius, defleaveradius = pipeparamcache
+        else:
+            defrootradius = get_first_param_value(self.mtg,self.propertyradius)
+            if defrootradius is None: defrootradius = 1
+            defleaveradius = defrootradius/100.
+        print defrootradius, defleaveradius
+        dialog = self.createParamDialog('Parameterizing the Pipe Model',[('Root Radius',float,defrootradius),('Leaves Radius',float,defleaveradius)])
+        if dialog.exec_() :
+            params = dialog.getParams()
+            self.setparamcache('pipemodel',params)
+            rootradius, leaveradius = params
+            print rootradius, leaveradius
+            estimatedradii = pipemodel(self.mtg, rootradius, leaveradius)
+            print estimatedradii
+            self.mtg.property(self.propertyradius).update(estimatedradii)
 
+            self.radiusRep, self.radiusRepIndex = createRadiiRepresentation(self.mtg, self.radiusMaterial, positionproperty= self.propertyposition, radiusproperty = self.propertyradius)
+            self.updateGL()
+            
     def pipeModelAverageDistance(self):
         pipeexponent, ok = QInputDialog.getDouble(self,'Pipe Exponent','Select a pipe exponent',self.getparamcache('pipeexponent',2.0),0.5,4,2)
         if ok:
@@ -1900,26 +2028,8 @@ class GLMTGEditor(QGLViewer):
 
 # ---------------------------- Check MTG ----------------------------------------     
         
-    def correct_labelMTG(self):
-        print 'Correcting label in MTG..'
-        for vtx in self.mtg.vertices(scale=self.mtg.max_scale()):
-            if vtx != 2: # root node
-                if self.mtg.edge_type(vtx) == '<':
-                    self.mtg.property('label')[vtx] = 'N'
-                elif self.mtg.edge_type(vtx) == '+':
-                    self.mtg.property('label')[vtx] = 'B'
-                elif self.mtg.edge_type(vtx) == '':
-                    print vtx
-                    if self.mtg.label(vtx) == 'N': 
-                        self.mtg.property('edge_type')[vtx] = '<'
-                    else: self.mtg.property('edge_type')[vtx] = '+'
-                    
-                child = [c for c in self.mtg.children(vtx)]
-                if len(child) == 1:
-                    self.mtg.property('edge_type')[child[0]] = '<'
     
     def checkMTG(self):
-        self.correct_labelMTG()
         
         error_vtx=[]
         for vtx in self.mtg.vertices(scale=self.mtg.max_scale()):
@@ -1927,7 +2037,7 @@ class GLMTGEditor(QGLViewer):
                 error_vtx.append(vtx)
         
         if len(error_vtx) != 0:
-            print 'Multiple direct sons of some nodes of the MGT : ', error_vtx
+            QMessageBox.warning(self,'Multiple direct sons of nodes of the MTG :'+str(error_vtx))
                  
         s = []
         for ctrlPoint in self.ctrlPoints.itervalues():
@@ -1938,8 +2048,6 @@ class GLMTGEditor(QGLViewer):
         
         self.ctrlPointsRep = Scene(s)
         
-        print 'finish check'
-
 # ---------------------------- Root ----------------------------------------     
 
 
@@ -1965,20 +2073,34 @@ class GLMTGEditor(QGLViewer):
 
 # ---------------------------- Reconstruction ----------------------------------------     
 
-    def xuReconstruction(self, startfrom = None):
-        print 'Xu Reconstruction'
+    def getStartFrom(self, startfrom):
         if type(startfrom) != int:
             if not self.selection is None:
                 startfrom = self.selection.id
                 points = None
+                return startfrom, points
             else:
+                if self.mtg is None : 
+                    QMessageBox.warning(self,"Root","Create a root node")
+                    return None, None
                 vtx = list(self.mtg.vertices(self.mtg.max_scale()))
-                if len(vtx) > 1 : QMessageBox.warning(self,"Root","Select a node")
-                elif len(vtx) ==0 : QMessageBox.warning(self,"Root","Add a root node")
+                if len(vtx) > 1 : 
+                    QMessageBox.warning(self,"Root","Select a node")
+                    return None, None
+                elif len(vtx) ==0 : 
+                    QMessageBox.warning(self,"Root","Add a root node")
+                    return None, None
                 else : startfrom = vtx[0]
                 points = self.points.pointList
+                return startfrom, points
         else:
-            return
+            return None, None
+
+    def xuReconstruction(self, startfrom = None):
+        print 'Xu Reconstruction'
+
+        startfrom, points = self.getStartFrom(startfrom)
+        if startfrom is None: return
 
         binratio, ok = QInputDialog.getInt(self,'Bin Ratio','Select a bin ratio',self.getparamcache('binratio',50),10,1000)
 
@@ -2000,78 +2122,109 @@ class GLMTGEditor(QGLViewer):
             self.updateMTGView()
             self.updateGL()
 
-    def preuksakarnReconstructionParam(self):
-        import adpativecontractionparam_ui
-        from vplants.plantgl.gui.curve2deditor import FuncConstraint
-
-        mini,maxi = self.points.pointList.getZMinAndMaxIndex()
-        zdist = self.points.pointList[maxi].z-self.points.pointList[mini].z
-        
-        class ContractionDialog(QDialog, adpativecontractionparam_ui.Ui_Dialog) :
-                def __init__(self, parent=None):
-                    QDialog.__init__(self, parent)
-                    adpativecontractionparam_ui.Ui_Dialog.__init__(self)
-                    self.setupUi(self)
-                    self.funcEditor.pointsConstraints = FuncConstraint()
-                    self.sectionLabel.hide()
-                    self.widthBox.hide()
-                    self.minRadiusLabel.setText('Minimum Bin Length')
-                    self.maxRadiusLabel.setText('Maximum Bin Length')
 
 
-        cdialog = ContractionDialog(self)
-
-        kclosests = self.estimateKClosest()
-        points = self.points.pointList
-
-        from numpy import mean
-        mini,maxi = points.getZMinAndMaxIndex()
-        zdist = points[maxi].z-points[mini].z
-        mdistance = mean(pointset_mean_distances(points, points, kclosests))
-
-        cdialog.minRadiusBox.setValue(zdist/200)
-        cdialog.maxRadiusBox.setValue(zdist/50)
-
-        Rfunc = NurbsCurve2D([(0,0,1),(0.3,0.3,1),(0.7,0.7,1),(1,1,1)])
-        cdialog.funcEditor.setCurve(Rfunc)
-
-        if cdialog.exec_() == QDialog.Accepted:
-            return cdialog.minRadiusBox.value(), cdialog.maxRadiusBox.value(), cdialog.funcEditor.getCurve()
-
-
-    def preuksakarnReconstruction(self, startfrom = None):
+    def graphColonization(self, startfrom = None):
         if not self.check_input_points() : return
         if not hasattr(self.pointinfo,'densities'):
             self.pointRDensityMT()
 
-        print 'Preuksakarn Reconstruction'
-        if type(startfrom) != int:
-            if not self.selection is None:
-                startfrom = self.selection.id
-                points = None
-            else:
-                vtx = list(self.mtg.vertices(self.mtg.max_scale()))
-                if len(vtx) > 1 : QMessageBox.warning(self,"Root","Select a node")
-                elif len(vtx) ==0 : QMessageBox.warning(self,"Root","Add a root node")
-                else : startfrom = vtx[0]
-                points = self.points.pointList
-        else:
-            return
+        print 'Graph Colonization Reconstruction'
+        startfrom, points = self.getStartFrom(startfrom)
+        if startfrom is None: return
 
-        param = self.preuksakarnReconstructionParam()
-        if not param is None:
+        points = self.points.pointList
+        mini,maxi = points.getZMinAndMaxIndex()
+        zdist = points[maxi].z-points[mini].z
+
+        Rfunc = NurbsCurve2D([(0,0,1),(0.3,0.3,1),(0.7,0.7,1),(1,1,1)])
+        dialog = self.createParamDialog('Parameterizing the Space Colonization Algorithm',[('Minimum Bin Length',float,zdist/200,{'decimals':5}),
+                                                                                           ('Maximum Bin Length',float,zdist/50,{'decimals':5}),
+                                                                                           ('Density - Bin Length Relationship',QuantisedFunction,Rfunc,{'decimals':5})] )
+        if dialog.exec_() :
+            param = dialog.getParams()
             minlength, maxlength, radiusfunc = param
             self.createBackup()
-            self.showMessage("Apply Preuksakarn et al. reconstruction from  node "+str(startfrom)+".")
+            self.showMessage("Apply Adaptive Graph Colonization et al. reconstruction from  node "+str(startfrom)+".")
             if points is None:
                 print 'filter',len(self.points.pointList),'points with distance', maxlength
                 points, emptycolor = self.filter_points(PointSet(self.points.pointList),maxlength)#,[startfrom])
                 if len(points) < 10: 
                     self.showMessage("Not enough points ("+str(len(points))+") to apply reconstruction from "+str(startfrom)+".")
                     return
-            from xumethod import preuksakarn_method
+            from xumethod import graphcolonization_method
             densities = self.pointinfo.densities
-            preuksakarn_method(self.mtg, startfrom, points, densities, minlength, maxlength, radiusfunc)
+            graphcolonization_method(self.mtg, startfrom, points, densities, minlength, maxlength, QuantisedFunction(radiusfunc.__deepcopy__({})))
+            self.updateMTGView()
+            self.updateGL()
+
+
+    def scaReconstruction(self, startfrom = None):
+        if not self.check_input_points() : return
+
+        print 'Space Colonization Reconstruction'
+        startfrom, points = self.getStartFrom(startfrom)
+        if startfrom is None: return
+
+        mini,maxi = self.points.pointList.getZMinAndMaxIndex()
+        zdist = self.points.pointList[maxi].z-self.points.pointList[mini].z
+
+        dialog = self.createParamDialog('Parameterizing the Space Colonization Algorithm',[('Growth Length',float,zdist/50,{'decimals':5}),
+                                                                                           ('Kill Distance Ratio',float,0.9,{'decimals':5}),
+                                                                                           ('Perception Distance Ratio',float,2.5,{'decimals':5}),
+                                                                                           ('Minimum number of attractors',int,5,{'range':(0,100)}) ] )
+        if dialog.exec_() :
+            param = dialog.getParams()
+            growthlength, killratio, perceptionratio, min_nb_pt_per_bud = param
+            self.createBackup()
+            self.showMessage("Apply Space Colonization reconstruction from node "+str(startfrom)+".")
+            if points is None:
+                print 'filter',len(self.points.pointList),'points with distance', growthlength
+                points, emptycolor = self.filter_points(PointSet(self.points.pointList),growthlength)#,[startfrom])
+                if len(points) < 10: 
+                    self.showMessage("Not enough points ("+str(len(points))+") to apply reconstruction from "+str(startfrom)+".")
+                    return
+            from sca import spacecolonization_method
+            spacecolonization_method(self.mtg, startfrom, points, growthlength, killratio, perceptionratio, min_nb_pt_per_bud)
+            self.updateMTGView()
+            self.updateGL()
+
+
+    def adaptivescaReconstruction(self, startfrom = None):
+        if not self.check_input_points() : return
+        if not hasattr(self.pointinfo,'densities'):
+            self.pointRDensityMT()
+
+        print 'Adaptive Space Colonization Reconstruction'
+        startfrom, points = self.getStartFrom(startfrom)
+        if startfrom is None: return
+
+        mini,maxi = self.points.pointList.getZMinAndMaxIndex()
+        zdist = self.points.pointList[maxi].z-self.points.pointList[mini].z
+
+        Rfunc = NurbsCurve2D([(0,0,1),(0.3,0.3,1),(0.7,0.7,1),(1,1,1)])
+        dialog = self.createParamDialog('Parameterizing the Space Colonization Algorithm',[('Maximum Growth Length',float,zdist/50,{'decimals':5}),
+                                                                                           ('Minimum Growth Length',float,zdist/100,{'decimals':5}),
+                                                                                           ('Density - Growth Length Relationship',QuantisedFunction,Rfunc,{'decimals':5}),
+                                                                                           ('Kill Distance Ratio',float,0.9,{'decimals':5}),
+                                                                                           ('Perception Distance Ratio',float,2.5,{'decimals':5}),
+                                                                                           ('Minimum number of attractors',int,5,{'range':(0,100)}) ] )
+        if dialog.exec_() :
+            param = dialog.getParams()
+            maxlength, minlength, radiusfunc, killratio, perceptionratio, min_nb_pt_per_bud = param
+            self.createBackup()
+            self.showMessage("Apply Adaptive Space Colonizatio reconstruction from node "+str(startfrom)+".")
+            if points is None:
+                print 'filter',len(self.points.pointList),'points with distance', maxlength
+                points, emptycolor = self.filter_points(PointSet(self.points.pointList),maxlength)#,[startfrom])
+                if len(points) < 10: 
+                    self.showMessage("Not enough points ("+str(len(points))+") to apply reconstruction from "+str(startfrom)+".")
+                    return
+            from sca import adaptivespacecolonization_method
+            densities = self.pointinfo.densities
+
+            adaptivespacecolonization_method(self.mtg, startfrom, points, densities, minlength, maxlength, QuantisedFunction(radiusfunc.__deepcopy__({})), 
+                                             killratio, perceptionratio, min_nb_pt_per_bud)
             self.updateMTGView()
             self.updateGL()
 
@@ -2079,44 +2232,32 @@ class GLMTGEditor(QGLViewer):
 
     def livnyReconstruction(self, startfrom = None):
         print 'Livny Reconstruction'
-        if type(startfrom) != int:
-            if not self.selection is None:
-                startfrom = self.selection.id
-                points = None
-            else:
-                vtx = list(self.mtg.vertices(self.mtg.max_scale()))
-                if len(vtx) > 1 : QMessageBox.warning(self,"Root","Select a node")
-                elif len(vtx) ==0 : QMessageBox.warning(self,"Root","Add a root node")
-                else : startfrom = vtx[0]
-                points = self.points.pointList
-        else:
-            return
 
-        livnycontractionnb, ok = QInputDialog.getInt(self,'Number of Contraction Steps','Select a number of contraction step',self.getparamcache('livnycontractionnb',3),0,50)
-        if ok:
+        startfrom, points = self.getStartFrom(startfrom)
+        if startfrom is None: return
 
-            livnyfilteringnb, ok = QInputDialog.getInt(self,'Number of Filtering Steps','Select a number of filtering step',self.getparamcache('livnyfilteringnb',5),0,50)
-            if ok:
-                livnyminedgeratio, ok = QInputDialog.getInt(self,'Ratio for min edge size','Select a ratio for min edge size filter',self.getparamcache('livnyminedgeratio',15),0,100)
+        dialog = self.createParamDialog('Parameterizing Livny Algorithm',[('Number of Contraction Steps',int,3,{'range':(0,50)}),
+                                                                          ('Number of Filtering Steps',int,5,{'range':(0,50)}),
+                                                                          ('Ratio for min edge size filter',int,15,{'range':(0,100)}) ] )
 
-                if ok:
-                    self.createBackup()
-                    self.showMessage("Apply Livny et al. reconstruction from  node "+str(startfrom)+".")
-                    self.setparamcache('livnycontractionnb',livnycontractionnb)
-                    self.setparamcache('livnyfilteringnb',livnyfilteringnb)
-                    self.setparamcache('livnyminedgeratio',livnyminedgeratio)
-                    verbose = False
-                    if points is None:
-                        print 'filter',len(self.points.pointList),'points with distance', binlength
-                        points, emptycolor = self.filter_points(PointSet(self.points.pointList),binlength)#,[startfrom])
-                        verbose = False
-                        if len(points) < 10: 
-                            self.showMessage("Not enough points ("+str(len(points))+") to apply reconstruction from "+str(startfrom)+".")
-                            return
-                    from livnymethod import livny_method_mtg
-                    livny_method_mtg(self.mtg, startfrom, points, livnycontractionnb, livnyfilteringnb, livnyminedgeratio/100. )
-                    self.updateMTGView()
-                    self.updateGL()
+        if dialog.exec_() :
+            param = dialog.getParams()
+            livnycontractionnb, livnyfilteringnb, livnyminedgeratio = param
+
+            self.createBackup()
+            self.showMessage("Apply Livny et al. reconstruction from  node "+str(startfrom)+".")
+            verbose = False
+            if points is None:
+                print 'filter',len(self.points.pointList),'points with distance', binlength
+                points, emptycolor = self.filter_points(PointSet(self.points.pointList),binlength)#,[startfrom])
+                verbose = False
+                if len(points) < 10: 
+                    self.showMessage("Not enough points ("+str(len(points))+") to apply reconstruction from "+str(startfrom)+".")
+                    return
+            from livnymethod import livny_method_mtg
+            livny_method_mtg(self.mtg, startfrom, points, livnycontractionnb, livnyfilteringnb, livnyminedgeratio/100. )
+            self.updateMTGView()
+            self.updateGL()
 
 
 # ---------------------------- Tagging ----------------------------------------     
@@ -2191,12 +2332,11 @@ class GLMTGEditor(QGLViewer):
 
     def tagUpdateVisu(self):
         self.createCtrlPointRepresentation()
-        self.prevVisu = (self.pointDisplay, self.contractedpointDisplay)
+        self.prevVisu = self.pointDisplay
         self.pointDisplay = False
-        self.contractedpointDisplay = False  
 
     def endTagRepresentation(self):
-        self.pointDisplay, self.contractedpointDisplay = self.prevVisu
+        self.pointDisplay = self.prevVisu
         for cid, cpoint in self.ctrlPoints.items():
             cpoint.color = self.ctrlPointColor
         self.createCtrlPointRepresentation()
@@ -2262,9 +2402,10 @@ class GLMTGEditor(QGLViewer):
                 props = dict()
                 for vid, model in zip(self.vids, self.models):
                     vidprops = dict()
-                    for i in xrange(self.model.rowCount()):
-                        propname = self.model.item(i,0).text()
-                        valuerepr = self.model.item(i,1).text()
+                    for i in xrange(model.rowCount()):
+                        propname = model.item(i,0).text()
+                        valuerepr = model.item(i,1).text()
+                        print propname,valuerepr
                         if len(valuerepr) > 0:
                             try:
                                 value = eval(valuerepr)
@@ -2281,15 +2422,19 @@ class GLMTGEditor(QGLViewer):
                 mtg = self.main.mtg
                 try:
                     props = self.retrieve_properties()
+                    print props
                     main.createBackup()
-                    for vid, vidprop in props.items:
-                        for pname, pvalue in vidprops.items():
+                    for vid, vidprop in props.items():
+                        print vid, vidprop
+                        for pname, pvalue in vidprop.items():
                             if pvalue is None:
                                 if mtg.property(pname).has_key(vid) : 
                                     del mtg.property(pname)[vid]
                             else:
                                 mtg.property(pname)[vid] = pvalue
-                        return True
+                        if mtg.scale(vid) == mtg.max_scale():
+                            self.main.__update_value__(vid)
+                    return True
                 except ValueError, ve:
                     return False
 

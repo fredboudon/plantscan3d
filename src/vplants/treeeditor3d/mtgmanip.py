@@ -1,13 +1,13 @@
 
 
-def initialize_mtg(root):
+def initialize_mtg(root, nodelabel = 'N'):
     from openalea.mtg import MTG
     mtg = MTG()
     plantroot = mtg.root
-    branchroot = mtg.add_component(plantroot,label='B')
-    noderoot = mtg.add_component(branchroot,label='N')
+    branchroot = mtg.add_component(plantroot,label='P')
+    noderoot = mtg.add_component(branchroot,label=nodelabel)
     mtg.property('position')[noderoot] = root  
-    mtg.property('radius')[noderoot] = 0   
+    mtg.property('radius')[noderoot] = None
     assert len(mtg.property('position')) == 1
     return mtg
 
@@ -21,12 +21,14 @@ def mtg2pgltree(mtg):
 
 from openalea.plantgl.all import *
 
-def pgltree2mtg(mtg, startfrom, parents, positions, radii = None, filter_short_branch = False, angle_between_trunk_and_lateral = 60):
+def pgltree2mtg(mtg, startfrom, parents, positions, radii = None, filter_short_branch = False, angle_between_trunk_and_lateral = 60, nodelabel = 'N'):
     from math import degrees, acos
 
     rootpos = Vector3(mtg.property('position')[startfrom])
     if norm(positions[0]-rootpos) > 1e-3:
-        startfrom = mtg.add_child(parent=startfrom,position=positions[0])
+        if len(mtg.children(startfrom)) > 0 : edge_type = '+'
+        else : edge_type = '<'
+        startfrom = mtg.add_child(parent=startfrom,position=positions[0], label=nodelabel, edge_type = edge_type)
 
     children, root = determine_children(parents)
     clength = subtrees_size(children,root)
@@ -44,7 +46,7 @@ def pgltree2mtg(mtg, startfrom, parents, positions, radii = None, filter_short_b
     while len(toprocess) > 0:
         nid, parent, edge_type = toprocess.pop(0)
         pos = positions[nid]
-        parameters = dict(parent = parent, label='N', edge_type = edge_type, position = pos)
+        parameters = dict(parent = parent, label=nodelabel, edge_type = edge_type, position = pos)
         if radii :
             parameters['radius'] = radii[nid]
         mtgnode = mtg.add_child(**parameters)
@@ -105,3 +107,49 @@ def threshold_filter(mtg, propname):
                     nprop[vid] = pvalue
 
     prop.update(nprop)
+
+def get_first_param_value(mtg, propname):
+    from openalea.mtg.traversal import iter_mtg2
+    scale = mtg.max_scale()
+
+    prop = mtg.property(propname)
+    for vid in iter_mtg2(mtg, mtg.root):
+        if vid in prop and mtg.scale(vid) == scale and not prop[vid] is None:
+            return prop[vid]
+
+def pipemodel(mtg, rootradius, leafradius):
+    from math import log
+    from openalea.mtg.traversal import post_order2
+    leaves = [vid for vid in mtg.vertices(mtg.max_scale()) if len(mtg.children(vid)) == 0]
+    #pipeexponent = log(len(leaves)) / (log(rootradius) - log(leafradius))
+    #print pipeexponent
+    #invpipeexponent = 1./ pipeexponent
+
+    roots = mtg.roots(scale=mtg.max_scale())
+    assert len(roots) == 1
+    root = roots[0]
+
+    radiusprop = dict()
+    for vid in leaves:  radiusprop[vid] = leafradius
+
+    nbelems = dict()
+    for vid in leaves:  nbelems[vid] = 1
+    for vid in post_order2(mtg, root):
+        if not vid in nbelems:
+            nbelems[vid] = sum([nbelems[child] for child in mtg.children(vid)]) + 1
+
+    #pipeexponent = log(nbelems[root]) / (log(rootradius) - log(leafradius))
+    pipeexponent = (log(rootradius) - log(leafradius))/log(nbelems[root]) 
+    print pipeexponent
+    invpipeexponent = 1./ pipeexponent
+
+    for vid in mtg.vertices(mtg.max_scale()):
+        if not vid in radiusprop:
+            radiusprop[vid] = leafradius*(nbelems[vid]**pipeexponent)
+
+    #for vid in post_order2(mtg, root):
+    #    if not vid in radiusprop:
+    #        rad = pow(sum([pow(radiusprop[child], pipeexponent) for child in mtg.children(vid)]), invpipeexponent)
+    #        radiusprop[vid] = rad
+
+    return radiusprop

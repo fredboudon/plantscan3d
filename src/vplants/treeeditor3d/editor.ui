@@ -11,7 +11,7 @@
    </rect>
   </property>
   <property name="windowTitle">
-   <string>MTG Editor</string>
+   <string>Plantscan3D</string>
   </property>
   <widget class="QWidget" name="centralwidget">
    <layout class="QGridLayout" name="gridLayout">
@@ -165,6 +165,11 @@
      <addaction name="actionArabido"/>
      <addaction name="actionAppleTree"/>
     </widget>
+    <widget class="QMenu" name="menuRecents">
+     <property name="title">
+      <string>Recents</string>
+     </property>
+    </widget>
     <addaction name="actionOpen_Project"/>
     <addaction name="actionSave_Project"/>
     <addaction name="separator"/>
@@ -180,6 +185,7 @@
     <addaction name="separator"/>
     <addaction name="menuExport_View"/>
     <addaction name="separator"/>
+    <addaction name="menuRecents"/>
     <addaction name="menuLoad"/>
     <addaction name="separator"/>
     <addaction name="actionExit"/>
@@ -188,6 +194,13 @@
     <property name="title">
      <string>View</string>
     </property>
+    <widget class="QMenu" name="menuTheme">
+     <property name="title">
+      <string>Theme</string>
+     </property>
+     <addaction name="actionWhiteTheme"/>
+     <addaction name="actionBlackTheme"/>
+    </widget>
     <addaction name="actionViewPoints"/>
     <addaction name="actionViewPointAttributes"/>
     <addaction name="separator"/>
@@ -200,6 +213,7 @@
     <addaction name="actionRefreshView"/>
     <addaction name="separator"/>
     <addaction name="actionAdjustView"/>
+    <addaction name="menuTheme"/>
    </widget>
    <widget class="QMenu" name="menuReconstruction">
     <property name="title">
@@ -230,8 +244,10 @@
       <string>Skeletization</string>
      </property>
      <addaction name="actionXuReconstruction"/>
+     <addaction name="actionGraphColonization"/>
      <addaction name="actionLivnyReconstruction"/>
-     <addaction name="actionPreuksakarnReconstruction"/>
+     <addaction name="actionScaReconstruction"/>
+     <addaction name="actionAdaptiveScaReconstruction"/>
     </widget>
     <widget class="QMenu" name="menuMultiScale">
      <property name="title">
@@ -344,6 +360,8 @@
     <addaction name="menuContraction"/>
     <addaction name="separator"/>
     <addaction name="menuAlign"/>
+    <addaction name="separator"/>
+    <addaction name="actionPointClusters"/>
    </widget>
    <addaction name="menuFile"/>
    <addaction name="menuEdit"/>
@@ -425,12 +443,12 @@
     <string>Preuksakarn et al.</string>
    </property>
   </action>
-  <action name="actionPreuksakarnReconstruction">
+  <action name="actionAdaptiveScaReconstruction">
    <property name="enabled">
     <bool>true</bool>
    </property>
    <property name="text">
-    <string>Preuksakarn et al.</string>
+    <string>Adaptive Space Colonization</string>
    </property>
   </action>
   <action name="actionExportGeom">
@@ -815,7 +833,7 @@
   </action>
   <action name="actionPipeModel">
    <property name="enabled">
-    <bool>false</bool>
+    <bool>true</bool>
    </property>
    <property name="text">
     <string>Pipe Model</string>
@@ -840,6 +858,36 @@
    </property>
    <property name="text">
     <string>Average</string>
+   </property>
+  </action>
+  <action name="actionClearRecents">
+   <property name="text">
+    <string>Clear</string>
+   </property>
+  </action>
+  <action name="actionGraphColonization">
+   <property name="text">
+    <string>Adaptive R. Graph Colonization</string>
+   </property>
+  </action>
+  <action name="actionPointClusters">
+   <property name="text">
+    <string>Clusters</string>
+   </property>
+  </action>
+  <action name="actionWhiteTheme">
+   <property name="text">
+    <string>White</string>
+   </property>
+  </action>
+  <action name="actionBlackTheme">
+   <property name="text">
+    <string>Black</string>
+   </property>
+  </action>
+  <action name="actionScaReconstruction">
+   <property name="text">
+    <string>Space Colonization</string>
    </property>
   </action>
  </widget>

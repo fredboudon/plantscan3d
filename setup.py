@@ -107,11 +107,11 @@ setup(
 
     # Declare scripts and wralea as entry_points (extensions) of your package 
     entry_points = { 
-        'wralea' : ['treeeditor3d = vplants.treeeditor3d_wralea' if has_project else 'treeeditor3d = treeeditor3d_wralea' ],
+        'wralea' : ['plantscan3d = vplants.treeeditor3d_wralea' if has_project else 'plantscan3d = treeeditor3d_wralea' ],
         #'console_scripts': [
         #       'fake_script = openalea.fakepackage.amodule:console_script', ],
         'gui_scripts': [
-              'treeeditor3d = vplants.treeeditor3d.mtgeditor:main',],
+              'plantscan3d = vplants.treeeditor3d.mtgeditor:main',],
         #	'wralea': wralea_entry_points
         },
     )

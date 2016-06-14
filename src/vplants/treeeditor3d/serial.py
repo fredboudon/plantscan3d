@@ -2,7 +2,6 @@
 from openalea.plantgl.all import *
 from openalea.plantgl.codec.asc import *
 from openalea.mtg.io import *
-import cPickle as pickle
 
 
 
@@ -20,16 +19,18 @@ def quantisefunc(fn=None, qfunc=None):
     
     return QuantisedFunction(curve) 
     
-def writefile(fn, obj):
-    f = open(fn,'wb')
-    pickle.dump(obj, f, pickle.HIGHEST_PROTOCOL)
-    f.close()
     
+import cPickle as pickle
 def readfile(fn, mode='rb'):
     f = open(fn,mode)
     obj = pickle.load(f)
     f.close()
     return obj
+
+def writefile(fn, obj):
+    f = open(fn,'wb')
+    pickle.dump(obj, f, pickle.HIGHEST_PROTOCOL)
+    f.close()
 
     
 def writeAscPoints(fn, points):
@@ -128,7 +129,11 @@ def complete_lines(mtg):
     lines.update(nlines)
 
   
-def convertStdMTGWithNode(g, useHeuristic = True, invertCoord = False):
+from openalea.plantgl.all import *
+def convertStdMTGWithNode(g, useHeuristic = True, 
+                             invertCoord = False, 
+                             propagate_parent = False):
+
     from openalea.mtg import MTG
 
     XXpropname = 'XX' if 'XX' in g.properties() else 'X'
@@ -147,7 +152,7 @@ def convertStdMTGWithNode(g, useHeuristic = True, invertCoord = False):
     scale = g.max_scale()
     dointerpolation = False
 
-    def toVector3(vtx): return Vector3(XX[vtx] if invertCoord else XX[vtx],YY[vtx], -ZZ[vtx] if invertCoord else ZZ[vtx])
+    def toVector3(vtx): return Vector3(XX[vtx],YY[vtx], -ZZ[vtx] if invertCoord else ZZ[vtx])
 
     for vtx in g.vertices(scale):
         v = None
@@ -160,7 +165,7 @@ def convertStdMTGWithNode(g, useHeuristic = True, invertCoord = False):
             if vtx in g.component_roots_at_scale(cpx, scale=scale) and cpx in XX:
                 v = toVector3(cpx)
                 parent =  g.parent(vtx)
-                if (g.edge_type(vtx) == '+') and (not parent in XX) and (len(g.children(parent)) == 1):
+                if (g.edge_type(vtx) == '+') and (not parent in XX) and (len(g.children(parent)) == 1 or propagate_parent):
                     positions[parent] = v
                 else:
                     positions[vtx] = v
@@ -231,7 +236,7 @@ def convertStdMTGWithNode(g, useHeuristic = True, invertCoord = False):
             while True:
                 ch = g.children(c)
                 if len(ch) > 1:
-                    raise ValueError('Heuristic for sub branching system not implemented :'+str(ch)+' at lines '+str([lines.get(vid) for vid in ch]))
+                    raise ValueError('Cannot determine coordinates for branch starting at:'+str(seed)+' at lines '+str(lines.get(seed)))
                 if len(ch) == 1:
                     c = ch[0]
                     #assert c in notpositionned

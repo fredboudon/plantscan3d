@@ -18,7 +18,7 @@
 
 
 # These will change with different releases.
-!define PSC_VERSION        "0.3.0"
+!define PSC_VERSION        "0.6.0"
 !define PSC_VERSION_EXTRA  "Alpha"
 !define PSC_VERSION_MEXTRA "a"
 !define PSC_LICENSE        "GPL"

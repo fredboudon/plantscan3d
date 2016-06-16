@@ -243,7 +243,8 @@ class GLMTGEditor(QGLViewer):
         self.propertyeditor = None
 
         self.paramcache = dict()
-
+        
+        self.setAcceptDrops(True) 
 
     def closeEvent(self, event):
         print 'save settings'
@@ -257,8 +258,17 @@ class GLMTGEditor(QGLViewer):
                     settings.setValue(name,val)
         settings.endGroup()
         event.accept()
-
-
+    
+    def dragEnterEvent(self, event):
+        if (event.mimeData().hasUrls()):
+                event.acceptProposedAction()
+        
+    def dropEvent(self, event):
+        urls = event.mimeData().urls()
+        for url in urls:
+            self.openFile(str(url.toLocalFile()))
+        self.updateGL()
+    
     def setTheme(self, theme = BlackTheme):
         self.theme = theme
 
@@ -540,10 +550,22 @@ class GLMTGEditor(QGLViewer):
         self.readPoints("/Users/fboudon/Develop/oagit/plantscan3d/data/LidarPommier/digitmtg/X0342_r1_004.xyz")
         self.alignScaleAndCenter()
     
-    def openFile(self, fname, ftype):
+    def openFile(self, fname, ftype = None):
         if ftype == 'MTG': self.readMTG(fname)
         elif ftype == 'iMTG': self.readMTG(fname, True)
         elif ftype == 'PTS' : self.readPoints(fname)
+        elif ftype is None:
+            import os.path as op
+            ext = op.splitext(fname)[1][1:]
+            print ext
+            if ext in ['mtg','bmtg']:
+                self.readMTG(fname)
+                self.filehistory.add(fname, 'MTG')
+            elif ext in ['asc','xyz','pwn','pts','txt','bgeom']:
+                self.readPoints(fname)
+                self.filehistory.add(fname, 'PTS')
+            else:
+                QMessageBox.warning(self,'Unknow File','Cannot read file '+repr(fname))
         else: 
             QMessageBox.warning(self,'Unknow File','Cannot read file '+repr(fname))
 
@@ -720,7 +742,6 @@ class GLMTGEditor(QGLViewer):
         
         for vid in self.mtg.vertices(scale=self.mtg.max_scale()):
             if self.mtg.parent(vid) is None or self.mtg.edge_type(vid) == "+":
-                print 'consider', vid
                 axe = self.mtg.Axis(vid)
                 if not self.mtg.parent(vid) is None: axe.insert(0, self.mtg.parent(vid))
                 if len(axe) > 2:
@@ -841,12 +862,18 @@ class GLMTGEditor(QGLViewer):
         if not fname: return
         fname = str(fname)
         self.saveNodeList(fname)
-        self.showMessage("Export done ...")
+        self.showMessage("Export in "+fname+" done ...")
         
     def saveNodeList(self,fname):
-        from vplants.pointreconstruction.mtgdata import export_mtg_in_txt
         stream = file(fname,'w')
-        export_mtg_in_txt(self.mtg, stream)
+        position = self.mtg.property('position')
+        radius = self.mtg.property('radius')
+        stream.write("# automatically exported mtg\n")
+        stream.write("# vid parentid XX YY ZZ Radius\n")
+        stream.write(str(self.mtg.nb_vertices(scale=self.mtg.max_scale()))+'\n')
+        for vid in self.mtg.vertices(scale=self.mtg.max_scale()):
+            p = position[vid]
+            stream.write(str(vid)+'\t'+('' if self.mtg.parent(vid) is None else str(self.mtg.parent(vid)))+'\t'+str(p.x)+'\t'+str(p.y)+'\t'+str(p.z)+'\t'+str(radius.get(vid,''))+'\n')
         stream.close()
         
     def adjustTo(self,obj):
@@ -1624,7 +1651,7 @@ class GLMTGEditor(QGLViewer):
         try:
             import matplotlib.pyplot as plt 
         except ImportError, e:
-            QMessageBox.critical(self, "MatPlotLib","MatPlotLib not available !")
+            QMessageBox.critical(self, "MatPlotLib","MatPlotLib not available !\n"+str(e))
             return
         if not hasattr(self.pointinfo,'densities') : 
             if not self.pointRDensity(): return

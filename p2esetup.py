@@ -14,9 +14,9 @@ if not os.path.exists(py2exe_file):
 # Setup script
 
 # Package name
-name = 'treeeditor3d'
+name = 'plantscan3d'
 namespace = 'vplants'
-version = 0.2
+version = 0.6
 pkg_name= namespace + '.' + name
 
 print pkg_name,': version =',version
@@ -40,6 +40,7 @@ build_prefix= "build-scons"
 
 
 from setuptools import setup
+import matplotlib
 
 MainScript = 'src/vplants/treeeditor3d/mtgeditor.py'
 
@@ -57,9 +58,25 @@ if sys.platform =='darwin':
   build_prefix = 'build-scons'
 else:
   import py2exe
+  import zmq
+  os.environ["PATH"] = os.environ["PATH"] + os.path.pathsep + os.path.split(zmq.__file__)[0]
+  
   option_name = 'py2exe'
   #extra_options =  { "dll_excludes" : ['MSVCP80.dll','MSVCR80.dll'] }
-  extra_options = {}
+  extra_options = {"includes": ["zmq.utils", "zmq.utils.jsonapi",  "zmq.utils.strtypes"],
+                    'dll_excludes': ['libgdk-win32-2.0-0.dll',
+                                         'libgobject-2.0-0.dll',
+                                         'libgdk_pixbuf-2.0-0.dll',
+                                         'libgtk-win32-2.0-0.dll',
+                                         'libglib-2.0-0.dll',
+                                         'libcairo-2.dll',
+                                         'libpango-1.0-0.dll',
+                                         'libpangowin32-1.0-0.dll',
+                                         'libpangocairo-1.0-0.dll',
+                                         'libglade-2.0-0.dll',
+                                         'libgmodule-2.0-0.dll',
+                                         'libgthread-2.0-0.dll',
+                                        ]}
   builderoptions = {'windows' : [{'script' : MainScript, 
                                  #'icon_resources' : [(1, "src/openalea/lpy/gui/logo.ico")]
                                  'options' : {"py2exe": {"includes":["sip"]}},
@@ -75,7 +92,7 @@ from os.path import splitext,basename,abspath
 goptions = { option_name : 
                 {
                     #'packages' : ['sip','stat','PyQt4', 'distutils', 'ctypes', 'random', 'IPython', 'pygments', 'PIL','PyOpenGL']
-                    'packages' : [ 'sip', 'vplants.treeeditor3d','openalea.plantgl', 'openalea.mtg', 'PyQt4','OpenGL', 'scipy', 'scipy.interpolate', 'scipy.interpolate._interpolate', 'scipy.special', 'scipy.sparse']
+                    'packages' : [ 'sip', 'vplants.treeeditor3d','openalea.plantgl', 'openalea.mtg','PyQt4','openalea.core','OpenGL',  'scipy', 'scipy.interpolate', 'scipy.interpolate._interpolate', 'scipy.special', 'scipy.sparse','matplotlib', 'six']
 
                 }
             }
@@ -98,6 +115,14 @@ import openalea.mtg as mtg
 for p in   mtg.__path__:
     modulefinder.AddPackagePath('openalea',abspath(pj(p,'..')))
 
+import openalea.vpltk as mtg
+for p in   mtg.__path__:
+    modulefinder.AddPackagePath('openalea',abspath(pj(p,'..')))
+
+import openalea
+for p in   openalea.__path__:
+    modulefinder.AddPackagePath('openalea',p)
+
 pgl_py = pgl_pys[0]
 if len(pgl_pys) > 1:
     pgl_dir = pj(pgl_py,'..','..')
@@ -113,7 +138,7 @@ print pgl_py
 print libdirs
 
 setup(
-    name="TreeEditor3D",
+    name="PlantScan3D",
     version=version,
     description=description,
     long_description=long_description,
@@ -147,7 +172,7 @@ setup(
     #lib_dirs = { 'lib' : libdirs},
     #inc_dirs = {'include' : pj(build_prefix, 'include') },
     share_dirs = {'share' : 'data', },
-
+    data_files=matplotlib.get_py2exe_datafiles(),
     
     # Dependencies
     setup_requires = ['openalea.deploy'],

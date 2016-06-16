@@ -3,18 +3,23 @@ try:
     import vplants.treeeditor3d.py2exe_release
     py2exe_release = True
     print 'Py2ExeRelease'
-except:
+except ImportError:
     py2exe_release = False
     print 'StdRelease'
 
-try:
+if not py2exe_release:
     import openalea.vpltk.qt
     from openalea.vpltk.qt.QtCore import *
     from openalea.vpltk.qt.QtGui import *
-except ImportError, e:
+
+else:
+    import sip
+
+    sip.setapi('QString', 2)
+    sip.setapi('QVariant', 2)
+
     from PyQt4.QtCore import *
     from PyQt4.QtGui import *
-
 
 
 import os
@@ -24,7 +29,6 @@ if not py2exe_release:
     cui.check_ui_generation(os.path.join(ldir, 'editor.ui'))
 
 import vplants.treeeditor3d.editor_ui as editor_ui
-from mtgeditorwidget import WhiteTheme, BlackTheme
 
 
 class MTGEditor(QMainWindow, editor_ui.Ui_MainWindow) :
@@ -47,11 +51,14 @@ class MTGEditor(QMainWindow, editor_ui.Ui_MainWindow) :
         QObject.connect(self.actionExportGeom, SIGNAL('triggered(bool)'),self.mtgeditor.exportAsGeom)
         QObject.connect(self.actionExportNodeList, SIGNAL('triggered(bool)'),self.mtgeditor.exportNodeList)
 
-        QObject.connect(self.actionPuu1, SIGNAL('triggered(bool)'),self.mtgeditor.puu1)
-        QObject.connect(self.actionPuu3, SIGNAL('triggered(bool)'),self.mtgeditor.puu3)
-        QObject.connect(self.actionCherry, SIGNAL('triggered(bool)'),self.mtgeditor.cherry)
-        QObject.connect(self.actionArabido, SIGNAL('triggered(bool)'),self.mtgeditor.arabido)
-        QObject.connect(self.actionAppleTree, SIGNAL('triggered(bool)'),self.mtgeditor.appletree)
+        if not py2exe_release:
+            QObject.connect(self.actionPuu1, SIGNAL('triggered(bool)'),self.mtgeditor.puu1)
+            QObject.connect(self.actionPuu3, SIGNAL('triggered(bool)'),self.mtgeditor.puu3)
+            QObject.connect(self.actionCherry, SIGNAL('triggered(bool)'),self.mtgeditor.cherry)
+            QObject.connect(self.actionArabido, SIGNAL('triggered(bool)'),self.mtgeditor.arabido)
+            QObject.connect(self.actionAppleTree, SIGNAL('triggered(bool)'),self.mtgeditor.appletree)
+        else:
+            self.menuFile.removeAction(self.menuLoad.menuAction())
 
         QObject.connect(self.actionUndo, SIGNAL('triggered(bool)'),self.mtgeditor.undo)
         QObject.connect(self.actionRedo, SIGNAL('triggered(bool)'),self.mtgeditor.redo)
@@ -59,6 +66,8 @@ class MTGEditor(QMainWindow, editor_ui.Ui_MainWindow) :
         QObject.connect(self.mtgeditor, SIGNAL('redoAvailable(bool)'),self.actionRedo.setEnabled)
         QObject.connect(self.actionRevolveAroundScene, SIGNAL('triggered(bool)'),self.mtgeditor.revolveAroundScene)
         QObject.connect(self.actionShowAll, SIGNAL('triggered(bool)'),self.mtgeditor.showEntireScene)
+
+        from vplants.treeeditor3d.mtgeditorwidget import WhiteTheme, BlackTheme
         QObject.connect(self.actionWhiteTheme, SIGNAL('triggered(bool)'),lambda : self.mtgeditor.updateTheme(WhiteTheme))
         QObject.connect(self.actionBlackTheme, SIGNAL('triggered(bool)'),lambda : self.mtgeditor.updateTheme(BlackTheme))
 

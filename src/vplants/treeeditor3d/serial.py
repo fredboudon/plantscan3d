@@ -83,41 +83,29 @@ def convertToStdMTG(g):
   return newg
 
 
-def convertToMyMTG(g):
-  from openalea.mtg import MTG
-  
-  def addProperties(mtg, vid, px, py, pz, radius):
-      mtg.property('position')[vid] = Vector3(px,py,pz)
-      mtg.property('radius')[vid] = radius
-      
-  mtg = MTG()
-  mtg.add_property('position')
-  mtg.add_property('radius')
-    
-  plantroot = mtg.root
-  branchroot = mtg.add_component(plantroot,label='B')
-  noderoot = mtg.add_component(branchroot,label='N')
-  
-  rdic = g.property('radius')
+def convertToMyMTG(mtg):
+    from copy import deepcopy
+    g = deepcopy(mtg)
 
-  for k,r in rdic.iteritems():
-    parentid = g.parent(k)
-    px = g.property('XX')[k]
-    py = g.property('YY')[k]
-    pz = g.property('ZZ')[k]
+    position = {}
+
+    XXpropname = 'XX' if 'XX' in g.properties() else 'X'
+    YYpropname = 'YY' if 'YY' in g.properties() else 'Y'
+    ZZpropname = 'ZZ' if 'ZZ' in g.properties() else 'Z'
+
+    XX = g.property(XXpropname)
+    YY = g.property(YYpropname)
+    ZZ = g.property(ZZpropname)    
+
+    for i,x in XX.iteritems():
+        position[i] = Vector3(x,YY[i],ZZ[i])
+
+    for propname in [XXpropname, YYpropname, ZZpropname]:
+        del g.properties()[propname]
+
+    mtg.property('position').update(position)
     
-    if parentid == None:
-      addProperties(mtg, k, px, py, pz, r)
-    else:
-      label = g.label(k)
-      if label == 'N':
-        vid = mtg.add_child(parentid,edge_type='<',label='N')
-      else:
-        vid = mtg.add_child(parentid,edge_type='+',label='B')
-        
-      addProperties(mtg, vid, px, py, pz, r)
-    
-  return mtg
+    return mtg
 
 def complete_lines(mtg):
     lines = mtg.property('_line')

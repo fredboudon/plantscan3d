@@ -117,33 +117,39 @@ def get_first_param_value(mtg, propname):
         if vid in prop and mtg.scale(vid) == scale and not prop[vid] is None:
             return prop[vid]
 
-def pipemodel(mtg, rootradius, leafradius):
+def pipemodel(mtg, rootradius, leafradius, root = None):
     from math import log
     from openalea.mtg.traversal import post_order2
-    leaves = [vid for vid in mtg.vertices(mtg.max_scale()) if len(mtg.children(vid)) == 0]
+    if root is None:
+        roots = mtg.roots(scale=mtg.max_scale())
+        assert len(roots) == 1
+        root = roots[0]
+
+    vertices = list(post_order2(mtg, root))
+
+    leaves = [vid for vid in vertices if len(mtg.children(vid)) == 0]
     #pipeexponent = log(len(leaves)) / (log(rootradius) - log(leafradius))
     #print pipeexponent
     #invpipeexponent = 1./ pipeexponent
 
-    roots = mtg.roots(scale=mtg.max_scale())
-    assert len(roots) == 1
-    root = roots[0]
 
     radiusprop = dict()
     for vid in leaves:  radiusprop[vid] = leafradius
 
     nbelems = dict()
     for vid in leaves:  nbelems[vid] = 1
-    for vid in post_order2(mtg, root):
+    for vid in vertices:
         if not vid in nbelems:
             nbelems[vid] = sum([nbelems[child] for child in mtg.children(vid)]) + 1
+
+    print root, nbelems[root]
 
     #pipeexponent = log(nbelems[root]) / (log(rootradius) - log(leafradius))
     pipeexponent = (log(rootradius) - log(leafradius))/log(nbelems[root]) 
     print pipeexponent
     invpipeexponent = 1./ pipeexponent
 
-    for vid in mtg.vertices(mtg.max_scale()):
+    for vid in vertices:
         if not vid in radiusprop:
             radiusprop[vid] = leafradius*(nbelems[vid]**pipeexponent)
 

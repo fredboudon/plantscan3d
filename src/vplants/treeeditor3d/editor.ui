@@ -490,7 +490,7 @@
   </action>
   <action name="actionComputeMaxRadius">
    <property name="text">
-    <string>Estimate Max</string>
+    <string>Estimate As Max Point Dist.</string>
    </property>
   </action>
   <action name="actionSmoothRadius">
@@ -739,7 +739,7 @@
   </action>
   <action name="actionComputeMeanRadius">
    <property name="text">
-    <string>Estimate Mean</string>
+    <string>Estimate As Mean Point Dist</string>
    </property>
   </action>
   <action name="actionImportMTG">

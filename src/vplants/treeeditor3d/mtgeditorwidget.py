@@ -91,12 +91,6 @@ def createCtrlPoint(mtg,nodeID,color,positionproperty = 'position',callback = No
     if callback: ccp.setCallBack(callback)
     return ccp
 
-def createAttractorsRepresentation(attractors, width, material):
-    pointset = PointSet(attractors)
-    pointset.width = width
-    return Scene([Shape(pointset, material)])
-
-
 
         # shape and material to display the object
 BlackTheme = {'Name':'Black',
@@ -112,6 +106,7 @@ BlackTheme = {'Name':'Black',
               'Radius' : (200,200,200),
               'Direction' : (255,255,255),
               '3DModel' : (128,64,0),
+              '3DHull' : (0,200,0),
               'LocalAttractors' :(255, 255, 0),
               'Cone' :(255,255,0),
               'TaggedCtrlPoint' : (255,0,0),
@@ -130,6 +125,7 @@ WhiteTheme = {'Name':'White',
               'Radius' : (100,100,100),
               'Direction' : (0,0,0),
               '3DModel' : (128,64,0),
+              '3DHull' : (0,200,0),
               'LocalAttractors' :(255, 255, 0),
               'Cone' :(255,255,0),
               'TaggedCtrlPoint' : (255,0,0),
@@ -190,7 +186,7 @@ class GLMTGEditor(QGLViewer):
         self.pointsRep = None
         self.pointsAttributeRep = None
         
-        self.k = 7
+        self.k = 16
         self.pointsKDTree = None
         
         self.mtg  = None        
@@ -283,6 +279,7 @@ class GLMTGEditor(QGLViewer):
         self.selectedPointColor = Material(self.theme['SelectedCtrlPoints'],1)
         self.radiusMaterial = Material(self.theme['Radius'],1)
         self.modelMaterial =  Material(self.theme['3DModel'],1, transparency=0.2)
+        self.hullMaterial =  Material(self.theme['3DHull'],1, transparency=0.2)
 
     def updateTheme(self, theme = BlackTheme):
         self.setTheme(theme)
@@ -602,6 +599,7 @@ class GLMTGEditor(QGLViewer):
                 # readable mtg format from openalea.mtg module
                 stdmtg = read_mtg_file(fname)
                 if fromdigit : convertStdMTGWithNode(stdmtg)
+                else : stdmtg = convertToMyMTG(stdmtg)
                 mtg = stdmtg
                 
             self.setMTG(mtg,fname)
@@ -739,6 +737,12 @@ class GLMTGEditor(QGLViewer):
     def create3DModelRepresentation(self, translation=None):
         scene = Scene()
         section= Polyline2D.Circle(1,30)
+        hulls = self.mtg.properties().get('hull',{})
+
+        def get_radius(nodeid):
+            val = self.mtg.property(self.propertyradius).get(nodeID,0)
+            if val is None: val = 0
+            return (val,val)
         
         for vid in self.mtg.vertices(scale=self.mtg.max_scale()):
             if self.mtg.parent(vid) is None or self.mtg.edge_type(vid) == "+":
@@ -746,10 +750,14 @@ class GLMTGEditor(QGLViewer):
                 if not self.mtg.parent(vid) is None: axe.insert(0, self.mtg.parent(vid))
                 if len(axe) > 2:
                     points = [self.mtg.property(self.propertyposition)[nodeID] for nodeID in axe]
-                    radius = [(self.mtg.property(self.propertyradius).get(nodeID,0), self.mtg.property(self.propertyradius).get(nodeID,0)) for nodeID in axe]
+                    radius = [get_radius(nodeID) for nodeID in axe]
                     geometry = Extrusion(Polyline(points), section, radius)
                     if translation: geometry = Translated(translation,geometry)
                     scene += Shape(geometry, self.modelMaterial, vid)
+            if vid in hulls:
+                shape = hulls[vid]
+                scene += Shape(shape, self.hullMaterial, nid)
+
         self.modelRep =  scene
     
     def importPoints(self):
@@ -1030,8 +1038,14 @@ class GLMTGEditor(QGLViewer):
             cCtrlPoint = self.getSelection(event.pos())
             if cCtrlPoint:
                 self.setSelection(cCtrlPoint)
-                self.tagScaleToNode()
-                self.updateGL()
+                if event.button() == Qt.RightButton:
+                    self.setSelection(cCtrlPoint)
+                    self.updateGL()
+                    self.contextMenu(event.globalPos())
+                    nompe = True
+                else:
+                    self.tagScaleToNode()
+                    self.updateGL()
             else:
                 self.setMode(self.Rotate | self.TagScale)
 
@@ -1039,8 +1053,14 @@ class GLMTGEditor(QGLViewer):
             cCtrlPoint = self.getSelection(event.pos())
             if cCtrlPoint:
                 self.setSelection(cCtrlPoint)
-                self.tagPropertyToNode()
-                self.updateGL()
+                if event.button() == Qt.RightButton:
+                    self.setSelection(cCtrlPoint)
+                    self.updateGL()
+                    self.contextMenu(event.globalPos())
+                    nompe = True
+                else:
+                    self.tagPropertyToNode()
+                    self.updateGL()
             else:
                 self.setMode(self.Rotate | self.TagProperty)
 
@@ -1123,23 +1143,34 @@ class GLMTGEditor(QGLViewer):
             menu.addAction("New child (N)",self.newChild)
             menu.addAction("Reparent (P)",self.beginReparentSelection)
             menu.addAction("Split Edge (E)",self.splitEdge)
-            menu.addMenu(self.mainwindow.menuReconstruction)
+            menu.addMenu(self.mainwindow.menuSkeletization)
         menu.addSeparator()
         menu.addAction("Set Branching Points",self.setBranchingPoint)
         menu.addAction("Set Axial Points (M)",self.setAxialPoint)        
-        if self.points:
+        if self.points and not self.mode in [self.TagScale, self.TagProperty]:
             menu.addSeparator()
             menu.addAction("S&tick to points (T)",self.stickToPoints)
             menu.addAction("Stick subtree (G)",self.stickSubtree)
             menu.addSeparator()
-            menu.addAction("Estimate radius",self.estimateRadius)
+            submenu = menu.addMenu("Estimate radius")
+            submenu.addAction("As Mean Point Distance",self.estimateMeanRadius)
+            submenu.addAction("As Max Point Distance",self.estimateMaxRadius)
+            submenu.addSeparator()
+            submenu.addAction("Using Pipe Model",self.pipeModelOnSelection)
+            menu.addSeparator()
+            submenu = menu.addMenu("Hull")
+            submenu.addAction("Convex Hull",self.convexHullOfSelection)
+            submenu.addAction("Remove",self.removeHullOfSelection)
         menu.addSeparator()
         menu.addAction("Revolve Around (R)",self.revolveAroundSelection)
         menu.addSeparator()
         menu.addAction("Properties",self.editProperty)
         if self.mode == self.TagScale:
             menu.addSeparator()
-            menu.addAction("Tag (A)",self.tagNode)
+            menu.addAction("Tag (A)",self.tagScaleToNode)
+        elif self.mode == self.TagProperty:
+            menu.addSeparator()
+            menu.addAction("Tag (A)",self.tagPropertyToNode)
         menu.exec_(pos)
         
     def setMode(self,mode):
@@ -1379,6 +1410,7 @@ class GLMTGEditor(QGLViewer):
         self.ctrlPointsRepIndex[cid] = len(self.ctrlPointsRep)-1
         self.mtgrep += createEdgeRepresentation(nid,cid,positions, self.edgePlusMaterial)
         self.mtgrepindex[cid] = len(self.mtgrep)-1 
+        self.__update_value__(cid)
         self.setSelection(ctrlPoint)
         self.updateGL()
         
@@ -1581,8 +1613,6 @@ class GLMTGEditor(QGLViewer):
             return [makeColor4(minhue+i*stephue) for i in xrange(256)]
 
     def pointDensityDisplay(self, densities):
-
-
         cmap = self.get_colormap()
         self.points.colorList = apply_colormap(cmap, densities)
 
@@ -1602,7 +1632,7 @@ class GLMTGEditor(QGLViewer):
             self.showMessage('Density range for K='+str(self.k)+' : '+str((min(densities), max(densities)))+'. Computed in {}'.format(t))
 
 
-    def pointRDensity(self):
+    def pointRDensity(self, display = True):
         if not self.check_input_points() : return
         mini,maxi = self.points.pointList.getZMinAndMaxIndex()
         zdist = self.points.pointList[maxi].z-self.points.pointList[mini].z
@@ -1614,12 +1644,13 @@ class GLMTGEditor(QGLViewer):
             densities = densities_from_r_neighborhood(rnbgs, radius)
             t = time() - t
             self.pointinfo.densities = densities
-            self.pointDensityDisplay(densities)
-            self.showMessage('Density range for R='+str(radius)+' : '+str(densities.getMinAndMax(True))+'. Computed in {}'.format(t))
+            if display : 
+                self.pointDensityDisplay(densities)
+                self.showMessage('Density range for R='+str(radius)+' : '+str(densities.getMinAndMax(True))+'. Computed in {}'.format(t))
             return True
         return False
 
-    def pointRDensityMT(self):
+    def pointRDensityMT(self, display = True):
         if not self.check_input_points() : return
         mini,maxi = self.points.pointList.getZMinAndMaxIndex()
         zdist = self.points.pointList[maxi].z-self.points.pointList[mini].z
@@ -1631,8 +1662,9 @@ class GLMTGEditor(QGLViewer):
             densities = densities_from_r_neighborhood(rnbgs, radius)
             t = time() - t
             self.pointinfo.densities = densities
-            self.pointDensityDisplay(densities)
-            self.showMessage('Density range for R='+str(radius)+' : '+str(densities.getMinAndMax(True))+'. Computed in {}'.format(t))
+            if display:
+                self.pointDensityDisplay(densities)
+                self.showMessage('Density range for R='+str(radius)+' : '+str(densities.getMinAndMax(True))+'. Computed in {}'.format(t))
 
     def pointClusters(self):
         if not self.check_input_data(): return
@@ -1695,7 +1727,7 @@ class GLMTGEditor(QGLViewer):
     def filterPointsMin(self):
         if not self.check_input_points() : return
         if not hasattr(self.pointinfo,'densities'):
-            self.pointRDensity()
+            self.pointRDensity(False)
         densityratio, ok = QInputDialog.getInt(self,'Density Ratio','Select the minimum density (percentage ratio) to select points to remove' ,5, 1, 100)
         if ok:
             densities = self.pointinfo.densities
@@ -1711,7 +1743,7 @@ class GLMTGEditor(QGLViewer):
     def filterPointsMax(self):
         if not self.check_input_points() : return
         if not hasattr(self.pointinfo,'densities'):
-            self.pointRDensity()
+            self.pointRDensity(False)
         densityratio, ok = QInputDialog.getInt(self,'Density Ratio','Select a maximum density (percentage ratio) to select points to remove' ,5, 1, 100)
 
         if ok:
@@ -1892,8 +1924,53 @@ class GLMTGEditor(QGLViewer):
             self.showMessage("Applied contraction in {} sec.".format(t))
 
 
+# ---------------------------- Align ----------------------------------------   
+
+    def convexHullOfSelection(self):
+        if not self.check_input_data(): return
+
+        assert not self.selection is None
+        nid = self.selection.id
+        print 'Add hull of nid'
+
+        points = self.points.pointList
+        nodes = self.mtg.property(self.propertyposition).values()
+        node2nid = dict([(node,i) for i,node in enumerate(self.mtg.property(self.propertyposition).keys())])
+        clusters = cluster_points(points, nodes)
+
+        from openalea.mtg.traversal import post_order2
+        pointids = sum([clusters[node2nid[n]] for n in post_order2(self.mtg, nid)],Index([]))
+
+        shape = Fit(points.subset(pointids)).convexHull()
+        self.mtg.property('hull')[nid] = shape
+        self.mtg.property('volume')[nid] = volume(shape)
+
+        sh = Shape(shape, self.hullMaterial, nid)
+
+        if not self.modelRep is None:
+            self.modelRep += sh
+        else : self.modelRep = Scene([sh])
+
+        self.modelDisplay = True
+        self.updateGL()
+
+    def removeHullOfSelection(self):
+        if not self.check_input_data(): return
+
+        assert not self.selection is None
+        nid = self.selection.id
+        print 'Remove hull of nid'
+
+        try:
+            del self.mtg.property('hull')[nid]
+        except:
+            pass
+
+        self.modelRep = Scene([sh for sh in self.modelRep if sh.id != nid])
+        self.updateGL()
 
 
+ 
 # ---------------------------- Align ----------------------------------------   
 
     def applyAlignement(self, funcname, *params):
@@ -1935,7 +2012,7 @@ class GLMTGEditor(QGLViewer):
 
 # ---------------------------- Radius Reconstruction ----------------------------------------     
 
-    def determine_radius(self, pid):
+    def determine_radius(self, pid, mean = True):
         if not self.check_input_data(): return
 
         mtg = self.mtg
@@ -1962,15 +2039,25 @@ class GLMTGEditor(QGLViewer):
                 else: 
                     dir = (0,0,1)
 
-            radius = pointset_mean_radial_distance(spos, dir, self.points.pointList, selection )
+            if mean : radius = pointset_mean_radial_distance(spos, dir, self.points.pointList, selection )
+            else :    radius = pointset_max_radial_distance(spos, dir, self.points.pointList, selection )
             print 'radius[',pid,']:',radius
             return radius
 
-    def estimateRadius(self):        
+    def estimateMeanRadius(self):        
         assert not self.selection is None
         sid = self.selection.id
 
         self.mtg.property(self.propertyradius)[sid] = self.determine_radius(sid)
+
+        self.__update_radius__(sid)
+        self.updateGL()
+
+    def estimateMaxRadius(self):        
+        assert not self.selection is None
+        sid = self.selection.id
+
+        self.mtg.property(self.propertyradius)[sid] = self.determine_radius(sid, False)
 
         self.__update_radius__(sid)
         self.updateGL()
@@ -2008,30 +2095,31 @@ class GLMTGEditor(QGLViewer):
         self.__update_all_mtg__()
         self.updateGL()
 
-    def pipeModel(self):
+    def pipeModel(self, startfrom = None):
         from mtgmanip import get_first_param_value, pipemodel
         self.check_input_mtg()
-        pipeparamcache = self.getparamcache('pipemodel',None)
-        if pipeparamcache:
-            defrootradius, defleaveradius = pipeparamcache
-        else:
-            defrootradius = get_first_param_value(self.mtg,self.propertyradius)
-            if defrootradius is None: defrootradius = 1
-            defleaveradius = defrootradius/100.
-        print defrootradius, defleaveradius
+        if  startfrom is False: startfrom = None
+
+        if  startfrom in self.mtg.property(self.propertyradius):
+            defrootradius = self.mtg.property(self.propertyradius)[startfrom]
+        else: defrootradius = get_first_param_value(self.mtg,self.propertyradius)
+        if defrootradius is None: defrootradius = 1
+        defleaveradius = defrootradius/100.
+ 
         dialog = self.createParamDialog('Parameterizing the Pipe Model',[('Root Radius',float,defrootradius),('Leaves Radius',float,defleaveradius)])
         if dialog.exec_() :
             params = dialog.getParams()
-            self.setparamcache('pipemodel',params)
             rootradius, leaveradius = params
-            print rootradius, leaveradius
-            estimatedradii = pipemodel(self.mtg, rootradius, leaveradius)
-            print estimatedradii
+            estimatedradii = pipemodel(self.mtg, rootradius, leaveradius, startfrom)
             self.mtg.property(self.propertyradius).update(estimatedradii)
 
             self.radiusRep, self.radiusRepIndex = createRadiiRepresentation(self.mtg, self.radiusMaterial, positionproperty= self.propertyposition, radiusproperty = self.propertyradius)
             self.updateGL()
-            
+    def pipeModelOnSelection(self):
+        assert not self.selection is None
+        sid = self.selection.id
+        self.pipeModel(sid)
+
     def pipeModelAverageDistance(self):
         pipeexponent, ok = QInputDialog.getDouble(self,'Pipe Exponent','Select a pipe exponent',self.getparamcache('pipeexponent',2.0),0.5,4,2)
         if ok:

@@ -5,7 +5,8 @@ def adaptivespacecolonization_method(mtg, startfrom, pointList, densities, mingr
     rootpos = Vector3(mtg.property('position')[startfrom])
 
     mindensity, maxdensity = densities.getMinAndMax()
-    deltadensity = maxdensity - mindensity + 1e-4
+    deltadensity = maxdensity - mindensity
+    growthlengthfunc.clamped = False
     normeddensity = lambda x : growthlengthfunc(abs(x - mindensity)/deltadensity)
 
     deltabinlength = maxgrowthlength-mingrowthlength

@@ -23,7 +23,8 @@ def graphcolonization_method(mtg, startfrom, pointList, densities, minbinlength,
     kclosests = connect_all_connex_components(pointList, kclosests,True)
 
     mindensity, maxdensity = densities.getMinAndMax()
-    deltadensity = maxdensity - mindensity + 1e-4
+    deltadensity = maxdensity - mindensity 
+    binlengthfunc.clamped = False
     normeddensity = lambda x : binlengthfunc(abs(x - mindensity)/deltadensity)
 
     deltabinlength = maxbinlength-minbinlength
@@ -39,6 +40,7 @@ def graphcolonization_method(mtg, startfrom, pointList, densities, minbinlength,
               pos = self.node_position(nid)
               components = self.node_components(nid)
               # print nid, self.parents[nid], pos, components
+              
               self.grid.enable_points(components)
               aid = self.grid.closest_point(pos)
               self.grid.disable_points(components)
@@ -47,7 +49,7 @@ def graphcolonization_method(mtg, startfrom, pointList, densities, minbinlength,
               l = binlength(adensity)
               self.setLengths(l)
 
-    sc = CustomSCA(pointList, maxbinlength, kclosests, root)
+    sc = GraphColonization(pointList, maxbinlength, kclosests, root)
     sc.run()
     
     nodes = sc.nodes

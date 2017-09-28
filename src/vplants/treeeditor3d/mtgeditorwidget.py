@@ -547,6 +547,7 @@ class GLMTGEditor(QGLViewer):
         self.readPoints("/Users/fboudon/Develop/oagit/plantscan3d/data/LidarPommier/digitmtg/X0342_r1_004.xyz")
         self.alignScaleAndCenter()
     
+
     def openFile(self, fname, ftype = None):
         if ftype == 'MTG': self.readMTG(fname)
         elif ftype == 'iMTG': self.readMTG(fname, True)
@@ -567,7 +568,8 @@ class GLMTGEditor(QGLViewer):
             QMessageBox.warning(self,'Unknow File','Cannot read file '+repr(fname))
 
     def openMTG(self):
-        initialname = os.path.dirname(self.mtgfile) if self.mtgfile else get_shared_data('mtgdata')
+        lastfile = self.filehistory.getLastFile('MTG')
+        initialname = os.path.dirname(lastfile) if lastfile else get_shared_data('mtgdata')
         fname = QFileDialog.getOpenFileName(self, "Open MTG file",
                                                 initialname,
                                                 "MTG Files (*.mtg;*.bmtg);;All Files (*.*)")
@@ -577,7 +579,8 @@ class GLMTGEditor(QGLViewer):
         self.readMTG(fname)
         
     def importMTG(self):
-        initialname = os.path.dirname(self.mtgfile) if self.mtgfile else get_shared_data('mtgdata')
+        lastfile = self.filehistory.getLastFile('iMTG')
+        initialname = os.path.dirname(lastfile) if lastfile else get_shared_data('mtgdata')
         fname = QFileDialog.getOpenFileName(self, "Open MTG file",
                                                 initialname,
                                                 "MTG Files (*.mtg);;All Files (*.*)")
@@ -653,7 +656,8 @@ class GLMTGEditor(QGLViewer):
             self.writeMTG(self.mtgfile)
         else:
             self.saveMTG()
-        
+    
+
     def saveMTG(self):
         initialname = os.path.dirname(self.mtgfile) if self.mtgfile else get_shared_data('mtgdata')
         fname = QFileDialog.getSaveFileName(self, "Save MTG file",
@@ -761,7 +765,9 @@ class GLMTGEditor(QGLViewer):
         self.modelRep =  scene
     
     def importPoints(self):
-        initialname = get_shared_data('pointset')
+        lastfile = self.filehistory.getLastFile('PTS')
+        initialname = os.path.dirname(lastfile) if lastfile else get_shared_data('pointset')
+
         fname = QFileDialog.getOpenFileName(self, "Open Points file",
                                                 initialname,
                                                 "Points Files (*.asc;*.xyz;*.pwn;*.pts;*.txt;*.bgeom);;All Files (*.*)")
@@ -808,7 +814,9 @@ class GLMTGEditor(QGLViewer):
     def exportPoints(self):
         if self.points is None:
             QMessageBox.warning(self,'data error','No points to save')
-        initialname = get_shared_data('pointset')
+        lastfile = self.filehistory.getLastFile('PTS')
+        initialname = os.path.dirname(lastfile) if lastfile else get_shared_data('pointset')
+
         fname = QFileDialog.getSaveFileName(self, "Save Points file",
                                                 initialname,
                                                 "Points Files (*.asc;*.xyz;*.pwn;*.pts;*.bgeom);;All Files (*.*)")

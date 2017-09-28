@@ -242,6 +242,8 @@ def convertStdMTGWithNode(g, useHeuristic = True,
             for i,vid in enumerate(group,1):
                 positions[vid] = initpos + i * length * latdir
 
+    if 'Diameter' in g.property_names():
+        g.property('radius').update(dict([(vid,d/2.) for vid,d in g.property('Diameter').items()]))
     g.property('position').update(positions)
 
 

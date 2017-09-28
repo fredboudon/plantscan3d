@@ -41,6 +41,10 @@ class FileHistory:
             self.files = files
             self.__discardedmenu = True
 
+    def getLastFile(self, ftype = None):
+        for fname, data in reversed(self.files.items()):
+            if data == ftype: return fname
+
     def updateMenu(self):
         from os.path import basename 
         if self.__discardedmenu :

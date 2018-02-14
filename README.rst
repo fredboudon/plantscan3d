@@ -21,21 +21,22 @@ Installation
 Requirements
 -------------
 
-* OpenAlea.PlantGL
+* `OpenAlea.PlantGL <https://github.com/openalea/plantgl>`
+* `PyQGLViewer <https://github.com/fredboudon/PyQGLViewer>`
 
 Installation
 -------------
 
-<code>
-python setup.py install
-</code>
+.. code-block:: python
+
+    python setup.py install
 
 Utilisation
 -------------
 
-<code>
-plantscan3d
-</code>
+.. code-block:: bash
+    
+    plantscan3d
 
 
 Authors

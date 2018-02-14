@@ -21,13 +21,16 @@ Installation
 Requirements
 -------------
 
-* `OpenAlea.PlantGL <https://github.com/openalea/plantgl>`
-* `PyQGLViewer <https://github.com/fredboudon/PyQGLViewer>`
+* OpenAlea.PlantGL_
+* PyQGLViewer_
+
+.. _OpenAlea.PlantGL: https://github.com/openalea/plantgl
+.. _PyQGLViewer: https://github.com/fredboudon/PyQGLViewer
 
 Installation
 -------------
 
-.. code-block:: python
+.. code-block:: bash
 
     python setup.py install
 

@@ -67,7 +67,7 @@ class MTGEditor(QMainWindow, editor_ui.Ui_MainWindow) :
         QObject.connect(self.actionRevolveAroundScene, SIGNAL('triggered(bool)'),self.mtgeditor.revolveAroundScene)
         QObject.connect(self.actionShowAll, SIGNAL('triggered(bool)'),self.mtgeditor.showEntireScene)
 
-        from vplants.treeeditor3d.mtgeditorwidget import WhiteTheme, BlackTheme
+        from openalea.plantscan3d.mtgeditorwidget import WhiteTheme, BlackTheme
         QObject.connect(self.actionWhiteTheme, SIGNAL('triggered(bool)'),lambda : self.mtgeditor.updateTheme(WhiteTheme))
         QObject.connect(self.actionBlackTheme, SIGNAL('triggered(bool)'),lambda : self.mtgeditor.updateTheme(BlackTheme))
 

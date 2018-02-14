@@ -2,7 +2,7 @@
 
 from openalea.core import *
 
-__name__ = 'treeeditor3D'
+__name__ = 'plantscan3D'
 __version__ = '1.0.0'
 __license__ = 'CeCILL-C'
 __author__ = None

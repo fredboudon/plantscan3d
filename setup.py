@@ -54,10 +54,7 @@ else:
 
 # dependencies to other eggs
 setup_requires = ['openalea.deploy']
-if("win32" in sys.platform):
-    install_requires = []
-else:
-    install_requires = []
+
 
 # web sites where to find eggs
 dependency_links = ['http://openalea.gforge.inria.fr/pi']
@@ -107,11 +104,11 @@ setup(
 
     # Declare scripts and wralea as entry_points (extensions) of your package 
     entry_points = { 
-        'wralea' : ['plantscan3d = vplants.treeeditor3d_wralea' if has_project else 'plantscan3d = treeeditor3d_wralea' ],
+        'wralea' : ['plantscan3d = openalea.plantscan3d_wralea' if has_project else 'plantscan3d = plantscan3d_wralea' ],
         #'console_scripts': [
         #       'fake_script = openalea.fakepackage.amodule:console_script', ],
         'gui_scripts': [
-              'plantscan3d = vplants.treeeditor3d.mtgeditor:main',],
+              'plantscan3d = openalea.plantscan3d.mtgeditor:main',],
         #	'wralea': wralea_entry_points
         },
     )

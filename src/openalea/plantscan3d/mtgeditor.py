@@ -1,6 +1,6 @@
 
 try:
-    import vplants.treeeditor3d.py2exe_release
+    import openalea.plantscan3d.py2exe_release
     py2exe_release = True
     print 'Py2ExeRelease'
 except ImportError:
@@ -28,7 +28,7 @@ if not py2exe_release:
     ldir    = os.path.dirname(__file__) 
     cui.check_ui_generation(os.path.join(ldir, 'editor.ui'))
 
-import vplants.treeeditor3d.editor_ui as editor_ui
+import openalea.plantscan3d.editor_ui as editor_ui
 
 
 class MTGEditor(QMainWindow, editor_ui.Ui_MainWindow) :

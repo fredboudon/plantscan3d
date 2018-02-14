@@ -1,0 +1,42 @@
+# do not edit the following line. It will be updated automatically
+{% set version = "1.0.0" %}
+
+package:
+  name: openalea.plantscan3d
+  version: {{ version }}
+
+source:
+  path: ..
+
+
+about:
+  home: https://github.com/openalea/plantscan3d
+  license: Cecill-C
+  summary: An open-source editor for reconstructing 3D plant architecture from laser scans.
+
+build:
+  preserve_egg_dir: True
+  number: 1
+
+requirements:
+  build:
+   - python
+   - setuptools
+   - openalea.deploy
+   - openalea.plantgl
+   - openalea.vpltk
+   - qt <5
+   - pyqt
+  run:
+   - openalea.plantgl
+   - qt <5
+   - pyqt
+   - openalea.vpltk
+   - pyopengl
+   - pyqglviewer
+   - scipy
+   - matplotlib
+
+test:
+  imports:
+    - openalea.plantscan3d

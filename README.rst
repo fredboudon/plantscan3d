@@ -1,9 +1,11 @@
 .. image:: https://img.shields.io/badge/License-GPL-blue.svg
    :target: https://opensource.org/licenses/GPL-3.0
 
-.. Future command : image:: https://travis-ci.org/openalea/plantscan3d.svg?branch=master :target: https://travis-ci.org/openalea/plantscan3d
+.. image:: https://travis-ci.org/openalea/plantscan3d.svg?branch=master 
+   :target: https://travis-ci.org/openalea/plantscan3d
 
-.. Future command : image:: https://ci.appveyor.com/api/projects/status/pbfi5p0bfslqij3s/branch/master?svg=true :target: https://ci.appveyor.com/project/fredboudon/plantscan3d
+.. image:: https://ci.appveyor.com/api/projects/status/ivvdm56b3plg201j/branch/master?svg=true 
+   :target: https://ci.appveyor.com/project/fredboudon/plantscan3d-d5fbc
 
 ============
 PlantScan3D 

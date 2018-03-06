@@ -22,6 +22,7 @@ Requirements
 -------------
 
 * OpenAlea.PlantGL
+* OpenAlea.MTG
 
 Installation
 -------------

@@ -21,10 +21,13 @@ Installation
 Requirements
 -------------
 
+
 * OpenAlea.PlantGL_
+* OpenAlea.MTG_
 * PyQGLViewer_
 
 .. _OpenAlea.PlantGL: https://github.com/openalea/plantgl
+.. _OpenAlea.MTG: https://github.com/openalea/mtg
 .. _PyQGLViewer: https://github.com/fredboudon/PyQGLViewer
 
 Installation

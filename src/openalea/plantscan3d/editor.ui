@@ -344,10 +344,20 @@
      <addaction name="actionPointDirections"/>
      <addaction name="actionAverageDirections"/>
     </widget>
+    <widget class="QMenu" name="menuSelection">
+     <property name="title">
+      <string>Selection</string>
+     </property>
+     <addaction name="actionSoil"/>
+     <addaction name="actionPoles"/>
+     <addaction name="actionWires"/>
+    </widget>
     <addaction name="actionReorient"/>
     <addaction name="actionSortZ"/>
     <addaction name="separator"/>
     <addaction name="actionSubSampling"/>
+    <addaction name="separator"/>
+    <addaction name="menuSelection"/>
     <addaction name="separator"/>
     <addaction name="menuDensity"/>
     <addaction name="separator"/>
@@ -888,6 +898,21 @@
   <action name="actionScaReconstruction">
    <property name="text">
     <string>Space Colonization</string>
+   </property>
+  </action>
+  <action name="actionSoil">
+   <property name="text">
+    <string>Soil</string>
+   </property>
+  </action>
+  <action name="actionPoles">
+   <property name="text">
+    <string>Pole</string>
+   </property>
+  </action>
+  <action name="actionWires">
+   <property name="text">
+    <string>Wire</string>
    </property>
   </action>
  </widget>

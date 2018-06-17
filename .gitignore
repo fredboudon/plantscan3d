@@ -60,9 +60,9 @@ docs/_build/
 # PyBuilder
 target/
 
-.mtgeditor.xml
-
 #Ipython Notebook
 .ipynb_checkpoints
 
-.mtgeditor.xml
+# JetBrains
+.idea
+*_ui.py

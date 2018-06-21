@@ -151,12 +151,15 @@ ThemeDict = {'Black': BlackTheme, 'White': WhiteTheme}
 
 class GLMTGEditor(QGLViewer):
     Edit, Selection, TagScale, TagProperty, Rotate = 1, 2, 4, 8, 16
+    # The Different selection modes
+    HybridSelect, AddSelect = 1, 2
 
     def __init__(self, parent, pointfile=None, mtgfile=None):
         QGLViewer.__init__(self, parent)
         self.setStateFileName('.plantscan3d.xml')
 
         self.mode = None
+        self.selectMode = self.HybridSelect
 
         self.filehistory = FileHistory(None, self.openFile)
 
@@ -177,6 +180,7 @@ class GLMTGEditor(QGLViewer):
         self.modelDisplay = True
         self.radiusDisplay = True
         self.pointfilter = 0
+        self.rectangleSelect = None
 
         # plantgl basic object 
         self.discretizer = Discretizer()
@@ -196,6 +200,7 @@ class GLMTGEditor(QGLViewer):
 
         self.points = None if pointfile is None else Scene(pointfile)[0].geometry
         self.pointinfo = PointInfo()
+        self.selectBuffSize = 0
 
         self.selectedPoint = Index([])
         self.mtgfile = mtgfile
@@ -204,6 +209,8 @@ class GLMTGEditor(QGLViewer):
         self.nodelabel = 'N'
 
         self.pointsRep = None
+        self.shapePoints = None
+        self.shapeSelection = None
         self.pointsAttributeRep = None
 
         self.k = 16
@@ -291,26 +298,16 @@ class GLMTGEditor(QGLViewer):
         settings.endGroup()
         event.accept()
 
-    def keyPressed(self, key):
-        """
+    def deleteSelection(self):
+        if len(self.selectedPoint) == 0:
+            return
 
-        :type event: QKeyEvent
-        """
-        if key == Qt.Key_Delete:
-            if len(self.selectedPoint) > 0:
-                self.createBackup('points')
-                newPointSet = PointSet(self.points.pointList.opposite_subset(self.selectedPoint),
-                                       self.points.colorList.opposite_subset(self.selectedPoint))
-                self.selectedPoint = Index([])
-                self.setPoints(newPointSet)
-                self.updateGL()
-
-    def keyReleased(self, key):
-        """
-
-        :type event: QKeyEvent
-        """
-        pass
+        self.createBackup('points')
+        newPointSet = PointSet(self.points.pointList.opposite_subset(self.selectedPoint),
+                               self.points.colorList.opposite_subset(self.selectedPoint))
+        self.selectedPoint = Index([])
+        self.setPoints(newPointSet)
+        self.updateGL()
 
     def dragEnterEvent(self, event):
         if (event.mimeData().hasUrls()):
@@ -433,6 +430,35 @@ class GLMTGEditor(QGLViewer):
             self.__update_ctrlpoint__(point.id)
             self.camera().setRevolveAroundPoint(toVec(point.position()))
 
+    def endSelection(self, p):
+        selection = self.getMultipleSelection()
+        selectIndex = Index([])
+        selectAlreadySelectedPoint = False
+
+        if selection is not None:
+            for zmin, zmax, id in selection:
+                if self.selectMode == self.AddSelect or id[0] == self.shapePoints.id:
+                    selectIndex.append(id[1])
+                elif len(self.selectedPoint) > 0 and id[0] == self.shapeSelection.id:
+                    if self.selectMode == self.HybridSelect:
+                        selectAlreadySelectedPoint = True
+                        break
+
+            if selectAlreadySelectedPoint:
+                selectIndex = Index([])
+                for zmin, zmax, id in selection:
+                    if id[0] == self.shapeSelection.id:
+                        selectIndex.append(id[1])
+                self.selectedPoint = self.selectedPoint.opposite_subset(selectIndex)
+
+        if not selectAlreadySelectedPoint:
+            if self.selectMode == self.AddSelect:
+                self.selectedPoint.append(selectIndex)
+            else:
+                self.selectedPoint = Index([])
+                self.selectMode = self.AddSelect
+                self.select(self.rectangleSelect.center())
+
     def fastDraw(self):
         """ paint in opengl """
         glDisable(GL_LIGHTING)
@@ -506,6 +532,45 @@ class GLMTGEditor(QGLViewer):
 
         if self.temporaryinfo:
             self.temporaryinfo.apply(self.glrenderer)
+
+    def postDraw(self):
+        if self.mode == self.Selection and self.rectangleSelect is not None:
+            self.__drawSelectionRectangle()
+
+    # Selection functions
+    def drawWithNames(self):
+        self.glrenderer.renderingMode = self.glrenderer.Selection
+        self.glrenderer.selectionMode = self.glrenderer.SceneObjectNPrimitive
+        if self.selectMode == self.AddSelect:
+            Scene([Shape(PointSet(self.points.pointList, self.points.colorList), self.pointMaterial)]).apply(self.glrenderer)
+        else:
+            self.pointsRep.apply(self.glrenderer)
+
+    def __drawSelectionRectangle(self):
+        self.startScreenCoordinatesSystem()
+        glDisable(GL_LIGHTING)
+        glEnable(GL_BLEND)
+
+        glColor4f(0.0, 0.0, 0.3, 0.3)
+        glBegin(GL_QUADS)
+        glVertex2i(self.rectangleSelect.left(), self.rectangleSelect.top())
+        glVertex2i(self.rectangleSelect.right(), self.rectangleSelect.top())
+        glVertex2i(self.rectangleSelect.right(), self.rectangleSelect.bottom())
+        glVertex2i(self.rectangleSelect.left(), self.rectangleSelect.bottom())
+        glEnd()
+
+        glLineWidth(2.0)
+        glColor4f(0.4, 0.4, 0.5, 0.5)
+        glBegin(GL_LINE_LOOP)
+        glVertex2i(self.rectangleSelect.left(), self.rectangleSelect.top())
+        glVertex2i(self.rectangleSelect.right(), self.rectangleSelect.top())
+        glVertex2i(self.rectangleSelect.right(), self.rectangleSelect.bottom())
+        glVertex2i(self.rectangleSelect.left(), self.rectangleSelect.bottom())
+        glEnd()
+
+        glDisable(GL_BLEND)
+        glEnable(GL_LIGHTING)
+        self.stopScreenCoordinatesSystem()
 
     def setTempInfoDisplay2D(self, sc):
         self.temporaryinfo2D = sc
@@ -736,14 +801,14 @@ class GLMTGEditor(QGLViewer):
             selectedPoints, otherPoints = pointList.split_subset(self.selectedPoint)
             selectedColors, otherColors = colorList.split_subset(self.selectedPoint)
 
-            for i in range(len(selectedColors)):
-                selectedColors[i] = Color4(255, 0, 0, 0)
+            selectedColors = Color4Array([Color4(255, 0, 0, 0) for i in xrange(len(selectedColors))])
 
-            shapePoints = Shape(PointSet(otherPoints, otherColors, width=self.pointinfo.pointWidth), self.pointMaterial)
-            shapeSelection = Shape(PointSet(selectedPoints, selectedColors, width=self.pointinfo.pointWidth + 2), self.pointMaterial)
-            self.pointsRep = Scene([shapePoints, shapeSelection])
+            self.shapePoints = Shape(PointSet(otherPoints, otherColors, width=self.pointinfo.pointWidth), self.pointMaterial)
+            self.shapeSelection = Shape(PointSet(selectedPoints, selectedColors, width=self.pointinfo.pointWidth + 2), self.pointMaterial)
+            self.pointsRep = Scene([self.shapePoints, self.shapeSelection])
         else:
-            self.pointsRep = Scene([Shape(PointSet(pointList, colorList, width=self.pointinfo.pointWidth), self.pointMaterial)])
+            self.shapePoints = Shape(PointSet(pointList, colorList, width=self.pointinfo.pointWidth), self.pointMaterial)
+            self.pointsRep = Scene([self.shapePoints])
 
     def setPointFilter(self, value):
         self.pointfilter = self.sceneRadius() * value / 10000.
@@ -830,6 +895,10 @@ class GLMTGEditor(QGLViewer):
                           100 + int(100 * ((i.y - bbx.getYMin()) / bbx.getYRange())),
                           100 + int(100 * ((i.z - bbx.getZMin()) / bbx.getZRange())), 0) for i in self.points.pointList]
             self.points.colorList = colorList
+
+        self.selectBuffSize = len(self.points.pointList) * 5
+        self.setSelectBufferSize(self.selectBuffSize)
+
         self.adjustTo(points)
         self.createPointsRepresentation()
 
@@ -1074,6 +1143,7 @@ class GLMTGEditor(QGLViewer):
             else check for which point is selected
         """
         nompe = False
+        print "mousePressEvent"
         if self.mode == self.TagScale:
             cCtrlPoint = self.getSelection(event.pos())
             if cCtrlPoint:
@@ -1111,6 +1181,16 @@ class GLMTGEditor(QGLViewer):
                 self.applySelectionTrigger(cCtrlPoint)
             else:
                 QMessageBox.warning(self, 'Selection', 'Cannot find a node to select')
+        elif event.button() == Qt.LeftButton and event.modifiers() == Qt.ShiftModifier:
+            self.selectMode = self.HybridSelect
+            self.rectangleSelect = QRect(event.pos(), event.pos())
+            self.mode = self.Selection
+            nompe = True
+        elif event.button() == Qt.LeftButton and event.modifiers() == (Qt.ShiftModifier | Qt.ControlModifier):
+            self.selectMode = self.AddSelect
+            self.rectangleSelect = QRect(event.pos(), event.pos())
+            self.mode = self.Selection
+            nompe = True
         elif event.modifiers() & Qt.ControlModifier:
             # only rotation
             self.setSelection(None)
@@ -1155,7 +1235,12 @@ class GLMTGEditor(QGLViewer):
 
     def mouseMoveEvent(self, event):
         """On mouse release, we release every grabbed objects"""
-        QGLViewer.mouseMoveEvent(self, event)
+        if self.mode == self.Selection:
+            # Updates rectangle_ coordinates and redraws rectangle
+            self.rectangleSelect.setBottomRight(event.pos())
+            self.updateGL()
+        else:
+            QGLViewer.mouseMoveEvent(self, event)
 
     def mouseReleaseEvent(self, event):
         """On mouse release, we release every grabbed objects"""
@@ -1167,6 +1252,22 @@ class GLMTGEditor(QGLViewer):
             self.setMode(self.TagScale)
         elif self.mode & self.TagProperty:
             self.setMode(self.TagProperty)
+        elif self.mode == self.Selection:
+            self.rectangleSelect = self.rectangleSelect.normalized()
+            # Define selection window dimensions
+            self.setSelectRegionWidth(self.rectangleSelect.width())
+            self.setSelectRegionHeight(self.rectangleSelect.height())
+            # Compute rectangle center and perform selection
+
+            if self.selectBuffSize != self.selectBufferSize():
+                print "setSelectBufferSize"
+                self.setSelectBufferSize(self.selectBuffSize)
+            self.select(self.rectangleSelect.center())
+            self.rectangleSelect = None
+            # Update display to show new selected objects
+            self.createPointsRepresentation()
+            self.glrenderer.renderingMode = self.glrenderer.Dynamic
+            self.setMode(self.Rotate)
         else:
             self.setMode(self.Rotate)
         self.updateGL()

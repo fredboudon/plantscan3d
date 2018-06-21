@@ -51,13 +51,9 @@ class Backup:
 
     def restore_backup(self):
         if len(self.backupdata) > 0:
-            print "ok1"
             data = self.backupdata.pop()
-            print "ok2"
             self.redodata.append({'type': data['type'], 'data': self.get_data(data['type'])})
-            print "ok3"
             self.set_data(data['type'], data['data'])
-            print "ok4"
             if self.backupmetainfos[data['type']]['updatemethod'] is not None:
                 self.backupmetainfos[data['type']]['updatemethod']()
             print "Undo " + data['type'] + " at " + str(id(data))
@@ -66,13 +62,9 @@ class Backup:
 
     def restore_redo(self):
         if len(self.redodata) > 0:
-            print "ok1"
             data = self.redodata.pop()
-            print "ok2"
             self.backupdata.append({'type': data['type'], 'data': self.get_data(data['type'])})
-            print "ok3"
             self.set_data(data['type'], data['data'])
-            print "ok4"
             if self.backupmetainfos[data['type']]['updatemethod'] is not None:
                 self.backupmetainfos[data['type']]['updatemethod']()
             print "Redo " + data['type'] + " at " + str(id(data))

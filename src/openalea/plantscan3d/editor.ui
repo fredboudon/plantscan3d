@@ -357,6 +357,7 @@
     <addaction name="separator"/>
     <addaction name="actionSubSampling"/>
     <addaction name="separator"/>
+    <addaction name="actionDelete_Selection"/>
     <addaction name="menuSelection"/>
     <addaction name="separator"/>
     <addaction name="menuDensity"/>
@@ -913,6 +914,14 @@
   <action name="actionWires">
    <property name="text">
     <string>Wire</string>
+   </property>
+  </action>
+  <action name="actionDelete_Selection">
+   <property name="text">
+    <string>Delete Selection</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+Backspace</string>
    </property>
   </action>
  </widget>

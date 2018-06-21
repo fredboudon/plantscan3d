@@ -66,3 +66,4 @@ target/
 # JetBrains
 .idea
 *_ui.py
+/src/openalea/plantscan3d/.plantscan3d.xml

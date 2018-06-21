@@ -29,15 +29,9 @@ if not py2exe_release:
     ldir = os.path.dirname(__file__)
     cui.check_ui_generation(os.path.join(ldir, 'editor.ui'))
 
-try:
-    import editor_ui
-except:
-    import openalea.plantscan3d.editor_ui as editor_ui
-
+import editor_ui
 
 class MTGEditor(QMainWindow, editor_ui.Ui_MainWindow):
-    keyPressed = pyqtSignal(int)
-    keyReleased = pyqtSignal(int)
 
     def __init__(self, parent=None):
         """
@@ -48,8 +42,6 @@ class MTGEditor(QMainWindow, editor_ui.Ui_MainWindow):
         self.setupUi(self)
         self.pointSizeSlider.setValue(self.mtgeditor.pointinfo.pointWidth)
         self.nodeSizeSlider.setValue(self.mtgeditor.nodeWidth)
-        self.keyPressed.connect(self.mtgeditor.keyPressed)
-        self.keyReleased.connect(self.mtgeditor.keyReleased)
         QObject.connect(self.actionOpenMTG, SIGNAL('triggered(bool)'), self.mtgeditor.openMTG)
         QObject.connect(self.actionImportMTG, SIGNAL('triggered(bool)'), self.mtgeditor.importMTG)  # TODO
         QObject.connect(self.actionSaveMTG, SIGNAL('triggered(bool)'), self.mtgeditor.saveMTG)
@@ -76,7 +68,7 @@ class MTGEditor(QMainWindow, editor_ui.Ui_MainWindow):
         QObject.connect(self.actionRevolveAroundScene, SIGNAL('triggered(bool)'), self.mtgeditor.revolveAroundScene)
         QObject.connect(self.actionShowAll, SIGNAL('triggered(bool)'), self.mtgeditor.showEntireScene)
 
-        from openalea.plantscan3d.mtgeditorwidget import WhiteTheme, BlackTheme
+        from mtgeditorwidget import WhiteTheme, BlackTheme
         QObject.connect(self.actionWhiteTheme, SIGNAL('triggered(bool)'),
                         lambda: self.mtgeditor.updateTheme(WhiteTheme))
         QObject.connect(self.actionBlackTheme, SIGNAL('triggered(bool)'),
@@ -100,6 +92,7 @@ class MTGEditor(QMainWindow, editor_ui.Ui_MainWindow):
 
         QObject.connect(self.actionSubSampling, SIGNAL('triggered(bool)'), self.mtgeditor.subSampling)
 
+        QObject.connect(self.actionDelete_Selection, SIGNAL('triggered(bool)'), self.mtgeditor.deleteSelection)
         QObject.connect(self.actionSoil, SIGNAL('triggered(bool)'), self.mtgeditor.selectSoil)
 
         QObject.connect(self.actionEuclidianContraction, SIGNAL('triggered(bool)'), self.mtgeditor.euclidianContraction)
@@ -192,13 +185,6 @@ class MTGEditor(QMainWindow, editor_ui.Ui_MainWindow):
     def closeEvent(self, event):
         self.mtgeditor.closeEvent(event)
 
-    def keyPressEvent(self, event):
-        super(MTGEditor, self).keyPressEvent(event)
-        self.keyPressed.emit(event.key())
-
-    def keyReleaseEvent(self, event):
-        super(MTGEditor, self).keyReleaseEvent(event)
-        self.keyReleased.emit(event.key())
 
 def main():
     # os.chdir(r'D:\Fred\Mes Documents\Develop\vplants\mbranches\pointreconstruction\data\pointset')

@@ -8,7 +8,6 @@ except ImportError:
     print 'StdRelease'
 
 if not py2exe_release:
-    import openalea.vpltk.qt
     from openalea.vpltk.qt.QtCore import *
     from openalea.vpltk.qt.QtGui import *
 
@@ -28,8 +27,11 @@ if not py2exe_release:
 
     ldir = os.path.dirname(__file__)
     cui.check_ui_generation(os.path.join(ldir, 'editor.ui'))
+    cui.check_rc_generation(os.path.join(ldir, 'plantscan3d.qrc'))
 
 import editor_ui
+from database import dbeditor, db_connection
+
 
 class MTGEditor(QMainWindow, editor_ui.Ui_MainWindow):
 
@@ -40,7 +42,7 @@ class MTGEditor(QMainWindow, editor_ui.Ui_MainWindow):
         QMainWindow.__init__(self, parent)
         editor_ui.Ui_MainWindow.__init__(self)
         self.setupUi(self)
-        self.pointSizeSlider.setValue(self.mtgeditor.pointinfo.pointWidth)
+        self.pointSizeSlider.setValue(self.mtgeditor.pointWidth)
         self.nodeSizeSlider.setValue(self.mtgeditor.nodeWidth)
         QObject.connect(self.actionOpenMTG, SIGNAL('triggered(bool)'), self.mtgeditor.openMTG)
         QObject.connect(self.actionImportMTG, SIGNAL('triggered(bool)'), self.mtgeditor.importMTG)  # TODO
@@ -51,6 +53,10 @@ class MTGEditor(QMainWindow, editor_ui.Ui_MainWindow):
         QObject.connect(self.actionExportPoints, SIGNAL('triggered(bool)'), self.mtgeditor.exportPoints)
         QObject.connect(self.actionExportGeom, SIGNAL('triggered(bool)'), self.mtgeditor.exportAsGeom)
         QObject.connect(self.actionExportNodeList, SIGNAL('triggered(bool)'), self.mtgeditor.exportNodeList)
+
+        self.db_connection = db_connection.DatabaseConnection(self)
+        QObject.connect(self.actionConnect_to_Database, SIGNAL('triggered(bool)'), self.db_connection.show)
+        QObject.connect(self.db_connection, SIGNAL('accepted()'), self.db_connection_validated)
 
         if not py2exe_release:
             QObject.connect(self.actionPuu1, SIGNAL('triggered(bool)'), self.mtgeditor.puu1)
@@ -67,6 +73,7 @@ class MTGEditor(QMainWindow, editor_ui.Ui_MainWindow):
         QObject.connect(self.mtgeditor, SIGNAL('redoAvailable(bool)'), self.actionRedo.setEnabled)
         QObject.connect(self.actionRevolveAroundScene, SIGNAL('triggered(bool)'), self.mtgeditor.revolveAroundScene)
         QObject.connect(self.actionShowAll, SIGNAL('triggered(bool)'), self.mtgeditor.showEntireScene)
+        QObject.connect(self.actionRecalculate_Colors, SIGNAL('triggered(bool)'), self.mtgeditor.RecalculateColors)
 
         from mtgeditorwidget import WhiteTheme, BlackTheme
         QObject.connect(self.actionWhiteTheme, SIGNAL('triggered(bool)'),
@@ -93,7 +100,15 @@ class MTGEditor(QMainWindow, editor_ui.Ui_MainWindow):
         QObject.connect(self.actionSubSampling, SIGNAL('triggered(bool)'), self.mtgeditor.subSampling)
 
         QObject.connect(self.actionDelete_Selection, SIGNAL('triggered(bool)'), self.mtgeditor.deleteSelection)
+        QObject.connect(self.actionKeep_Selection, SIGNAL('triggered(bool)'), self.mtgeditor.keepSelection)
         QObject.connect(self.actionSoil, SIGNAL('triggered(bool)'), self.mtgeditor.selectSoil)
+        QObject.connect(self.actionWire, SIGNAL('triggered(bool)'), self.mtgeditor.selectWire)
+        QObject.connect(self.mtgeditor, SIGNAL('wireAvailable(bool)'), self.actionWire.setEnabled)
+        QObject.connect(self.actionWire_KeepPoint, SIGNAL('triggered(bool)'), self.mtgeditor.wireKeepPoint)
+        QObject.connect(self.actionPole, SIGNAL('triggered(bool)'), self.mtgeditor.selectPole)
+        QObject.connect(self.actionSegment, SIGNAL('triggered(bool)'), self.mtgeditor.segment)
+        QObject.connect(self.mtgeditor, SIGNAL('nextSegmentedTreeAvailable(bool)'), self.actionNext_Segmented_Tree.setEnabled)
+        QObject.connect(self.actionNext_Segmented_Tree, SIGNAL('triggered(bool)'), self.mtgeditor.nextSegmentedTree)
 
         QObject.connect(self.actionEuclidianContraction, SIGNAL('triggered(bool)'), self.mtgeditor.euclidianContraction)
         QObject.connect(self.actionLaplacianContraction, SIGNAL('triggered(bool)'), self.mtgeditor.laplacianContraction)
@@ -182,12 +197,133 @@ class MTGEditor(QMainWindow, editor_ui.Ui_MainWindow):
         self.setStatusBar(self.mtgeditor.statusBar)
         self.setWindowTitle('PlantScan3D')
 
+        self.openDBObject = None
+
     def closeEvent(self, event):
+        from database.server_manip import server_info
+        server_info.save_register_ids()
         self.mtgeditor.closeEvent(event)
+
+    def test_connection_callback(self, status):
+        if status:
+            def get_file_path(fname):
+                file_path = './'
+                if '/' in fname:
+                    end_path = fname.rfind('/')
+                    if fname.startswith('/'):
+                        file_path = fname[:end_path] + '/'
+                    else:
+                        file_path = fname[:end_path] + '/'
+                return file_path
+
+            def delete_request(id):
+                if self.openDBObject == id:
+                    self.openDBObject = None
+
+                    msgBox = QMessageBox()
+                    msgBox.setText('The current opened scan has been deleted from the database, do you want to clean the viewer ?')
+                    msgBox.setStandardButtons(QMessageBox.Apply | QMessageBox.Cancel)
+                    msgBox.setDefaultButton(QMessageBox.Cancel)
+
+                    if msgBox.exec_() == QMessageBox.Apply:
+                        from openalea.plantgl.all import PointSet, Point3Array, Color4Array
+                        self.mtgeditor.setPoints(PointSet(Point3Array(), Color4Array()))
+
+            def open_request(id, fname):
+                from zipfile import ZipFile, ZIP_DEFLATED
+
+                file_path = get_file_path(str(fname))
+
+                zip = ZipFile(fname, mode='r', compression=ZIP_DEFLATED)
+                zip.extractall(file_path)
+
+                if 'point_cloud.ply' in zip.namelist():
+                    self.mtgeditor.readPoints(str(file_path + 'point_cloud.ply'))
+                if 'skeleton.bmtg' in zip.namelist():
+                    self.mtgeditor.readMTG(str(file_path + 'skeleton.bmtg'))
+
+                self.openDBObject = id
+                zip.close()
+
+            def save_request(fname):
+                from zipfile import ZipFile, ZIP_DEFLATED
+
+                file_path = get_file_path(str(fname))
+
+                zip = ZipFile(fname, mode='w', compression=ZIP_DEFLATED)
+
+                if self.mtgeditor.points is not None and len(self.mtgeditor.points.pointList) > 0:
+                    self.mtgeditor.savePoints(file_path + 'point_cloud.ply', self.mtgeditor.points)
+                    zip.write(file_path + 'point_cloud.ply', 'point_cloud.ply')
+                if self.mtgeditor.mtg is not None:
+                    self.mtgeditor.writeMTG(file_path + 'skeleton.bmtg')
+                    zip.write(file_path + 'skeleton.bmtg', 'skeleton.bmtg')
+                zip.close()
+
+            def set_object_request(id):
+                self.openDBObject = id
+
+            def size_callback():
+                return len(self.mtgeditor.points.pointList)
+
+            def make_thumbnail():
+                from thumbnailmaker import make_thumbnail
+                from openalea.plantgl.all import Scene
+                return make_thumbnail(Scene([self.mtgeditor.points]),  )
+
+            def reset_open_object():
+                self.openDBObject = None
+                self.database_editor.current_opened_item = None
+
+            self.actionDatabase.setEnabled(True)
+            self.actionExport_To_Database.setEnabled(True)
+            self.actionUpdate_Current_Item.setEnabled(True)
+            self.database_editor = dbeditor.DatabaseEditor(size_callback, make_thumbnail, parent=self)
+            QObject.connect(self.actionDatabase, SIGNAL('triggered(bool)'), self.database_editor.show)
+            QObject.connect(self.actionExport_To_Database, SIGNAL('triggered(bool)'), self.database_editor.insert_item)
+            QObject.connect(self.actionUpdate_Current_Item, SIGNAL('triggered(bool)'), self.database_editor.update_current_item)
+            self.database_editor.openObjectRequested.connect(open_request)
+            self.database_editor.saveObjectRequested.connect(save_request)
+            self.database_editor.setCurrentObjectRequested.connect(set_object_request)
+            self.database_editor.objectDeleted.connect(delete_request)
+
+            self.mtgeditor.open_file.connect(reset_open_object)
+            QMessageBox.information(self, 'Connection success', 'The connection to the MongoDB server has succeeded')
+            self.database_editor.show()
+        else:
+            QMessageBox.warning(self, 'Connection fail', 'The connection to the MongoDB server has failed')
+            self.db_connection.show()
+
+    def db_connection_validated(self):
+        try:
+            # Python 3.x
+            from urllib.parse import quote_plus
+        except ImportError:
+            # Python 2.x
+            from urllib import quote_plus
+
+        mongodb_address = self.db_connection.addressComboBox.currentText()
+        mongodb_username = self.db_connection.usernameLineEdit.text()
+        mongodb_password = self.db_connection.passwordLineEdit.text()
+        uri = 'mongodb://'
+        if self.db_connection.IDGroupBox.isChecked():
+            uri += quote_plus(mongodb_username) + ':' + quote_plus(mongodb_password) + '@' + mongodb_address
+        else:
+            uri += mongodb_address
+        from database.server_manip import server_info, WorkerTestConnection
+
+        server_info.mongodb_uri = uri
+
+        self.workerThread = QThread()
+        self.workerObject = WorkerTestConnection()
+        self.workerObject.moveToThread(self.workerThread)
+        self.workerThread.started.connect(self.workerObject.run)
+        self.workerObject.finished.connect(self.workerThread.quit)
+        self.workerObject.result.connect(self.test_connection_callback)
+        self.workerThread.start()
 
 
 def main():
-    # os.chdir(r'D:\Fred\Mes Documents\Develop\vplants\mbranches\pointreconstruction\data\pointset')
     qapp = QApplication([])
     # qapp.processEvents()
     w = MTGEditor()

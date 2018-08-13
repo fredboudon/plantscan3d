@@ -57,9 +57,9 @@ if __name__ == '__main__':
         exit(-1)
     i = 1
     while i < len(sys.argv):
-        if str(sys.argv[i]).rfind(".ui"):
+        if str(sys.argv[i]).rfind(".ui") >= 0:
             check_ui_generation(sys.argv[i])
-        elif str(sys.argv[i]).rfind(".rc"):
+        elif str(sys.argv[i]).rfind(".rc") >= 0 or str(sys.argv[i]).rfind(".qrc") >= 0:
             check_rc_generation(sys.argv[i])
         else:
             print sys.argv[i] + ": not supported"

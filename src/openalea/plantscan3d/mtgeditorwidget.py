@@ -8,6 +8,7 @@ from openalea.plantgl.gui.editablectrlpoint import *
 import openalea.mtg.algo as mtgalgo
 from pglnqgl import *
 import os
+import numpy
 from math import pi
 from serial import *
 from shareddata import *
@@ -148,11 +149,16 @@ WhiteTheme = {'Name': 'White',
 
 ThemeDict = {'Black': BlackTheme, 'White': WhiteTheme}
 
+class PointInfo:
+    def __init__(self):
+        pass
 
 class GLMTGEditor(QGLViewer):
     Edit, Selection, TagScale, TagProperty, Rotate = 1, 2, 4, 8, 16
     # The Different selection modes
     HybridSelect, AddSelect = 1, 2
+
+    open_file = pyqtSignal()
 
     def __init__(self, parent, pointfile=None, mtgfile=None):
         QGLViewer.__init__(self, parent)
@@ -194,12 +200,12 @@ class GLMTGEditor(QGLViewer):
 
         self.modelRep = None
 
-        class PointInfo:
-            def __init__(self):
-                self.pointWidth = 2
+        self.wireStartPoints = []
+        self.connexPoints = []
 
         self.points = None if pointfile is None else Scene(pointfile)[0].geometry
         self.pointinfo = PointInfo()
+        self.pointWidth = 2
         self.selectBuffSize = 0
 
         self.selectedPoint = Index([])
@@ -243,20 +249,20 @@ class GLMTGEditor(QGLViewer):
         self.backup = Backup(self)
         self.backup.declare_backup('mtg', [BackupObject('mtg', self)], lambda: self.__update_all_mtg__())
 
-        def setpointsmethod(object, name, newobject):
-            setattr(object, name, PointSet(newobject['pointList'], newobject['colorList']))
-
         self.backup.declare_backup('points',
                                    [
                                        BackupObject('points', self,
                                                     getmethod=lambda o, n: {'pointList': getattr(o, n).pointList,
                                                                             'colorList': getattr(o, n).colorList},
-                                                    setmethod=setpointsmethod,
+                                                    setmethod=lambda o, n, no: setattr(o, n, PointSet(no['pointList'], no['colorList'])),
                                                     copymethod=lambda o: {'pointList': Point3Array(o.pointList),
                                                                           'colorList': Color4Array(o.colorList)}
                                                     ),
                                        BackupObject('pointinfo', self),
-                                       BackupObject('selectedPoint', self)
+                                       BackupObject('selectedPoint', self),
+                                       BackupObject('wireStartPoints', self),
+                                       BackupObject('connexPoints', self),
+                                       BackupObject('pointWidth', self)
                                    ],
                                    lambda: self.setPoints(self.points))
 
@@ -299,15 +305,36 @@ class GLMTGEditor(QGLViewer):
         event.accept()
 
     def deleteSelection(self):
+        from time import time
+
         if len(self.selectedPoint) == 0:
             return
 
         self.createBackup('points')
+        t = time()
         newPointSet = PointSet(self.points.pointList.opposite_subset(self.selectedPoint),
                                self.points.colorList.opposite_subset(self.selectedPoint))
         self.selectedPoint = Index([])
         self.setPoints(newPointSet)
+        t = time() - t
         self.updateGL()
+        self.showMessage("Points deleted in {} sec.".format(t))
+
+    def keepSelection(self):
+        from time import time
+
+        if len(self.selectedPoint) == 0:
+            return
+
+        self.createBackup('points')
+        t = time()
+        newPointSet = PointSet(self.points.pointList.subset(self.selectedPoint),
+                               self.points.colorList.subset(self.selectedPoint))
+        self.selectedPoint = Index([])
+        self.setPoints(newPointSet)
+        t = time() - t
+        self.updateGL()
+        self.showMessage("Points kept in {} sec.".format(t))
 
     def dragEnterEvent(self, event):
         if (event.mimeData().hasUrls()):
@@ -644,8 +671,11 @@ class GLMTGEditor(QGLViewer):
                 self.filehistory.add(fname, 'PTS')
             else:
                 QMessageBox.warning(self, 'Unknow File', 'Cannot read file ' + repr(fname))
+                return
         else:
             QMessageBox.warning(self, 'Unknow File', 'Cannot read file ' + repr(fname))
+            return
+        self.open_file.emit()
 
     def openMTG(self):
         lastfile = self.filehistory.getLastFile('MTG')
@@ -657,6 +687,7 @@ class GLMTGEditor(QGLViewer):
         fname = str(fname)
         self.filehistory.add(fname, 'MTG')
         self.readMTG(fname)
+        self.open_file.emit()
 
     def importMTG(self):
         lastfile = self.filehistory.getLastFile('iMTG')
@@ -668,6 +699,7 @@ class GLMTGEditor(QGLViewer):
         fname = str(fname)
         self.filehistory.add(fname, 'iMTG')
         self.readMTG(fname, True)
+        self.open_file.emit()
 
     def readMTG(self, fname, fromdigit=False):
         import os.path
@@ -803,11 +835,11 @@ class GLMTGEditor(QGLViewer):
 
             selectedColors = Color4Array([Color4(255, 0, 0, 0) for i in xrange(len(selectedColors))])
 
-            self.shapePoints = Shape(PointSet(otherPoints, otherColors, width=self.pointinfo.pointWidth), self.pointMaterial)
-            self.shapeSelection = Shape(PointSet(selectedPoints, selectedColors, width=self.pointinfo.pointWidth + 2), self.pointMaterial)
+            self.shapePoints = Shape(PointSet(otherPoints, otherColors, width=self.pointWidth), self.pointMaterial)
+            self.shapeSelection = Shape(PointSet(selectedPoints, selectedColors, width=self.pointWidth + 2), self.pointMaterial)
             self.pointsRep = Scene([self.shapePoints, self.shapeSelection])
         else:
-            self.shapePoints = Shape(PointSet(pointList, colorList, width=self.pointinfo.pointWidth), self.pointMaterial)
+            self.shapePoints = Shape(PointSet(pointList, colorList, width=self.pointWidth), self.pointMaterial)
             self.pointsRep = Scene([self.shapePoints])
 
     def setPointFilter(self, value):
@@ -818,7 +850,7 @@ class GLMTGEditor(QGLViewer):
         if self.isVisible(): self.updateGL()
 
     def setPointWidth(self, value):
-        self.pointinfo.pointWidth = value
+        self.pointWidth = value
         if self.pointsRep:
             self.pointsRep[0].geometry.width = value
             if len(self.selectedPoint) > 0:
@@ -863,11 +895,12 @@ class GLMTGEditor(QGLViewer):
 
         fname = QFileDialog.getOpenFileName(self, "Open Points file",
                                             initialname,
-                                            "Points Files (*.asc *.xyz *.pwn *.pts *.txt *.bgeom *.xyz);;All Files (*.*)")
+                                            "Points Files (*.asc *.xyz *.pwn *.pts *.txt *.bgeom *.xyz *.ply);;All Files (*.*)")
         if not fname: return
         fname = str(fname)
         self.filehistory.add(fname, 'PTS')
         self.readPoints(fname)
+        self.open_file.emit()
 
     def readPoints(self, fname):
         sc = Scene(fname)
@@ -884,17 +917,20 @@ class GLMTGEditor(QGLViewer):
         self.setPoints(points)
         self.showEntireScene()
 
-    def setPoints(self, points):
+    def RecalculateColors(self):
+        self.points.colorList = generate_point_color(self.points)
+        self.createPointsRepresentation()
+        self.updateGL()
+
+    def setPoints(self, points, keepInfo=False):
         self.points = points
 
         self.pointsAttributeRep = None
+        if not keepInfo:
+            self.pointinfo = PointInfo()
+
         if self.points.colorList is None:
-            bbx = BoundingBox(self.points)
-            print 'generate color'
-            colorList = [(100 + int(100 * ((i.x - bbx.getXMin()) / bbx.getXRange())),
-                          100 + int(100 * ((i.y - bbx.getYMin()) / bbx.getYRange())),
-                          100 + int(100 * ((i.z - bbx.getZMin()) / bbx.getZRange())), 0) for i in self.points.pointList]
-            self.points.colorList = colorList
+            self.points.colorList = generate_point_color(self.points)
 
         self.selectBuffSize = len(self.points.pointList) * 5
         self.setSelectBufferSize(self.selectBuffSize)
@@ -903,21 +939,19 @@ class GLMTGEditor(QGLViewer):
         self.createPointsRepresentation()
 
     def exportPoints(self):
-        if self.points is None:
-            QMessageBox.warning(self, 'data error', 'No points to save')
         lastfile = self.filehistory.getLastFile('PTS')
         initialname = os.path.dirname(lastfile) if lastfile else get_shared_data('pointset')
 
         fname = QFileDialog.getSaveFileName(self, "Save Points file",
                                             initialname,
-                                            "Points Files (*.asc;*.xyz;*.pwn;*.pts;*.bgeom);;All Files (*.*)")
+                                            "Points Files (*.asc *.xyz *.pwn *.pts *.bgeom *.ply);;All Files (*.*)")
         if not fname: return
         fname = str(fname)
         self.filehistory.add(fname, 'PTS')
-        self.savePoints(fname)
+        self.savePoints(fname, self.points)
 
-    def savePoints(self, fname):
-        Scene([self.points]).save(fname)
+    def savePoints(self, fname, points):
+        Scene([points]).save(fname)
 
     def exportAsGeom(self):
         initialname = 'out.bgeom'
@@ -1141,9 +1175,9 @@ class GLMTGEditor(QGLViewer):
         """ Check for eventual operations the user asks: 
             shift start rectangular selection
             else check for which point is selected
+            :type event: QMouseEvent
         """
         nompe = False
-        print "mousePressEvent"
         if self.mode == self.TagScale:
             cCtrlPoint = self.getSelection(event.pos())
             if cCtrlPoint:
@@ -1634,7 +1668,7 @@ class GLMTGEditor(QGLViewer):
 
         self.createBackup('mtg')
         nbg = self.stickNodeToPoints(nid)
-        self.setTempInfoDisplay(Scene([Shape(PointSet(self.pointsRep[0].geometry.pointList.subset(nbg), width=self.pointinfo.pointWidth + 2), Material((255, 0, 255)))]))
+        self.setTempInfoDisplay(Scene([Shape(PointSet(self.pointsRep[0].geometry.pointList.subset(nbg), width=self.pointWidth + 2), Material((255, 0, 255)))]))
         self.showMessage("Stick " + str(nid) + " to points.")
         self.updateGL()
 
@@ -1648,7 +1682,7 @@ class GLMTGEditor(QGLViewer):
         nbg = []
         for ci in mtgalgo.descendants(self.mtg, nid):
             nbg += self.stickNodeToPoints(ci)
-        self.setTempInfoDisplay(Scene([Shape(PointSet(self.pointsRep[0].geometry.pointList.subset(nbg), width=self.pointinfo.pointWidth + 2), Material((255, 0, 255)))]))
+        self.setTempInfoDisplay(Scene([Shape(PointSet(self.pointsRep[0].geometry.pointList.subset(nbg), width=self.pointWidth + 2), Material((255, 0, 255)))]))
         self.showMessage("Stick subtree of " + str(nid) + " to points.")
         self.updateGL()
 
@@ -1874,15 +1908,11 @@ class GLMTGEditor(QGLViewer):
             self.pointRDensity(False)
         densityratio, ok = QInputDialog.getInt(self, 'Density Ratio', 'Select the minimum density (percentage ratio) to select points to remove', 5, 1, 100)
         if ok:
-            densities = self.pointinfo.densities
-            mind, maxd = densities.getMinAndMax(True)
-            densitythreshold = mind + (maxd - mind) * densityratio / 100
             self.createBackup('points')
-            nbPoints = len(self.points.pointList)
-            subset = [i for i in xrange(nbPoints) if densities[i] < densitythreshold]
+            subset = filter_min_densities(self.pointinfo.densities, densityratio)
             self.setPoints(PointSet(self.points.pointList.opposite_subset(subset), self.points.colorList.opposite_subset(subset)))
             self.updateGL()
-            self.showMessage("Applied density filtering (d<" + str(densitythreshold) + "). Nb of points : " + str(len(self.points.pointList)) + ".")
+            self.showMessage("Applied density filtering. Nb of points : " + str(len(self.points.pointList)) + ".")
 
     def filterPointsMax(self):
         if not self.check_input_points(): return
@@ -1891,15 +1921,11 @@ class GLMTGEditor(QGLViewer):
         densityratio, ok = QInputDialog.getInt(self, 'Density Ratio', 'Select a maximum density (percentage ratio) to select points to remove', 5, 1, 100)
 
         if ok:
-            densities = self.pointinfo.densities
-            mind, maxd = densities.getMinAndMax(True)
-            densitythreshold = maxd - (maxd - mind) * densityratio / 100
             self.createBackup('points')
-            nbPoints = len(self.points.pointList)
-            subset = [i for i in xrange(nbPoints) if densities[i] > densitythreshold]
+            subset = filter_max_densities(self.pointinfo.densities, densityratio)
             self.setPoints(PointSet(self.points.pointList.opposite_subset(subset), self.points.colorList.opposite_subset(subset)))
             self.updateGL()
-            self.showMessage("Applied density filtering (d>" + str(densitythreshold) + "). Nb of points : " + str(len(self.points.pointList)) + ".")
+            self.showMessage("Applied density filtering. Nb of points : " + str(len(self.points.pointList)) + ".")
 
     def subSampling(self):
         if not self.check_input_points(): return
@@ -1915,10 +1941,108 @@ class GLMTGEditor(QGLViewer):
             self.showMessage("Applied sub-sampling. Nb of points : " + str(len(self.points.pointList)) + ".")
 
     def selectSoil(self):
+        a = self.points.pointList.getCenter().z
+        minZ = self.points.pointList[self.points.pointList.getZMinIndex()].z
+        max_height = minZ + (a - minZ) * 0.5
+        dialog = self.createParamDialog('Parameterizing the soil selection algorithm', [
+            ('Top height percent', int, 10, {'range': (0, 100)}),
+            ('Bottom threshold', float, max_height)
+        ])
+        if dialog.exec_():
+            topPercent, bottomThreshold = dialog.getParams()
+            self.createBackup('points')
+            self.selectedPoint = select_soil(self.points.pointList, IndexArray(0), topPercent, bottomThreshold)
+            self.createPointsRepresentation()
+            self.updateGL()
+
+    def selectWire(self):
+        if len(self.wireStartPoints) != 2:
+            print "reset wireStartPoints"
+            self.wireStartPoints = []
+        else:
+            dialog = self.createParamDialog('Parameterizing the wire selection algorithm', [
+                ('Baricenter radius value', float, 0.04),
+                ('Get radii value', float, 0.05)
+            ])
+            if dialog.exec_():
+                bariRadius, radiiValue = dialog.getParams()
+                self.createBackup('points')
+
+                kclosest_wire = IndexArray(0)
+                wire_path = get_shortest_path(self.points.pointList, kclosest_wire, self.wireStartPoints[0], self.wireStartPoints[1])
+                newpoint, baricenters = add_baricenter_points_of_path(self.points.pointList, kclosest_wire, wire_path, bariRadius)
+
+                kclosest = k_closest_points_from_ann(newpoint, 20, True)
+
+                radii = get_radii_of_path(newpoint, kclosest, baricenters, radiiValue)
+                radius = numpy.average(radii)
+
+                self.selectedPoint = Index([])
+                newselectedPoints = select_wire_from_path(newpoint, baricenters, radius, radii)
+
+                for sp in newselectedPoints:
+                    if sp not in baricenters:
+                        self.selectedPoint.append(sp)
+
+                self.wireStartPoints = []
+                self.createPointsRepresentation()
+                self.updateGL()
+                self.emit(SIGNAL('wireAvailable(bool)'), False)
+
+    def wireKeepPoint(self):
+        if len(self.selectedPoint) == 0:
+            pass
+        else:
+            print "Keep point : index = " + str(self.selectedPoint[0])
+            self.wireStartPoints.append(self.selectedPoint[0])
+            self.selectedPoint = Index([])
+            self.createPointsRepresentation()
+            self.updateGL()
+
+            if len(self.wireStartPoints) == 2:
+                self.emit(SIGNAL('wireAvailable(bool)'), True)
+
+    def selectPole(self):
+        dialog = self.createParamDialog('Parameterizing the pole selection algorithm', [
+            ('Estimate radius of the pole', float, 0.175),
+            ('Radius tolerance', int, 60, {'range': (0, 100)}),
+            ('Number of algorithm iteration', int, 10000, {'range': (0, 1000000)})
+        ])
+        if dialog.exec_():
+            poleRadius, tolerance, iteration = dialog.getParams()
+            self.createBackup('points')
+            tolerance = float(tolerance) / 100
+            pole, score = select_pole_points_mt(self.points.pointList, poleRadius, iteration, tolerance)
+            self.selectedPoint = pole
+            self.createPointsRepresentation()
+            self.updateGL()
+
+    def segment(self):
         self.createBackup('points')
-        self.selectedPoint = select_soil(self.points.pointList, IndexArray(0), 10)
-        self.createPointsRepresentation()
+
+        kclosest = k_closest_points_from_ann(self.points.pointList, 10, True)
+        connexsIndex = get_all_connex_components(self.points.pointList, kclosest)
+
+        self.connexPoints = []  # type: List[Point3Array]
+        for c in connexsIndex:
+            if len(c) < 10000:
+                continue
+            self.connexPoints.append(self.points.pointList.split_subset(c)[0])
+
+        self.emit(SIGNAL('nextSegmentedTreeAvailable(bool)'), True)
+        self.nextSegmentedTree()
+
+    def nextSegmentedTree(self):
+        if len(self.connexPoints) == 0:
+            self.emit(SIGNAL('nextSegmentedTreeAvailable(bool)'), False)
+            return
+
+        self.createBackup('points')
+        self.setPoints(PointSet(self.connexPoints.pop(0)))
         self.updateGL()
+
+        if len(self.connexPoints) == 0:
+            self.emit(SIGNAL('nextSegmentedTreeAvailable(bool)'), False)
 
     def euclidianContraction(self):
         if not self.check_input_points(): return
@@ -1960,7 +2084,7 @@ class GLMTGEditor(QGLViewer):
         kclosests = self.estimateKClosest()
         self.points.pointList = centroids_of_groups(points, kclosests)
         t = time() - t
-        self.setPoints(self.points, True)
+        self.setPoints(self.points)
         self.updateGL()
         self.showMessage("Applied contraction in {} sec.".format(t))
 
@@ -2125,7 +2249,7 @@ class GLMTGEditor(QGLViewer):
         self.createBackup('mtg')
 
         if type(funcname) == str:
-            import alignement
+            import aligfnement
             func = alignement.__dict__[funcname]
 
         if len(params):

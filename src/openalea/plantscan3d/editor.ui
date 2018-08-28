@@ -16,7 +16,11 @@
   <widget class="QWidget" name="centralwidget">
    <layout class="QGridLayout" name="gridLayout">
     <item row="0" column="0" rowspan="4" colspan="6">
-     <widget class="GLMTGEditor" name="mtgeditor" native="true"/>
+     <widget class="GLMTGEditor" name="mtgeditor" native="true">
+      <property name="acceptDrops">
+       <bool>true</bool>
+      </property>
+     </widget>
     </item>
     <item row="0" column="6">
      <widget class="QLabel" name="label_3">
@@ -180,6 +184,11 @@
     <addaction name="actionImportPoints"/>
     <addaction name="actionExportPoints"/>
     <addaction name="separator"/>
+    <addaction name="actionConnect_to_Database"/>
+    <addaction name="actionDatabase"/>
+    <addaction name="actionExport_To_Database"/>
+    <addaction name="actionUpdate_Current_Item"/>
+    <addaction name="separator"/>
     <addaction name="actionImportMTG"/>
     <addaction name="menuExport_MTG"/>
     <addaction name="separator"/>
@@ -214,6 +223,7 @@
     <addaction name="separator"/>
     <addaction name="actionAdjustView"/>
     <addaction name="menuTheme"/>
+    <addaction name="actionRecalculate_Colors"/>
    </widget>
    <widget class="QMenu" name="menuReconstruction">
     <property name="title">
@@ -344,10 +354,25 @@
      <addaction name="actionPointDirections"/>
      <addaction name="actionAverageDirections"/>
     </widget>
+    <widget class="QMenu" name="menuSelection">
+     <property name="title">
+      <string>Selection</string>
+     </property>
+     <addaction name="actionSoil"/>
+     <addaction name="actionPole"/>
+     <addaction name="separator"/>
+     <addaction name="actionWire_KeepPoint"/>
+     <addaction name="actionWire"/>
+    </widget>
     <addaction name="actionReorient"/>
     <addaction name="actionSortZ"/>
     <addaction name="separator"/>
     <addaction name="actionSubSampling"/>
+    <addaction name="separator"/>
+    <addaction name="actionDelete_Selection"/>
+    <addaction name="actionKeep_Selection"/>
+    <addaction name="menuSelection"/>
+    <addaction name="actionSegment"/>
     <addaction name="separator"/>
     <addaction name="menuDensity"/>
     <addaction name="separator"/>
@@ -600,11 +625,6 @@
   <action name="actionSubSampling">
    <property name="text">
     <string>Sub-Sampling</string>
-   </property>
-  </action>
-  <action name="actionTest">
-   <property name="text">
-    <string>test</string>
    </property>
   </action>
   <action name="actionRedo">
@@ -888,6 +908,104 @@
   <action name="actionScaReconstruction">
    <property name="text">
     <string>Space Colonization</string>
+   </property>
+  </action>
+  <action name="actionSoil">
+   <property name="text">
+    <string>Soil</string>
+   </property>
+  </action>
+  <action name="actionPole">
+   <property name="text">
+    <string>Pole</string>
+   </property>
+  </action>
+  <action name="actionDelete_Selection">
+   <property name="text">
+    <string>Delete Selection</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+Backspace</string>
+   </property>
+  </action>
+  <action name="actionWire">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Wire</string>
+   </property>
+  </action>
+  <action name="actionWire_KeepPoint">
+   <property name="text">
+    <string>Use selection for wire algorithm</string>
+   </property>
+  </action>
+  <action name="actionKeep_Selection">
+   <property name="text">
+    <string>Keep Selection</string>
+   </property>
+  </action>
+  <action name="actionRecalculate_Colors">
+   <property name="text">
+    <string>Recalculate Colors</string>
+   </property>
+  </action>
+  <action name="actionSegment">
+   <property name="text">
+    <string>Segment</string>
+   </property>
+  </action>
+  <action name="actionNext_Segmented_Tree">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Next Segmented Tree</string>
+   </property>
+  </action>
+  <action name="actionDatabase">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Browse Database</string>
+   </property>
+  </action>
+  <action name="actionExport_To_Database">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Export To Database</string>
+   </property>
+  </action>
+  <action name="actionUpdate_Current_Item">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Update Current Item</string>
+   </property>
+  </action>
+  <action name="actionConnect_to_Database">
+   <property name="text">
+    <string>Connect to Database</string>
+   </property>
+  </action>
+  <action name="actionUpload_to_Database">
+   <property name="text">
+    <string>Upload to Database</string>
+   </property>
+  </action>
+  <action name="actionUpload_to_Database_2">
+   <property name="text">
+    <string>Upload to Database</string>
+   </property>
+  </action>
+  <action name="actionRecenter_points">
+   <property name="text">
+    <string>Recenter points</string>
    </property>
   </action>
  </widget>

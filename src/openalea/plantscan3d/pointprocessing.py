@@ -9,7 +9,7 @@ def  np_inertia_axis(points, verbose = False):
     if verbose: print 'centering points'
     center = points.getCenter()
     npoints = pgl.Point3Array(points)
-    if pgl.norm(center) < 1e-5:
+    if pgl.norm(center) > 1e-5:
         npoints.translate(- center)
 
     if verbose: print 'compute covariance'

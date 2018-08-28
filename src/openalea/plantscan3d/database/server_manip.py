@@ -42,7 +42,6 @@ class ServerInformation:
             for id in str(ids).split(';'):
                 address, username, password = id.split(':')
                 self.register_id[address] = (username, password)
-            print self.register_id
         self.settings.endGroup()
 
     def save_register_ids(self):

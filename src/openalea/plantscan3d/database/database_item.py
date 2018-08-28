@@ -178,12 +178,22 @@ class Database_Item(QDialog, database_item_ui.Ui_Dialog):
                 QMessageBox.warning(self, 'Invalid name', 'Connot have data with the same name')
                 return
 
+            from bson.binary import Binary
+
+            ba = QByteArray()
+            buffer = QBuffer(ba)
+            buffer.open(QIODevice.WriteOnly)
+            self.thumbnail.save(buffer, 'PNG')
+
+            thumbnail = Binary(ba.data())
+
             data = {
                 '$set': {
                     'name': self.nameEdit.text(),
                     'tags': self.tags,
                     'fileURL': self.protocolComboBox.currentText() + '://' + self.storageComboBox.currentText() + '/' + self.nameEdit.text() + '.zip',
-                    'date': datetime.datetime.now()
+                    'date': datetime.datetime.now(),
+                    'thumbnail': thumbnail
                 }
             }
             for item in self.otherProperties.iteritems():

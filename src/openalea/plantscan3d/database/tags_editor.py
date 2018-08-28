@@ -87,7 +87,6 @@ class TagsEditor(QDialog, tags_editor_ui.Ui_Dialog):
                 new_item.setText(0, tag_name)
                 new_item.setCheckState(0, Qt.Unchecked)
                 self.tags_ref[str(new_tag)] = new_item
-                print new_tag
                 if clicked_item is None:
                     self.treeWidget.addTopLevelItem(new_item)
                 else:
@@ -211,5 +210,4 @@ class TagsEditor(QDialog, tags_editor_ui.Ui_Dialog):
                 for t in get_path('', self.treeWidget.topLevelItem(i)).split(';'):
                     if t != '':
                         tags.append(t)
-        print tags
         return tags

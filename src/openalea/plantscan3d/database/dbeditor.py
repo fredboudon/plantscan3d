@@ -53,7 +53,7 @@ class DatabaseEditor(QDialog, database_ui.Ui_Dialog):
         self.current_thumbnail = None
 
         self.treeWidget.itemDoubleClicked.connect(self.item_double_clicked)
-        self.treeWidget.itemClicked.connect(self.item_clicked)
+        self.treeWidget.currentItemChanged.connect(self.item_changed)
 
         self.thumbnailLabel.setBackgroundRole(QPalette.Base)
         self.thumbnailLabel.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Ignored)
@@ -137,12 +137,12 @@ class DatabaseEditor(QDialog, database_ui.Ui_Dialog):
 
     def insert_db(self, data):
         filename = data['name'] + '.zip'
-        fname = str('/tmp/' + filename)
+        fname = str('/tmp/' + str(os.getpid()) + '/' + filename)
         self.saveObjectRequested.emit(fname)
         data['nbpoint'] = self.size_callback() if self.size_callback is not None else 0
 
         def callback(connection):
-            connection.upload(fname, filename)
+            connection.upload(filename, fname)
             data['filesize'] = connection.fileSize(filename)
             result = MongoDBManip.insert_one(data)
             self.current_opened_item = result.inserted_id
@@ -264,7 +264,7 @@ class DatabaseEditor(QDialog, database_ui.Ui_Dialog):
         self.tableWidget.setRowCount(0)
         QDialog.show(self)
 
-    def item_clicked(self, item, column):
+    def item_changed(self, item, column):
         """
 
         :type column: int
@@ -318,12 +318,12 @@ class DatabaseEditor(QDialog, database_ui.Ui_Dialog):
             return
 
         data = MongoDBManip.find_one({'_id': item.object_id}, {'name': 1, 'fileURL': 1})
-        fname = str('/tmp/' + data['name'] + '.zip')
+        fname = str('/tmp/' + str(os.getpid()) + '/' + data['name'] + '.zip')
 
         def callback(connection):
+            self.close()
             connection.download(data['name'] + '.zip', fname)
             self.openObjectRequested.emit(item.object_id.binary, fname)
-            self.close()
 
         self.file_manipulation(str(data['fileURL']), callback)
         self.current_opened_item = item.object_id

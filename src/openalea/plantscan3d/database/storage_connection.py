@@ -123,13 +123,18 @@ class FTPConnection(StorageConnection):
 
         ftp = self.get_instance()
 
+        try:
+            os.makedirs(os.path.split(local_path)[0])
+        except:
+            pass
+
         f = open(local_path, 'wb')
         ftp.retrbinary('RETR ' + server_path, f.write)
         f.close()
         ftp.quit()
 
-    def upload(self, local_path, server_path):
-        if not self.connected:
+    def upload(self, server_path, local_path):
+        if not self.connected or not os.path.exists(local_path):
             return
 
         ftp = self.get_instance()

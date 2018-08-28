@@ -31,6 +31,7 @@ if not py2exe_release:
 
 import editor_ui
 from database import dbeditor, db_connection
+from src.openalea.plantscan3d.segmenteditor import SegmentEditor
 
 
 class MTGEditor(QMainWindow, editor_ui.Ui_MainWindow):
@@ -42,7 +43,7 @@ class MTGEditor(QMainWindow, editor_ui.Ui_MainWindow):
         QMainWindow.__init__(self, parent)
         editor_ui.Ui_MainWindow.__init__(self)
         self.setupUi(self)
-        self.pointSizeSlider.setValue(self.mtgeditor.pointWidth)
+        self.pointSizeSlider.setValue(self.mtgeditor.pointinfo.pointWidth)
         self.nodeSizeSlider.setValue(self.mtgeditor.nodeWidth)
         QObject.connect(self.actionOpenMTG, SIGNAL('triggered(bool)'), self.mtgeditor.openMTG)
         QObject.connect(self.actionImportMTG, SIGNAL('triggered(bool)'), self.mtgeditor.importMTG)  # TODO
@@ -106,9 +107,10 @@ class MTGEditor(QMainWindow, editor_ui.Ui_MainWindow):
         QObject.connect(self.mtgeditor, SIGNAL('wireAvailable(bool)'), self.actionWire.setEnabled)
         QObject.connect(self.actionWire_KeepPoint, SIGNAL('triggered(bool)'), self.mtgeditor.wireKeepPoint)
         QObject.connect(self.actionPole, SIGNAL('triggered(bool)'), self.mtgeditor.selectPole)
-        QObject.connect(self.actionSegment, SIGNAL('triggered(bool)'), self.mtgeditor.segment)
-        QObject.connect(self.mtgeditor, SIGNAL('nextSegmentedTreeAvailable(bool)'), self.actionNext_Segmented_Tree.setEnabled)
-        QObject.connect(self.actionNext_Segmented_Tree, SIGNAL('triggered(bool)'), self.mtgeditor.nextSegmentedTree)
+        self.segment_editor = SegmentEditor(parent=self)
+        QObject.connect(self.actionSegment, SIGNAL('triggered(bool)'), self.segment_points)
+        #QObject.connect(self.mtgeditor, SIGNAL('nextSegmentedTreeAvailable(bool)'), self.actionNext_Segmented_Tree.setEnabled)
+        #QObject.connect(self.actionNext_Segmented_Tree, SIGNAL('triggered(bool)'), self.mtgeditor.nextSegmentedTree)
 
         QObject.connect(self.actionEuclidianContraction, SIGNAL('triggered(bool)'), self.mtgeditor.euclidianContraction)
         QObject.connect(self.actionLaplacianContraction, SIGNAL('triggered(bool)'), self.mtgeditor.laplacianContraction)
@@ -199,6 +201,10 @@ class MTGEditor(QMainWindow, editor_ui.Ui_MainWindow):
 
         self.openDBObject = None
 
+    def segment_points(self):
+        self.segment_editor.gleditor.setSegmentPoints(self.mtgeditor.points.pointList)
+        self.segment_editor.show()
+
     def closeEvent(self, event):
         from database.server_manip import server_info
         server_info.save_register_ids()
@@ -206,18 +212,8 @@ class MTGEditor(QMainWindow, editor_ui.Ui_MainWindow):
 
     def test_connection_callback(self, status):
         if status:
-            def get_file_path(fname):
-                file_path = './'
-                if '/' in fname:
-                    end_path = fname.rfind('/')
-                    if fname.startswith('/'):
-                        file_path = fname[:end_path] + '/'
-                    else:
-                        file_path = fname[:end_path] + '/'
-                return file_path
-
             def delete_request(id):
-                if self.openDBObject == id:
+               if self.openDBObject == id:
                     self.openDBObject = None
 
                     msgBox = QMessageBox()
@@ -229,35 +225,42 @@ class MTGEditor(QMainWindow, editor_ui.Ui_MainWindow):
                         from openalea.plantgl.all import PointSet, Point3Array, Color4Array
                         self.mtgeditor.setPoints(PointSet(Point3Array(), Color4Array()))
 
-            def open_request(id, fname):
+            def open_request(id, file_path):
                 from zipfile import ZipFile, ZIP_DEFLATED
 
-                file_path = get_file_path(str(fname))
+                if not os.path.exists(file_path):
+                    return
 
-                zip = ZipFile(fname, mode='r', compression=ZIP_DEFLATED)
-                zip.extractall(file_path)
+                path, fname = os.path.split(str(file_path))
+
+                zip = ZipFile(file_path, mode='r', compression=ZIP_DEFLATED)
+                zip.extractall(path)
 
                 if 'point_cloud.ply' in zip.namelist():
-                    self.mtgeditor.readPoints(str(file_path + 'point_cloud.ply'))
+                    self.mtgeditor.readPoints(str(path + '/point_cloud.ply'))
                 if 'skeleton.bmtg' in zip.namelist():
-                    self.mtgeditor.readMTG(str(file_path + 'skeleton.bmtg'))
+                    self.mtgeditor.readMTG(str(path + '/skeleton.bmtg'))
 
                 self.openDBObject = id
                 zip.close()
 
-            def save_request(fname):
+            def save_request(file_path):
                 from zipfile import ZipFile, ZIP_DEFLATED
 
-                file_path = get_file_path(str(fname))
+                path, fname = os.path.split(str(file_path))
+                try:
+                    os.makedirs(path)
+                except:
+                    pass
 
-                zip = ZipFile(fname, mode='w', compression=ZIP_DEFLATED)
+                zip = ZipFile(file_path, mode='w', compression=ZIP_DEFLATED)
 
                 if self.mtgeditor.points is not None and len(self.mtgeditor.points.pointList) > 0:
-                    self.mtgeditor.savePoints(file_path + 'point_cloud.ply', self.mtgeditor.points)
-                    zip.write(file_path + 'point_cloud.ply', 'point_cloud.ply')
+                    self.mtgeditor.savePoints(path + '/point_cloud.ply', self.mtgeditor.points)
+                    zip.write(path + '/point_cloud.ply', 'point_cloud.ply')
                 if self.mtgeditor.mtg is not None:
-                    self.mtgeditor.writeMTG(file_path + 'skeleton.bmtg')
-                    zip.write(file_path + 'skeleton.bmtg', 'skeleton.bmtg')
+                    self.mtgeditor.writeMTG(path + '/skeleton.bmtg')
+                    zip.write(path + '/skeleton.bmtg', 'skeleton.bmtg')
                 zip.close()
 
             def set_object_request(id):
@@ -269,7 +272,7 @@ class MTGEditor(QMainWindow, editor_ui.Ui_MainWindow):
             def make_thumbnail():
                 from thumbnailmaker import make_thumbnail
                 from openalea.plantgl.all import Scene
-                return make_thumbnail(Scene([self.mtgeditor.points]),  )
+                return make_thumbnail(Scene([self.mtgeditor.points]), (256, 256))
 
             def reset_open_object():
                 self.openDBObject = None
@@ -286,6 +289,8 @@ class MTGEditor(QMainWindow, editor_ui.Ui_MainWindow):
             self.database_editor.saveObjectRequested.connect(save_request)
             self.database_editor.setCurrentObjectRequested.connect(set_object_request)
             self.database_editor.objectDeleted.connect(delete_request)
+
+            self.segment_editor.set_database(dbeditor.DatabaseEditor(size_callback, make_thumbnail, parent=self))
 
             self.mtgeditor.open_file.connect(reset_open_object)
             QMessageBox.information(self, 'Connection success', 'The connection to the MongoDB server has succeeded')

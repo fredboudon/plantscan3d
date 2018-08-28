@@ -373,7 +373,6 @@
     <addaction name="actionKeep_Selection"/>
     <addaction name="menuSelection"/>
     <addaction name="actionSegment"/>
-    <addaction name="actionNext_Segmented_Tree"/>
     <addaction name="separator"/>
     <addaction name="menuDensity"/>
     <addaction name="separator"/>
@@ -939,7 +938,7 @@
   </action>
   <action name="actionWire_KeepPoint">
    <property name="text">
-    <string>Use selection for wire initiation</string>
+    <string>Use selection for wire algorithm</string>
    </property>
   </action>
   <action name="actionKeep_Selection">
@@ -1002,6 +1001,11 @@
   <action name="actionUpload_to_Database_2">
    <property name="text">
     <string>Upload to Database</string>
+   </property>
+  </action>
+  <action name="actionRecenter_points">
+   <property name="text">
+    <string>Recenter points</string>
    </property>
   </action>
  </widget>

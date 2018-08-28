@@ -20,8 +20,7 @@ reference guide, see :ref:`treeeditor3d_reference`.
    Many aspects of VPlants.treeeditor3D are not covered.
 
    More documentation can be found on the
-   `openalea <http://openalea.gforge.inria.fr>`__ wiki.
+   `openalea <http://openalea.gforge.inria.fr/dokuwiki/doku.php?id=packages:vplants:treeeditor3d:treeeditor3d>`__ wiki.
 
 .. toctree::
-
     manual.rst

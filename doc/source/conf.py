@@ -20,6 +20,7 @@
 # -- Project information -----------------------------------------------------
 
 from openalea.deploy.metainfo import read_metainfo
+import os
 
 metadata = read_metainfo('../../metainfo.ini') # read metainfo from common file with setup.py
 for key in ['version','project','release', 'name']:
@@ -28,7 +29,6 @@ for key in ['version','project','release', 'name']:
 project = u'PlantScan3d'
 copyright = u'2018, Frederic Boudon, Julien Benoit'
 author = u'Frederic Boudon, Julien Benoit'
-
 
 # -- General configuration ---------------------------------------------------
 

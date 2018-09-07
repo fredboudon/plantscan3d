@@ -82,4 +82,4 @@ class FileHistory:
         files = [ftype+':'+fname for fname, ftype in self.files.items()]
         settings.setValue("RecentFiles",files)
         files = settings.value("RecentFiles")
-        settings.endGroup();        
+        settings.endGroup()

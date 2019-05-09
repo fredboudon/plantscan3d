@@ -16,7 +16,7 @@ def compile_ui(uifname):
     """ compile a Ui """
     pyfname = get_uifnames_from(uifname)
     fstream = open(pyfname,'w')
-    uic.compileUi(uifname,fstream)
+    uic.compileUi(uifname,fstream,from_imports=True)
     fstream.close()
 
 def compile_rc(rcfname):

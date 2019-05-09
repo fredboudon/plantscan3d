@@ -1,4 +1,4 @@
-from PyQt5.QtCore import QObject, SIGNAL
+from PyQt5.QtCore import *
 from collections import OrderedDict
 
 class FileHistory:

@@ -1013,7 +1013,7 @@
   <customwidget>
    <class>GLMTGEditor</class>
    <extends>QWidget</extends>
-   <header>mtgeditorwidget.h</header>
+   <header>.mtgeditorwidget.h</header>
    <container>1</container>
   </customwidget>
  </customwidgets>

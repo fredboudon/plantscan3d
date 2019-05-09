@@ -29,7 +29,7 @@ if not py2exe_release:
     cui.check_ui_generation(os.path.join(ldir, 'editor.ui'))
     cui.check_rc_generation(os.path.join(ldir, 'plantscan3d.qrc'))
 
-import editor_ui
+from . import editor_ui
 from .database import dbeditor, db_connection
 from src.openalea.plantscan3d.segmenteditor import SegmentEditor
 

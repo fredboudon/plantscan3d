@@ -28,7 +28,7 @@ if not py2exe_release:
     ldir = os.path.dirname(__file__)
     cui.check_ui_generation(os.path.join(ldir, 'connection.ui'))
 
-import connection_ui
+from . import connection_ui
 import ftplib
 from .server_manip import server_info
 

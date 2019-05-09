@@ -28,7 +28,7 @@ if not py2exe_release:
     ldir = os.path.dirname(__file__)
     cui.check_ui_generation(os.path.join(ldir, 'segmenteditor.ui'))
 
-import segmenteditor_ui
+from . import segmenteditor_ui
 
 
 class SegmentEditor(QMainWindow, segmenteditor_ui.Ui_MainWindow):

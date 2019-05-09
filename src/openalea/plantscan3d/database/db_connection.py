@@ -29,7 +29,7 @@ if not py2exe_release:
     ldir = os.path.dirname(__file__)
     cui.check_ui_generation(os.path.join(ldir, 'db_connection.ui'))
 
-import db_connection_ui
+from . import db_connection_ui
 
 
 class DatabaseConnection(QDialog, db_connection_ui.Ui_Dialog):

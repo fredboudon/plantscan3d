@@ -28,7 +28,7 @@ if not py2exe_release:
     ldir = os.path.dirname(__file__)
     cui.check_ui_generation(os.path.join(ldir, 'tags_editor.ui'))
 
-import tags_editor_ui
+from . import tags_editor_ui
 from .server_manip import MongoDBManip
 
 

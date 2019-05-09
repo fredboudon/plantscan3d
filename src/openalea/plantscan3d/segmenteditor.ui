@@ -64,7 +64,7 @@
   <customwidget>
    <class>GLSegmentEditor</class>
    <extends>QWidget</extends>
-   <header>glsegmenteditor.h</header>
+   <header>.glsegmenteditor.h</header>
    <container>1</container>
   </customwidget>
  </customwidgets>

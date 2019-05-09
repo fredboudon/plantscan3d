@@ -29,7 +29,7 @@ if not py2exe_release:
     ldir = os.path.dirname(__file__)
     cui.check_ui_generation(os.path.join(ldir, 'database_item.ui'))
 
-import database_item_ui
+from . import database_item_ui
 import datetime
 from .properties.properties import *
 from .server_manip import MongoDBManip, Binary, ObjectId, Already_used_key_db

@@ -778,7 +778,7 @@ class GLMTGEditor(QGLViewer):
                                             initialname,
                                             "MTG Files (*.mtg;*.bmtg);;All Files (*.*)")
         if not fname: return
-        fname = str(fname)
+        fname = str(fname[0])
         self.filehistory.add(fname, 'MTG')
         self.writeMTG(fname)
 
@@ -947,7 +947,7 @@ class GLMTGEditor(QGLViewer):
                                             initialname,
                                             "Points Files (*.asc *.xyz *.pwn *.pts *.bgeom *.ply);;All Files (*.*)")
         if not fname: return
-        fname = str(fname)
+        fname = str(fname[0])
         self.filehistory.add(fname, 'PTS')
         self.savePoints(fname, self.points)
 
@@ -960,7 +960,7 @@ class GLMTGEditor(QGLViewer):
                                             initialname,
                                             "GEOM Files (*.bgeom;*.geom);;All Files (*.*)")
         if not fname: return
-        fname = str(fname)
+        fname = str(fname[0])
         self.saveAsGeom(fname)
 
     def saveAsGeom(self, fname):
@@ -999,7 +999,7 @@ class GLMTGEditor(QGLViewer):
                                             initialname,
                                             "Txt Files (*.txt);;All Files (*.*)")
         if not fname: return
-        fname = str(fname)
+        fname = str(fname[0])
         self.saveNodeList(fname)
         self.showMessage("Export in " + fname + " done ...")
 
@@ -2640,7 +2640,7 @@ class GLMTGEditor(QGLViewer):
                                                 'angles.txt',
                                                 "Txt Files (*.txt);;All Files (*.*)")
             if fname:
-                write_phylo_angles(fname, phyangles, nodelength)
+                write_phylo_angles(str(fname[0]), phyangles, nodelength)
 
     # ---------------------------- Tagging ----------------------------------------
 

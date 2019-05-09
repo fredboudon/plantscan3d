@@ -62,8 +62,8 @@ class TextProperty(Property, textprop_ui.Ui_Form):
         textprop_ui.Ui_Form.__init__(self)
         self.setupUi(self)
 
-        QObject.connect(self.deleteButton, SIGNAL('clicked()'), self.delete_property)
-        QObject.connect(self.propValue, SIGNAL('textChanged()'), self.valueChange)
+        self.deleteButton.clicked.connect(self.delete_property)
+        self.propValue.textChanged.connect(self.valueChange)
         self.propNameLabel.setText(property_name)
 
     def setValue(self, value):
@@ -82,8 +82,8 @@ class DateProperty(Property, dateprop_ui.Ui_Form):
         dateprop_ui.Ui_Form.__init__(self)
         self.setupUi(self)
 
-        QObject.connect(self.deleteButton, SIGNAL('clicked()'), self.delete_property)
-        QObject.connect(self.propValue, SIGNAL('dateChanged(QDate)'), self.valueChange)
+        self.deleteButton.clicked.connect(self.delete_property)
+        self.propValue.dateChanged.connect(self.valueChange)
         self.propNameLabel.setText(property_name)
 
     def setValue(self, value):
@@ -111,8 +111,8 @@ class FloatValueProperty(Property, floatvalueprop_ui.Ui_Form):
         floatvalueprop_ui.Ui_Form.__init__(self)
         self.setupUi(self)
 
-        QObject.connect(self.deleteButton, SIGNAL('clicked()'), self.delete_property)
-        QObject.connect(self.propValue, SIGNAL('valueChanged(double)'), self.valueChange)
+        self.deleteButton.clicked.connect(self.delete_property)
+        self.propValue.valueChanged.connect(self.valueChange)
         self.propNameLabel.setText(property_name)
 
     def setValue(self, value):
@@ -132,7 +132,7 @@ class CreateProperty(QDialog, create_property_ui.Ui_Dialog):
 
         self.prop = None
 
-        QObject.connect(self.buttonBox, SIGNAL('accepted()'), self.valid)
+        self.buttonBox.accepted.connect(self.valid)
 
     def valid(self):
         if len(self.nameLineEdit.text()) == 0:

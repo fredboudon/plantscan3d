@@ -44,7 +44,7 @@ class TagsEditor(QDialog, tags_editor_ui.Ui_Dialog):
 
         self.treeWidget.itemChanged.connect(self.item_changed)
         self.treeWidget.setContextMenuPolicy(Qt.CustomContextMenu)
-        QObject.connect(self.treeWidget, SIGNAL('customContextMenuRequested(QPoint)'), self.open_menu)
+        self.treeWidget.customContextMenuRequested.connect(self.open_menu)
 
     def item_changed(self, item, column):
         """
@@ -128,9 +128,9 @@ class TagsEditor(QDialog, tags_editor_ui.Ui_Dialog):
         action_add = QAction('Add', self)
         action_rename = QAction('Rename', self)
         action_del = QAction('Delete', self)
-        QObject.connect(action_add, SIGNAL('triggered()'), on_add)
-        QObject.connect(action_rename, SIGNAL('triggered()'), on_rename)
-        QObject.connect(action_del, SIGNAL('triggered()'), on_delete)
+        action_add.triggered.connect(on_add)
+        action_rename.triggered.connect(on_rename)
+        action_del.triggered.connect(on_delete)
 
         menu = QMenu(self)
         menu.addAction(action_add)

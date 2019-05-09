@@ -63,7 +63,7 @@ class DatabaseEditor(QDialog, database_ui.Ui_Dialog):
         self.tableWidget.setHorizontalHeaderItem(1, QTableWidgetItem('Value'))
 
         self.treeWidget.setContextMenuPolicy(Qt.CustomContextMenu)
-        QObject.connect(self.treeWidget, SIGNAL('customContextMenuRequested(QPoint)'), self.openMenu)
+        self.treeWidget.customContextMenuRequested.connect(self.openMenu)
 
     def openMenu(self, pos):
         item = self.treeWidget.itemAt(pos)
@@ -98,8 +98,8 @@ class DatabaseEditor(QDialog, database_ui.Ui_Dialog):
         delaction = QAction('Delete', self)
         modifaction = QAction('Modify', self)
 
-        QObject.connect(delaction, SIGNAL('triggered()'), on_delete)
-        QObject.connect(modifaction, SIGNAL('triggered()'), on_modify)
+        delaction.triggered.connect(on_delete)
+        modifaction.triggered.connect(on_modify)
 
         menu = QMenu(self)
         menu.addAction(modifaction)

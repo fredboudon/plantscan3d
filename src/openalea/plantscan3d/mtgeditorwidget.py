@@ -1480,8 +1480,8 @@ class GLMTGEditor(QGLViewer):
         buttonBox = QDialogButtonBox(Dialog)
         buttonBox.setOrientation(Qt.Horizontal)
         buttonBox.setStandardButtons(QDialogButtonBox.Cancel | QDialogButtonBox.Ok)
-        QtCore.QObject.connect(buttonBox, SIGNAL("accepted()"), Dialog.accept)
-        QtCore.QObject.connect(buttonBox, SIGNAL("rejected()"), Dialog.reject)
+        buttonBox.accepted.connect(Dialog.accept)
+        buttonBox.rejected.connect(Dialog.reject)
         gridLayout.addWidget(buttonBox, row, 1, 1, 1)
 
         return Dialog
@@ -2733,9 +2733,9 @@ class GLMTGEditor(QGLViewer):
                 self.init(self.widget)
 
             def init(self, widget):
-                QObject.connect(widget.actionAdd, SIGNAL('clicked()'), self.add_item)
-                QObject.connect(widget.actionMinus, SIGNAL('clicked()'), self.remove_item)
-                QObject.connect(widget.buttonBox, SIGNAL('accepted()'), self.commit)
+                widget.actionAdd.clicked.connect(self.add_item)
+                widget.actionMinus.clicked.connect(self.remove_item)
+                widget.buttonBox.accepted.connect(self.commit)
 
             def add_item(self, propname='prop', value='value', model=None):
                 if model is None: model = self.models[self.widget.tabWidget.currentIndex()]
@@ -2851,7 +2851,7 @@ class GLMTGEditor(QGLViewer):
     def startTagProperty(self):
         if self.mode != self.TagProperty:
             self.createProperty()
-            QObject.connect(self.propertyeditor, SIGNAL("accepted()"), self.launchTagProperty)
+            self.propertyeditor.accepted.connect(self.launchTagProperty)
         else:
             self.endTagRepresentation()
             self.setMode(self.Rotate)

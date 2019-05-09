@@ -35,6 +35,7 @@ requirements:
    - pyqglviewer
    - scipy
    - matplotlib
+   - pymongo
 
 test:
   imports:

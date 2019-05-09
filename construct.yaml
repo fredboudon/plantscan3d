@@ -15,6 +15,7 @@ specs:
    - pyqglviewer
    - scipy
    - matplotlib
+   - pymongo
    - openalea.plantgl
    - openalea.plantscan3d
 

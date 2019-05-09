@@ -58,7 +58,7 @@ setup(
     include_package_data = True,
     # (you can provide an exclusion dictionary named exclude_package_data to remove parasites).
     # alternatively to global inclusion, list the file to include   
-    package_data = {'' : ['*.ui'],},
+    package_data = {'' : ['*.ui', '*.rc', '*.qrc'],},
 
     # postinstall_scripts = ['',],
 

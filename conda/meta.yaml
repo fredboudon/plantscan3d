@@ -24,15 +24,13 @@ requirements:
    - setuptools
    - openalea.deploy
    - openalea.plantgl
-   - openalea.vpltk
-   - qt <5
+   - qt
    - pyqt
   run:
    - python
    - openalea.plantgl
-   - qt <5
+   - qt
    - pyqt
-   - openalea.vpltk
    - pyopengl
    - pyqglviewer
    - scipy

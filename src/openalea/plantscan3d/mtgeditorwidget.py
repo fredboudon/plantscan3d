@@ -1129,7 +1129,7 @@ class GLMTGEditor(QGLViewer):
                     if z > 0 and not self.clippigPlaneEnabled or self.frontVisibility <= z * 2 <= self.backVisibility:
                         possibles.append((z, cCtrlPoint))
         if len(possibles) > 0:
-            possibles.sort(lambda x, y: cmp(x[0], y[0]))
+            possibles.sort(key=lambda x: x[0])
             return possibles[0][1]
         return None
 

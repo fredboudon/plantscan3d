@@ -749,7 +749,8 @@ class GLMTGEditor(QGLViewer):
         if self.ctrlPointPrimitive:
             self.ctrlPointPrimitive.radius = self.nodeWidth * self.getUnitCtrlPointSize()
         print(self.sceneRadius())
-        self.showMessage('Set Node Width to ' + str(value) + ' (' + str(self.ctrlPointPrimitive.radius) + ')')
+        if self.ctrlPointPrimitive:
+            self.showMessage('Set Node Width to ' + str(value) + ' (' + str(self.ctrlPointPrimitive.radius) + ')')
         self.updateGL()
 
     def createCtrlPoints(self):

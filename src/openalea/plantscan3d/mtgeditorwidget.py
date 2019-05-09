@@ -684,7 +684,7 @@ class GLMTGEditor(QGLViewer):
                                             initialname,
                                             "MTG Files (*.mtg;*.bmtg);;All Files (*.*)")
         if not fname: return
-        fname = str(fname)
+        fname = str(fname[0])
         self.filehistory.add(fname, 'MTG')
         self.readMTG(fname)
         self.open_file.emit()
@@ -696,7 +696,7 @@ class GLMTGEditor(QGLViewer):
                                             initialname,
                                             "MTG Files (*.mtg);;All Files (*.*)")
         if not fname: return
-        fname = str(fname)
+        fname = str(fname[0])
         self.filehistory.add(fname, 'iMTG')
         self.readMTG(fname, True)
         self.open_file.emit()
@@ -898,7 +898,7 @@ class GLMTGEditor(QGLViewer):
                                             initialname,
                                             "Points Files (*.asc *.xyz *.pwn *.pts *.txt *.bgeom *.xyz *.ply);;All Files (*.*)")
         if not fname: return
-        fname = str(fname)
+        fname = str(fname[0])
         self.filehistory.add(fname, 'PTS')
         self.readPoints(fname)
         self.open_file.emit()

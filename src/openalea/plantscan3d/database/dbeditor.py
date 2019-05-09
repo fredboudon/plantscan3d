@@ -27,8 +27,9 @@ if not py2exe_release:
 
     ldir = os.path.dirname(__file__)
     cui.check_ui_generation(os.path.join(ldir, 'database.ui'))
+    cui.check_rc_generation(os.path.join(ldir, 'database.qrc'))
 
-import database_ui
+from . import database_ui
 from . import database_item
 from .server_manip import MongoDBManip, Based_filter, NonBased_filter
 from .storage_connection import *

@@ -15,19 +15,19 @@ def get_rcfnames_from(fname):
 def compile_ui(uifname):
     """ compile a Ui """
     pyfname = get_uifnames_from(uifname)
-    fstream = file(pyfname,'w')
+    fstream = open(pyfname,'w')
     uic.compileUi(uifname,fstream)
     fstream.close()
 
-def compile_rc (rcfname) :
-    """ compile a Ressource file """
+def compile_rc(rcfname):
+    """ compile a Resource file """
     pyfname = get_rcfnames_from(rcfname)
     if sys.platform == 'posix':
-        exe = 'pyrcc4'
+        exe = 'pyrcc5'
     else:
-        exe = os.path.join(sys.prefix,'pyrcc4.bat')
+        exe = os.path.join(sys.prefix,'pyrcc5.bat')
         if not os.path.exists(exe):
-            exe = 'pyrcc4'
+            exe = 'pyrcc5'
     cmd = '%s "%s" > "%s"' % (exe,rcfname, pyfname)
     os.system(cmd)
 
@@ -42,7 +42,7 @@ def check_ui_generation(uifname):
          compile_ui(uifname)
 
 def check_rc_generation(rcfname):
-    """ check if a py file should regenerated from a ui """
+    """ check if a py file should regenerated from a Resource file """
     pyfname = get_rcfnames_from(rcfname)
     if (os.path.exists(rcfname) and 
         not os.path.exists(pyfname) or

@@ -2,14 +2,14 @@ try:
     import openalea.plantscan3d.py2exe_release
 
     py2exe_release = True
-    print 'Py2ExeRelease'
+    print('Py2ExeRelease')
 except ImportError:
     py2exe_release = False
-    print 'StdRelease'
+    print('StdRelease')
 
 if not py2exe_release:
-    from openalea.vpltk.qt.QtCore import *
-    from openalea.vpltk.qt.QtGui import *
+    from openalea.plantgl.gui.qt.QtCore import *
+    from openalea.plantgl.gui.qt.QtGui import *
 
 else:
     import sip
@@ -17,20 +17,20 @@ else:
     sip.setapi('QString', 2)
     sip.setapi('QVariant', 2)
 
-    from PyQt4.QtCore import *
-    from PyQt4.QtGui import *
+    from PyQt5.QtCore import *
+    from PyQt5.QtGui import *
 
 import os
 
 if not py2exe_release:
-    import compileUi as cui
+    from . import compileUi as cui
 
     ldir = os.path.dirname(__file__)
     cui.check_ui_generation(os.path.join(ldir, 'editor.ui'))
     cui.check_rc_generation(os.path.join(ldir, 'plantscan3d.qrc'))
 
 import editor_ui
-from database import dbeditor, db_connection
+from .database import dbeditor, db_connection
 from src.openalea.plantscan3d.segmenteditor import SegmentEditor
 
 
@@ -76,7 +76,7 @@ class MTGEditor(QMainWindow, editor_ui.Ui_MainWindow):
         QObject.connect(self.actionShowAll, SIGNAL('triggered(bool)'), self.mtgeditor.showEntireScene)
         QObject.connect(self.actionRecalculate_Colors, SIGNAL('triggered(bool)'), self.mtgeditor.RecalculateColors)
 
-        from mtgeditorwidget import WhiteTheme, BlackTheme
+        from .mtgeditorwidget import WhiteTheme, BlackTheme
         QObject.connect(self.actionWhiteTheme, SIGNAL('triggered(bool)'),
                         lambda: self.mtgeditor.updateTheme(WhiteTheme))
         QObject.connect(self.actionBlackTheme, SIGNAL('triggered(bool)'),
@@ -206,7 +206,7 @@ class MTGEditor(QMainWindow, editor_ui.Ui_MainWindow):
         self.segment_editor.show()
 
     def closeEvent(self, event):
-        from database.server_manip import server_info
+        from .database.server_manip import server_info
         server_info.save_register_ids()
         self.mtgeditor.closeEvent(event)
 
@@ -270,7 +270,7 @@ class MTGEditor(QMainWindow, editor_ui.Ui_MainWindow):
                 return len(self.mtgeditor.points.pointList)
 
             def make_thumbnail():
-                from thumbnailmaker import make_thumbnail
+                from .thumbnailmaker import make_thumbnail
                 from openalea.plantgl.all import Scene
                 return make_thumbnail(Scene([self.mtgeditor.points]), (256, 256))
 
@@ -305,7 +305,7 @@ class MTGEditor(QMainWindow, editor_ui.Ui_MainWindow):
             from urllib.parse import quote_plus
         except ImportError:
             # Python 2.x
-            from urllib import quote_plus
+            from urllib.parse import quote_plus
 
         mongodb_address = self.db_connection.addressComboBox.currentText()
         mongodb_username = self.db_connection.usernameLineEdit.text()
@@ -315,7 +315,7 @@ class MTGEditor(QMainWindow, editor_ui.Ui_MainWindow):
             uri += quote_plus(mongodb_username) + ':' + quote_plus(mongodb_password) + '@' + mongodb_address
         else:
             uri += mongodb_address
-        from database.server_manip import server_info, WorkerTestConnection
+        from .database.server_manip import server_info, WorkerTestConnection
 
         server_info.mongodb_uri = uri
 

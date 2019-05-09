@@ -1,5 +1,5 @@
 from openalea.plantgl.all import *
-from PyQt4.Qt import *
+from PyQt5.Qt import *
 from PyQGLViewer import *
 import OpenGL.GL as ogl
 import OpenGL.GLU as oglu

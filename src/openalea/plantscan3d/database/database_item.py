@@ -2,15 +2,15 @@ try:
     import openalea.plantscan3d.py2exe_release
 
     py2exe_release = True
-    print 'Py2ExeRelease'
+    print('Py2ExeRelease')
 except ImportError:
     py2exe_release = False
-    print 'StdRelease'
+    print('StdRelease')
 
 if not py2exe_release:
-    import openalea.vpltk.qt
-    from openalea.vpltk.qt.QtCore import *
-    from openalea.vpltk.qt.QtGui import *
+    import openalea.plantgl.gui.qt
+    from openalea.plantgl.gui.qt.QtCore import *
+    from openalea.plantgl.gui.qt.QtGui import *
 
 else:
     import sip
@@ -18,8 +18,8 @@ else:
     sip.setapi('QString', 2)
     sip.setapi('QVariant', 2)
 
-    from PyQt4.QtCore import *
-    from PyQt4.QtGui import *
+    from PyQt5.QtCore import *
+    from PyQt5.QtGui import *
 
 import os
 
@@ -31,9 +31,9 @@ if not py2exe_release:
 
 import database_item_ui
 import datetime
-from properties.properties import *
-from server_manip import MongoDBManip, Binary, ObjectId, Already_used_key_db
-from tags_editor import TagsEditor
+from .properties.properties import *
+from .server_manip import MongoDBManip, Binary, ObjectId, Already_used_key_db
+from .tags_editor import TagsEditor
 
 class Database_Item(QDialog, database_item_ui.Ui_Dialog):
     otherProperties = None  # type: dict[str, Property]
@@ -111,14 +111,14 @@ class Database_Item(QDialog, database_item_ui.Ui_Dialog):
         self.deletedProperies = []
 
         if nonebaseData is not None:
-            for data in nonebaseData.iteritems():
+            for data in nonebaseData.items():
                 key, value = data
                 prop = None  # type: Property
                 if type(value) == datetime.datetime:
                     prop = DateProperty(key)
                 elif type(value) == int or type(value) == float:
                     prop = FloatValueProperty(key)
-                elif type(value) == str or type(value) == unicode:
+                elif type(value) == str or type(value) == str:
                     prop = TextProperty(key)
 
                 self.propertiesVLayout.addWidget(prop)
@@ -196,7 +196,7 @@ class Database_Item(QDialog, database_item_ui.Ui_Dialog):
                     'thumbnail': thumbnail
                 }
             }
-            for item in self.otherProperties.iteritems():
+            for item in self.otherProperties.items():
                 key, prop = item
                 data['$set'][key] = prop.getValue()
 
@@ -227,7 +227,7 @@ class Database_Item(QDialog, database_item_ui.Ui_Dialog):
                 'tags': self.tags,
                 'date': datetime.datetime.now()
             }
-            for item in self.otherProperties.iteritems():
+            for item in self.otherProperties.items():
                 key, prop = item
                 data[key] = prop.getValue()
 

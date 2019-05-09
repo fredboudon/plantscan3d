@@ -13,7 +13,7 @@ class Line:
     @staticmethod
     def estimate(positions, nodes):
         lpoints = [positions[n] for n in nodes]
-        idx = range(len(nodes))
+        idx = list(range(len(nodes)))
         pos = centroid_of_group(lpoints,idx)
         dir = direction(pointset_orientation(lpoints,idx))
         if dot(pos-positions[nodes[0]],dir) < 0: dir *= -1
@@ -23,14 +23,14 @@ class Line:
 def NurbsEstimate(positions, nodes, degree):
     from scipy.interpolate import splprep
     lpoints = [positions[n] for n in nodes]
-    x,y,z = [[p[i] for p in lpoints] for i in xrange(3)]
+    x,y,z = [[p[i] for p in lpoints] for i in range(3)]
     tck,u = splprep([x,y,z],k=degree)
     t,c,k = tck
     return NurbsCurve(ctrlPointList = Point4Array([(x,y,z,1) for x,y,z in zip(c[0],c[1],c[2])]),degree=k,knotList=t )   
 
 def NurbsEstimate0(positions, nodes, degree):
     lpoints = [positions[n] for n in nodes]
-    print lpoints
+    print(lpoints)
     curve = Fit.nurbsCurve(lpoints, degree, len(lpoints)/10)
     return curve
 
@@ -44,7 +44,7 @@ def lines_estimation(mtg, degree = 1):
         trunk_line = Line.estimate(positions,trunk_nodes)
     lateral_roots = sum([[n for n in mtg.children(i) if mtg.edge_type(n) == '+'] for i in trunk_nodes],[])
     lateral_lines = [Line.estimate(positions,mtg.Axis(lr))  for lr in lateral_roots]
-    nodelength = [norm(positions[mtg.parent(lateral_roots[i])]-positions[mtg.parent(lateral_roots[i+1])]) for i in xrange(len(lateral_roots)-1)]
+    nodelength = [norm(positions[mtg.parent(lateral_roots[i])]-positions[mtg.parent(lateral_roots[i+1])]) for i in range(len(lateral_roots)-1)]
     
     return trunk_line, lateral_lines, nodelength
 
@@ -81,7 +81,7 @@ def phylo_angles(trunk, branches):
     if isinstance(trunk,Line):
         trunkdir = trunk.dir
         refdir = get_ref_dir(trunkdir) 
-        print 'Angle taken from initial direction', refdir,'rotating around', trunkdir
+        print('Angle taken from initial direction', refdir,'rotating around', trunkdir)
         return [mangle(l.dir,refdir,trunkdir) for l in branches]
     else:
         result = []

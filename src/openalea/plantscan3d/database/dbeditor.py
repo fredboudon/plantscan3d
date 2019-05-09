@@ -2,14 +2,14 @@ try:
     import openalea.plantscan3d.py2exe_release
 
     py2exe_release = True
-    print 'Py2ExeRelease'
+    print('Py2ExeRelease')
 except ImportError:
     py2exe_release = False
-    print 'StdRelease'
+    print('StdRelease')
 
 if not py2exe_release:
-    from openalea.vpltk.qt.QtCore import *
-    from openalea.vpltk.qt.QtGui import *
+    from openalea.plantgl.gui.qt.QtCore import *
+    from openalea.plantgl.gui.qt.QtGui import *
 
 else:
     import sip
@@ -17,8 +17,8 @@ else:
     sip.setapi('QString', 2)
     sip.setapi('QVariant', 2)
 
-    from PyQt4.QtCore import *
-    from PyQt4.QtGui import *
+    from PyQt5.QtCore import *
+    from PyQt5.QtGui import *
 
 import os
 
@@ -29,9 +29,9 @@ if not py2exe_release:
     cui.check_ui_generation(os.path.join(ldir, 'database.ui'))
 
 import database_ui
-import database_item
-from server_manip import MongoDBManip, Based_filter, NonBased_filter
-from storage_connection import *
+from . import database_item
+from .server_manip import MongoDBManip, Based_filter, NonBased_filter
+from .storage_connection import *
 
 
 class DatabaseEditor(QDialog, database_ui.Ui_Dialog):
@@ -220,7 +220,7 @@ class DatabaseEditor(QDialog, database_ui.Ui_Dialog):
                     item.setText(2, tree['date'].strftime('%Y/%m/%d %H:%M:%S'))
                     parent_ref[tree['_id']] = item
                 else:
-                    if not parent_ref.has_key(tree['parent']):
+                    if tree['parent'] not in parent_ref:
                         allchecked = False
                         continue
                     parent = parent_ref[tree['parent']]
@@ -303,7 +303,7 @@ class DatabaseEditor(QDialog, database_ui.Ui_Dialog):
 
         self.tableWidget.setRowCount(len(data))
         index = 0
-        for d in data.iteritems():
+        for d in data.items():
             key, value = d
             self.tableWidget.setItem(index, 0, QTableWidgetItem(str(key)))
             self.tableWidget.setItem(index, 1, QTableWidgetItem(str(value)))

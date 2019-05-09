@@ -1,5 +1,5 @@
-from PyQt4.QtCore import *
-from PyQt4.QtGui import *
+from PyQt5.QtCore import *
+from PyQt5.QtGui import *
 from PyQGLViewer import *
 from OpenGL.GL import *
 
@@ -28,7 +28,7 @@ class GLSegmentEditor(QGLViewer):
         try:
             self.glrenderer.setGLFrame(self)
         except:
-            print 'no text on GL Display'
+            print('no text on GL Display')
 
     def init(self):
         self.camera().setViewDirection(Vec(0, -1, 0))

@@ -20,7 +20,7 @@ def quantisefunc(fn=None, qfunc=None):
     return QuantisedFunction(curve) 
     
     
-import cPickle as pickle
+import pickle as pickle
 def readfile(fn, mode='rb'):
     f = open(fn,mode)
     obj = pickle.load(f)
@@ -68,7 +68,7 @@ def convertToStdMTG(g):
   yy = {}
   zz = {}
   
-  for i,v in pdic.iteritems():
+  for i,v in pdic.items():
       xx[i] = v.x
       yy[i] = v.y
       zz[i] = v.z
@@ -97,7 +97,7 @@ def convertToMyMTG(mtg):
     YY = g.property(YYpropname)
     ZZ = g.property(ZZpropname)    
 
-    for i,x in XX.iteritems():
+    for i,x in XX.items():
         position[i] = Vector3(x,YY[i],ZZ[i])
 
     for propname in [XXpropname, YYpropname, ZZpropname]:
@@ -110,7 +110,7 @@ def convertToMyMTG(mtg):
 def complete_lines(mtg):
     lines = mtg.property('_line')
     nlines = dict(lines)
-    for vid, line in lines.items():
+    for vid, line in list(lines.items()):
         while mtg.parent(vid) and lines.get(mtg.parent(vid)) == None:              
             vid = mtg.parent(vid)
             nlines[vid] = line
@@ -148,7 +148,7 @@ def convertStdMTGWithNode(g, useHeuristic = True,
             v = toVector3(vtx)
             positions[vtx] = v
 
-        for i in xrange(scale+1, 0, -1):
+        for i in range(scale+1, 0, -1):
             cpx = g.complex_at_scale(vtx, scale=i)
             if vtx in g.component_roots_at_scale(cpx, scale=scale) and cpx in XX:
                 v = toVector3(cpx)
@@ -161,8 +161,8 @@ def convertStdMTGWithNode(g, useHeuristic = True,
 
     notpositionned =  set(g.vertices(scale)) - set(positions.keys())
     if len(notpositionned) > 0:
-        print 'interpolate positions'
-        positionned = positions.keys()
+        print('interpolate positions')
+        positionned = list(positions.keys())
 
         components = dict()
         cparent = dict()
@@ -196,10 +196,10 @@ def convertStdMTGWithNode(g, useHeuristic = True,
 
             components[vtx] = (posi, posj, axe)
 
-        a = [(vtx, lines[vtx], info[2]) for vtx, info in components.items()]
+        a = [(vtx, lines[vtx], info[2]) for vtx, info in list(components.items())]
         a.sort(key=lambda v:v[1])
 
-        for vtx, info in components.items():
+        for vtx, info in list(components.items()):
             posi, posj, axe = info
             nbseg = len(axe)+1
 
@@ -211,7 +211,7 @@ def convertStdMTGWithNode(g, useHeuristic = True,
     #print notpositionned
     #print [g.property('_line').get(vid) for vid in notpositionned]
     if len(notpositionned) > 0 and useHeuristic:
-        print 'use heuristic for', list(notpositionned)
+        print('use heuristic for', list(notpositionned))
         groups = []
         while len(notpositionned) > 0:
             seed = notpositionned.pop()
@@ -243,7 +243,7 @@ def convertStdMTGWithNode(g, useHeuristic = True,
                 positions[vid] = initpos + i * length * latdir
 
     if 'Diameter' in g.property_names():
-        g.property('radius').update(dict([(vid,d/2.) for vid,d in g.property('Diameter').items()]))
+        g.property('radius').update(dict([(vid,d/2.) for vid,d in list(g.property('Diameter').items())]))
     g.property('position').update(positions)
 
 

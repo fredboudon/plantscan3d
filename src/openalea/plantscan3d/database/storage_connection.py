@@ -2,14 +2,14 @@ try:
     import openalea.plantscan3d.py2exe_release
 
     py2exe_release = True
-    print 'Py2ExeRelease'
+    print('Py2ExeRelease')
 except ImportError:
     py2exe_release = False
-    print 'StdRelease'
+    print('StdRelease')
 
 if not py2exe_release:
-    from openalea.vpltk.qt.QtCore import *
-    from openalea.vpltk.qt.QtGui import *
+    from openalea.plantgl.gui.qt.QtCore import *
+    from openalea.plantgl.gui.qt.QtGui import *
 
 else:
     import sip
@@ -17,8 +17,8 @@ else:
     sip.setapi('QString', 2)
     sip.setapi('QVariant', 2)
 
-    from PyQt4.QtCore import *
-    from PyQt4.QtGui import *
+    from PyQt5.QtCore import *
+    from PyQt5.QtGui import *
 
 import os
 
@@ -30,7 +30,7 @@ if not py2exe_release:
 
 import connection_ui
 import ftplib
-from server_manip import server_info
+from .server_manip import server_info
 
 class StorageConnection(QDialog, connection_ui.Ui_Dialog):
     def __init__(self, server_address='', server_port=0, parent=None):

@@ -2,14 +2,14 @@ try:
     import openalea.plantscan3d.py2exe_release
 
     py2exe_release = True
-    print 'Py2ExeRelease'
+    print('Py2ExeRelease')
 except ImportError:
     py2exe_release = False
-    print 'StdRelease'
+    print('StdRelease')
 
 if not py2exe_release:
-    from openalea.vpltk.qt.QtCore import *
-    from openalea.vpltk.qt.QtGui import *
+    from openalea.plantgl.gui.qt.QtCore import *
+    from openalea.plantgl.gui.qt.QtGui import *
 
 else:
     import sip
@@ -17,8 +17,8 @@ else:
     sip.setapi('QString', 2)
     sip.setapi('QVariant', 2)
 
-    from PyQt4.QtCore import *
-    from PyQt4.QtGui import *
+    from PyQt5.QtCore import *
+    from PyQt5.QtGui import *
 
 import os
 
@@ -29,7 +29,7 @@ if not py2exe_release:
     cui.check_ui_generation(os.path.join(ldir, 'tags_editor.ui'))
 
 import tags_editor_ui
-from server_manip import MongoDBManip
+from .server_manip import MongoDBManip
 
 
 class TagsEditor(QDialog, tags_editor_ui.Ui_Dialog):

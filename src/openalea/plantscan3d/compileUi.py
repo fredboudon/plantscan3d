@@ -1,4 +1,4 @@
-from PyQt4 import uic
+from PyQt5 import uic
 import os
 import sys
 
@@ -38,7 +38,7 @@ def check_ui_generation(uifname):
          not os.path.exists(pyfname) or
          (os.access(pyfname,os.F_OK|os.W_OK) and
          os.stat(pyfname).st_mtime < os.stat(uifname).st_mtime )) :
-         print 'Generate Ui'
+         print('Generate Ui')
          compile_ui(uifname)
 
 def check_rc_generation(rcfname):
@@ -48,12 +48,12 @@ def check_rc_generation(rcfname):
         not os.path.exists(pyfname) or
         (os.access(pyfname,os.F_OK|os.W_OK) and
         os.stat(pyfname).st_mtime < os.stat(rcfname).st_mtime )) :
-        print 'Generate Rc'
+        print('Generate Rc')
         compile_rc(rcfname)
 
 if __name__ == '__main__':
     if len(sys.argv) < 2:
-        print "Usage: python compileUi.py [filename.{ui,rc}]"
+        print("Usage: python compileUi.py [filename.{ui,rc}]")
         exit(-1)
     i = 1
     while i < len(sys.argv):
@@ -62,5 +62,5 @@ if __name__ == '__main__':
         elif str(sys.argv[i]).rfind(".rc") >= 0 or str(sys.argv[i]).rfind(".qrc") >= 0:
             check_rc_generation(sys.argv[i])
         else:
-            print sys.argv[i] + ": not supported"
+            print(sys.argv[i] + ": not supported")
         i += 1

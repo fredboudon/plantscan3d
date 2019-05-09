@@ -1,17 +1,17 @@
-from PyQt4.Qt import *
+from PyQt5.Qt import *
 from OpenGL.GL import *
 from openalea.plantgl.gui.editablectrlpoint import *
 import openalea.mtg.algo as mtgalgo
-from pglnqgl import *
+from .pglnqgl import *
 import numpy
-from serial import *
-from shareddata import *
-from history import FileHistory
-from settings import PSSettings
-from backup import *
+from .serial import *
+from .shareddata import *
+from .history import FileHistory
+from .settings import PSSettings
+from .backup import *
 
 import os
-import compileUi as cui
+from . import compileUi as cui
 
 ldir = os.path.dirname(__file__)
 cui.check_ui_generation(os.path.join(ldir, 'propwidget.ui'))
@@ -54,7 +54,7 @@ def createMTGRepresentation(mtg, segment_inf_material, segment_plus_material, tr
 
 def createEdgeRepresentation(begnode, endnode, positions, material, translation=None):
     if begnode is None or endnode is None:
-        print 'Pb with node ', begnode, endnode
+        print('Pb with node ', begnode, endnode)
         return None
     res = Polyline([positions[begnode], positions[endnode]], width=1)
     # res = Group([res,Translated((positions[begnode]+positions[endnode])/2,Text(str(endnode)))])
@@ -68,8 +68,8 @@ def createRadiiRepresentation(mtg, material, translation=None, positionproperty=
     shindex = {}
     positions = mtg.property(positionproperty)
     radii = mtg.property(radiusproperty)
-    l = [createRadiusRepresentation(mtg, nodeID, positions, radii, material, translation) for nodeID in radii.keys()]
-    l = filter(lambda x: not x is None, l)
+    l = [createRadiusRepresentation(mtg, nodeID, positions, radii, material, translation) for nodeID in list(radii.keys())]
+    l = [x for x in l if not x is None]
     scene = Scene(l)
     shindex = dict((sh.id, i) for i, sh in enumerate(l))
 
@@ -168,12 +168,12 @@ class GLMTGEditor(QGLViewer):
 
         self.filehistory = FileHistory(None, self.openFile)
 
-        print 'retrieve'
+        print('retrieve')
         settings = PSSettings()
         self.filehistory.retrieveSettings(settings)
         settings.beginGroup("Theme")
         themename = settings.value("Name", 'Black')
-        print themename
+        print(themename)
         settings.endGroup()
 
         self.setTheme(ThemeDict[themename])
@@ -195,7 +195,7 @@ class GLMTGEditor(QGLViewer):
         try:
             self.glrenderer.setGLFrame(self)
         except:
-            print 'no text on GL Display'
+            print('no text on GL Display')
 
         self.modelRep = None
 
@@ -284,13 +284,13 @@ class GLMTGEditor(QGLViewer):
         self.setAcceptDrops(True)
 
     def closeEvent(self, event):
-        print 'save settings'
+        print('save settings')
         settings = PSSettings()
         self.filehistory.setSettings(settings)
         settings.beginGroup("Theme")
         settings.setValue("Name", self.theme['Name'])
         if self.theme['Name'] == 'Custom':
-            for name, val in self.theme.items():
+            for name, val in list(self.theme.items()):
                 if name != 'Name':
                     settings.setValue(name, val)
         settings.endGroup()
@@ -622,7 +622,7 @@ class GLMTGEditor(QGLViewer):
 
         if pointname is None: pointname = dataedit
         pointfname = str(join(get_shared_data('pointset'), pointname + '.bgeom'))
-        print pointfname
+        print(pointfname)
         self.readPoints(pointfname)
 
     def puu1(self):
@@ -717,7 +717,7 @@ class GLMTGEditor(QGLViewer):
             self.setMTG(mtg, fname)
             self.modelRep = None
             self.showEntireScene()
-        except Exception, e:
+        except Exception as e:
             tb.print_exception(*sys.exc_info())
             QMessageBox.critical(self, 'Import Error', 'Import Error:' + repr(e))
 
@@ -743,7 +743,7 @@ class GLMTGEditor(QGLViewer):
         self.nodeWidth = value
         if self.ctrlPointPrimitive:
             self.ctrlPointPrimitive.radius = self.nodeWidth * self.getUnitCtrlPointSize()
-        print self.sceneRadius()
+        print(self.sceneRadius())
         self.showMessage('Set Node Width to ' + str(value) + ' (' + str(self.ctrlPointPrimitive.radius) + ')')
         self.updateGL()
 
@@ -756,7 +756,7 @@ class GLMTGEditor(QGLViewer):
         self.createCtrlPointRepresentation()
 
     def createCtrlPointRepresentation(self):
-        self.ctrlPointsRep = Scene([ctrlPoint.representation(self.ctrlPointPrimitive) for ctrlPoint in self.ctrlPoints.itervalues()])
+        self.ctrlPointsRep = Scene([ctrlPoint.representation(self.ctrlPointPrimitive) for ctrlPoint in self.ctrlPoints.values()])
         self.ctrlPointsRepIndex = dict([(sh.id, i) for i, sh in enumerate(self.ctrlPointsRep)])
         # self.ctrlPointsRepIndex = {2:0, 3:1, ..., 4362: 4360}
 
@@ -811,7 +811,7 @@ class GLMTGEditor(QGLViewer):
             nodeiddict = dict([(vid, i) for i, vid in enumerate(nodeids)])
             parents = [nodeiddict[nonone(self.mtg.parent(i), i)] for i in nodeids]
 
-            print 'points_at_distance_from_skeleton', pointfilter
+            print('points_at_distance_from_skeleton', pointfilter)
             distantpoints = points_at_distance_from_skeleton(pointset.pointList, nodes, parents, -pointfilter, 1)
             # print distantpoints
             if pointset.colorList:
@@ -828,7 +828,7 @@ class GLMTGEditor(QGLViewer):
             selectedPoints, otherPoints = pointList.split_subset(self.pointinfo.selectedPoint)
             selectedColors, otherColors = colorList.split_subset(self.pointinfo.selectedPoint)
 
-            selectedColors = Color4Array([Color4(255, 0, 0, 0) for i in xrange(len(selectedColors))])
+            selectedColors = Color4Array([Color4(255, 0, 0, 0) for i in range(len(selectedColors))])
 
             self.shapePoints = Shape(PointSet(otherPoints, otherColors, width=self.pointinfo.pointWidth), self.pointMaterial)
             self.shapeSelection = Shape(PointSet(selectedPoints, selectedColors, width=self.pointinfo.pointWidth + 2), self.pointMaterial)
@@ -840,7 +840,7 @@ class GLMTGEditor(QGLViewer):
     def setPointFilter(self, value):
         self.pointfilter = self.sceneRadius() * value / 10000.
         self.showMessage("Remove points at a distance " + str(self.pointfilter) + " of the skeleton")
-        print self.pointfilter, self.sceneRadius(), value
+        print(self.pointfilter, self.sceneRadius(), value)
         if self.points: self.createPointsRepresentation()
         if self.isVisible(): self.updateGL()
 
@@ -1115,7 +1115,7 @@ class GLMTGEditor(QGLViewer):
     def getSelection(self, pos):
         possibles = []
         if self.ctrlPoints and self.ctrlPointDisplay:
-            for cCtrlPoint in self.ctrlPoints.itervalues():
+            for cCtrlPoint in self.ctrlPoints.values():
                 cCtrlPoint.checkIfGrabsMouse(pos.x(), pos.y(), self.camera())
                 if cCtrlPoint.grabsMouse():
                     pz = self.camera().viewDirection() * (cCtrlPoint.position() - self.camera().position())
@@ -1256,7 +1256,7 @@ class GLMTGEditor(QGLViewer):
     def mouseDoubleClickEvent(self, event):
         cCtrlPoint = self.getSelection(event.pos())
         if cCtrlPoint:
-            print 'Select point ', cCtrlPoint.id
+            print('Select point ', cCtrlPoint.id)
             if self.mode == self.Selection:
                 self.applySelectionTrigger(cCtrlPoint)
             else:
@@ -1289,7 +1289,7 @@ class GLMTGEditor(QGLViewer):
             # Compute rectangle center and perform selection
 
             if self.selectBuffSize != self.selectBufferSize():
-                print "setSelectBufferSize"
+                print("setSelectBufferSize")
                 self.setSelectBufferSize(self.selectBuffSize)
             self.select(self.rectangleSelect.center())
             self.rectangleSelect = None
@@ -1431,7 +1431,7 @@ class GLMTGEditor(QGLViewer):
             gridLayout.addWidget(sectionLabel, row, 0, 1, 1)
             if ptype == int:
                 valuebox = QSpinBox(Dialog)
-                if pparam.has_key('range'):
+                if 'range' in pparam:
                     valuebox.setRange(*pparam['range'])
                 else:
                     valuebox.setMinimum(-9999999999)
@@ -1441,7 +1441,7 @@ class GLMTGEditor(QGLViewer):
                 Dialog.resultgetter.append(valuebox.value)
             elif ptype == float:
                 valuebox = QDoubleSpinBox(Dialog)
-                if pparam.has_key('decimals'):
+                if 'decimals' in pparam:
                     valuebox.setDecimals(pparam['decimals'])
                 else:
                     valuebox.setDecimals(5)
@@ -1534,7 +1534,7 @@ class GLMTGEditor(QGLViewer):
             dirl = direction(l)
             dirView = toV3(self.camera().viewDirection())
             nbcandidates = 10
-            candidates = [ipos + Matrix3.axisRotation(dirView, ang * 2 * pi / nbcandidates) * l for ang in xrange(nbcandidates)]
+            candidates = [ipos + Matrix3.axisRotation(dirView, ang * 2 * pi / nbcandidates) * l for ang in range(nbcandidates)]
             ocandidates = candidates
             candidates = [self.stickPosToPoints(c)[0] for c in candidates]
             siblings = list(self.mtg.siblings(nid)) + list(self.mtg.children(nid))
@@ -1546,14 +1546,14 @@ class GLMTGEditor(QGLViewer):
             # distance to other nodes criteria
             factor2 = [sum([norm(pos - c) for pos in siblingpos]) for c in candidates]
             max1, max2 = max(factor1), max(factor2)
-            cmplist = [(i, (factor1[i] / max1) + 2 * (1 - (factor2[i] / max2))) for i in xrange(nbcandidates)]
+            cmplist = [(i, (factor1[i] / max1) + 2 * (1 - (factor2[i] / max2))) for i in range(nbcandidates)]
             # self.setTempInfoDisplay(Scene([Shape(PointSet(ocandidates,width = self.pointWidth+2),Material((255,0,255))),
             # Shape(PointSet(candidates,width = self.pointWidth+2),Material((255,255,0))),
             # Shape(PointSet(siblingpos,width = self.pointWidth+8),Material((255,255,255))),
             # Shape(Group([Translated(ocandidates[i],Text(str(int(100*cmplist[i][1])))) for i in xrange(len(candidates))]),Material((255,255,0)))
             # ]))
             cmplist.sort(lambda x, y: cmp(x[1], y[1]))
-            print cmplist
+            print(cmplist)
             npos = candidates[cmplist[0][0]]
 
         if self.mtg.is_leaf(nid):
@@ -1688,7 +1688,7 @@ class GLMTGEditor(QGLViewer):
         self.updateGL()
 
     def smoothPosition(self):
-        from mtgmanip import gaussian_filter
+        from .mtgmanip import gaussian_filter
         self.createBackup('mtg')
         self.showMessage("Applied gaussian filter to positions.")
         gaussian_filter(self.mtg, self.propertyposition)
@@ -1708,7 +1708,7 @@ class GLMTGEditor(QGLViewer):
             self.statusBar.showMessage(message, timeout)
         else:
             self.displayMessage(message, timeout)
-        print message
+        print(message)
 
     # ---------------------------- Point edition ----------------------------------------
 
@@ -1750,7 +1750,7 @@ class GLMTGEditor(QGLViewer):
     def estimateRNeigbor(self, radius, multithreaded=False):
         if not self.check_input_points(): return
 
-        if not hasattr(self.pointinfo, 'rnbg') or not self.pointinfo.rnbg.has_key(radius):
+        if not hasattr(self.pointinfo, 'rnbg') or radius not in self.pointinfo.rnbg:
             kclosests = self.estimateKClosest()
             r_neighborhoods_func = r_neighborhoods_mt if multithreaded else r_neighborhoods
             rnbgs = r_neighborhoods_func(self.points.pointList, kclosests, radius, True)
@@ -1777,12 +1777,12 @@ class GLMTGEditor(QGLViewer):
         try:
             from matplotlib.cm import get_cmap
             p = get_cmap('jet')
-            ncmap = [p(i) for i in xrange(p.N)]
-            print 'Use matplotlib'
+            ncmap = [p(i) for i in range(p.N)]
+            print('Use matplotlib')
             return [Color4(int(round(255 * r)), int(round(255 * g)), int(round(255 * b)), 0) for r, g, b, a in ncmap]
-        except Exception, e:
-            print e
-            print 'use qt colormap'
+        except Exception as e:
+            print(e)
+            print('use qt colormap')
 
             def makeColor4(h):
                 q = QColor()
@@ -1791,7 +1791,7 @@ class GLMTGEditor(QGLViewer):
 
             minhue, maxhue = 255, 0
             stephue = -1
-            return [makeColor4(minhue + i * stephue) for i in xrange(256)]
+            return [makeColor4(minhue + i * stephue) for i in range(256)]
 
     def pointDensityDisplay(self, densities):
         cmap = self.get_colormap()
@@ -1850,7 +1850,7 @@ class GLMTGEditor(QGLViewer):
         if not self.check_input_data(): return
 
         points = self.points.pointList
-        nodes = self.mtg.property(self.propertyposition).values()
+        nodes = list(self.mtg.property(self.propertyposition).values())
         from numpy.random import shuffle
         shuffle(nodes)
         clusterid = points_clusters(points, nodes)
@@ -1861,7 +1861,7 @@ class GLMTGEditor(QGLViewer):
         if not self.check_input_points(): return
         try:
             import matplotlib.pyplot as plt
-        except ImportError, e:
+        except ImportError as e:
             QMessageBox.critical(self, "MatPlotLib", "MatPlotLib not available !\n" + str(e))
             return
         if not hasattr(self.pointinfo, 'densities'):
@@ -1935,7 +1935,7 @@ class GLMTGEditor(QGLViewer):
         pointratio, ok = QInputDialog.getInt(self, 'Point Ratio', 'Select a percentage ratio of points to keep (Actual nb of points: %i)' % nbPoints, ratio, 1, 100)
         if ok:
             from random import sample
-            subset = sample(xrange(nbPoints), nbPoints * pointratio / 100)
+            subset = sample(range(nbPoints), nbPoints * pointratio / 100)
             self.createBackup('points')
             self.setPoints(PointSet(self.points.pointList.subset(subset), self.points.colorList.subset(subset)))
             self.updateGL()
@@ -1959,7 +1959,7 @@ class GLMTGEditor(QGLViewer):
 
     def selectWire(self):
         if len(self.pointinfo.wireStartPoints) != 2:
-            print "reset wireStartPoints"
+            print("reset wireStartPoints")
             self.pointinfo.wireStartPoints = []
         else:
             dialog = self.createParamDialog('Parameterizing the wire selection algorithm', [
@@ -1977,7 +1977,7 @@ class GLMTGEditor(QGLViewer):
                 kclosest = k_closest_points_from_ann(newpoint, 20, True)
 
                 radii = get_radii_of_path(newpoint, kclosest, baricenters, radiiValue)
-                print len(radii)
+                print(len(radii))
                 radius = numpy.average(radii)
 
                 self.pointinfo.selectedPoint = Index([])
@@ -1996,7 +1996,7 @@ class GLMTGEditor(QGLViewer):
         if len(self.pointinfo.selectedPoint) == 0:
             pass
         else:
-            print "Keep point : index = " + str(self.pointinfo.selectedPoint[0])
+            print("Keep point : index = " + str(self.pointinfo.selectedPoint[0]))
             self.pointinfo.wireStartPoints.append(self.pointinfo.selectedPoint[0])
             self.pointinfo.selectedPoint = Index([])
             self.createPointsRepresentation()
@@ -2121,10 +2121,10 @@ class GLMTGEditor(QGLViewer):
             else:
                 root = 0
             from time import time
-            from livnymethod import livny_contraction
+            from .livnymethod import livny_contraction
             t = time()
             newPointList = points
-            for i in xrange(livnycontractionnb):
+            for i in range(livnycontractionnb):
                 newPointList, parents, weights = livny_contraction(newPointList, root)
             if self.mtg:
                 del newPointList[root]
@@ -2157,7 +2157,7 @@ class GLMTGEditor(QGLViewer):
             normals = self.estimateNormals()
             directions = self.pointinfo.directions
             sections = points_sections(points, kclosests, directions, radius)
-            for i in xrange(rosastepnb):
+            for i in range(rosastepnb):
                 directions = sections_normals(normals, sections)
                 sections = points_sections(points, kclosests, directions, radius)
 
@@ -2176,10 +2176,10 @@ class GLMTGEditor(QGLViewer):
 
         assert not self.selection is None
         nid = self.selection.id
-        print 'Add hull of nid'
+        print('Add hull of nid')
 
         points = self.points.pointList
-        nodes = self.mtg.property(self.propertyposition).values()
+        nodes = list(self.mtg.property(self.propertyposition).values())
         node2nid = dict([(node, i) for i, node in enumerate(self.mtg.property(self.propertyposition).keys())])
         clusters = cluster_points(points, nodes)
 
@@ -2205,7 +2205,7 @@ class GLMTGEditor(QGLViewer):
 
         assert not self.selection is None
         nid = self.selection.id
-        print 'Remove hull of nid'
+        print('Remove hull of nid')
 
         try:
             del self.mtg.property('hull')[nid]
@@ -2220,12 +2220,12 @@ class GLMTGEditor(QGLViewer):
     def applyAlignement(self, funcname, *params):
         if not self.check_input_data():  return
 
-        print 'apply', funcname
+        print('apply', funcname)
 
         self.createBackup('mtg')
 
         if type(funcname) == str:
-            import alignement
+            from . import alignement
             func = alignement.__dict__[funcname]
 
         if len(params):
@@ -2246,7 +2246,7 @@ class GLMTGEditor(QGLViewer):
         self.applyAlignement('optimizeAlignementOrientation')
 
     def alignOptimizePosition(self):
-        mtgextent = Point3Array(self.mtg.property(self.propertyposition).values()).getExtent()
+        mtgextent = Point3Array(list(self.mtg.property(self.propertyposition).values())).getExtent()
         distanceratio, ok = QInputDialog.getInt(self, 'Distance Ratio', 'Select a percentage ratio of distance to optimize (size={})'.format(str(list(mtgextent))), 10, 1, 100)
         if ok:
             self.applyAlignement('optimizeAlignementPosition', distanceratio)
@@ -2287,7 +2287,7 @@ class GLMTGEditor(QGLViewer):
                 radius = pointset_mean_radial_distance(spos, dir, self.points.pointList, selection)
             else:
                 radius = pointset_max_radial_distance(spos, dir, self.points.pointList, selection)
-            print 'radius[', pid, ']:', radius
+            print('radius[', pid, ']:', radius)
             return radius
 
     def estimateMeanRadius(self):
@@ -2311,14 +2311,14 @@ class GLMTGEditor(QGLViewer):
     def estimateAllRadius(self, maxmethod=True, overwrite=True):
         if not self.check_input_data(): return
 
-        from mtgmanip import mtg2pgltree
+        from .mtgmanip import mtg2pgltree
 
         nodes, parents, vertex2node = mtg2pgltree(self.mtg)
 
         estimatedradii = estimate_radii_from_points(self.points.pointList, nodes, parents, maxmethod=maxmethod)
 
         radii = self.mtg.property(self.propertyradius)
-        for vid, nid in vertex2node.items():
+        for vid, nid in list(vertex2node.items()):
             if not vid in radii or overwrite:
                 radii[vid] = estimatedradii[nid]
 
@@ -2326,7 +2326,7 @@ class GLMTGEditor(QGLViewer):
         self.updateGL()
 
     def smoothRadius(self):
-        from mtgmanip import gaussian_filter
+        from .mtgmanip import gaussian_filter
         self.createBackup('mtg')
         self.showMessage("Applied gaussian filter to radius.")
         gaussian_filter(self.mtg, self.propertyradius, False)
@@ -2334,7 +2334,7 @@ class GLMTGEditor(QGLViewer):
         self.updateGL()
 
     def thresholdRadius(self):
-        from mtgmanip import threshold_filter
+        from .mtgmanip import threshold_filter
         self.createBackup('mtg')
         self.showMessage("Applied threshold filter to radius.")
         threshold_filter(self.mtg, self.propertyradius)
@@ -2342,7 +2342,7 @@ class GLMTGEditor(QGLViewer):
         self.updateGL()
 
     def pipeModel(self, startfrom=None):
-        from mtgmanip import get_first_param_value, pipemodel
+        from .mtgmanip import get_first_param_value, pipemodel
         self.check_input_mtg()
         if startfrom is False: startfrom = None
 
@@ -2372,19 +2372,19 @@ class GLMTGEditor(QGLViewer):
         pipeexponent, ok = QInputDialog.getDouble(self, 'Pipe Exponent', 'Select a pipe exponent', self.getparamcache('pipeexponent', 2.0), 0.5, 4, 2)
         if ok:
             self.setparamcache('pipeexponent', pipeexponent)
-            from mtgmanip import mtg2pgltree
+            from .mtgmanip import mtg2pgltree
             nodes, parents, vertex2node = mtg2pgltree(self.mtg)
             avgradius = average_radius(self.points.pointList, nodes, parents)
-            print 'average distance to points :', avgradius
+            print('average distance to points :', avgradius)
             weights = carried_length(nodes, parents)
             weights += 1
-            print 'compute radii'
+            print('compute radii')
             estimatedradii = estimate_radii_from_pipemodel(nodes, parents, weights.log(), avgradius, pipeexponent)
 
             radii = self.mtg.property(self.propertyradius)
-            for vid, nid in vertex2node.items():
+            for vid, nid in list(vertex2node.items()):
                 radii[vid] = estimatedradii[nid]
-            print estimatedradii[0]
+            print(estimatedradii[0])
 
             self.radiusRep, self.radiusRepIndex = createRadiiRepresentation(self.mtg, self.radiusMaterial, positionproperty=self.propertyposition, radiusproperty=self.propertyradius)
             self.updateGL()
@@ -2402,7 +2402,7 @@ class GLMTGEditor(QGLViewer):
             QMessageBox.warning(self, 'Multiple direct sons of nodes of the MTG :' + str(error_vtx))
 
         s = []
-        for ctrlPoint in self.ctrlPoints.itervalues():
+        for ctrlPoint in self.ctrlPoints.values():
             shape = ctrlPoint.representation(self.ctrlPointPrimitive)
             if shape.id in error_vtx:
                 shape.appearance.ambient = (255, 0, 0)  # blue
@@ -2427,7 +2427,7 @@ class GLMTGEditor(QGLViewer):
         self.addRoot(root)
 
     def addRoot(self, position):
-        import mtgmanip as mm
+        from . import mtgmanip as mm
         self.setMTG(mm.initialize_mtg(position), None)
         self.showEntireScene()
 
@@ -2458,7 +2458,7 @@ class GLMTGEditor(QGLViewer):
             return None, None
 
     def xuReconstruction(self, startfrom=None):
-        print 'Xu Reconstruction'
+        print('Xu Reconstruction')
 
         startfrom, points = self.getStartFrom(startfrom)
         if startfrom is None: return
@@ -2473,12 +2473,12 @@ class GLMTGEditor(QGLViewer):
             zdist = self.points.pointList[maxi].z - self.points.pointList[mini].z
             binlength = zdist / binratio
             if points is None:
-                print 'filter', len(self.points.pointList), 'points with distance', binlength
+                print('filter', len(self.points.pointList), 'points with distance', binlength)
                 points, emptycolor = self.filter_points(PointSet(self.points.pointList), binlength)  # ,[startfrom])
                 if len(points) < 10:
                     self.showMessage("Not enough points (" + str(len(points)) + ") to apply reconstruction from " + str(startfrom) + ".")
                     return
-            from xumethod import xu_method
+            from .xumethod import xu_method
             xu_method(self.mtg, startfrom, points, binlength)
             self.updateMTGView()
             self.updateGL()
@@ -2488,7 +2488,7 @@ class GLMTGEditor(QGLViewer):
         if not hasattr(self.pointinfo, 'densities'):
             self.pointRDensityMT()
 
-        print 'Graph Colonization Reconstruction'
+        print('Graph Colonization Reconstruction')
         startfrom, points = self.getStartFrom(startfrom)
         if startfrom is None: return
 
@@ -2506,12 +2506,12 @@ class GLMTGEditor(QGLViewer):
             self.createBackup('mtg')
             self.showMessage("Apply Adaptive Graph Colonization et al. reconstruction from  node " + str(startfrom) + ".")
             if points is None:
-                print 'filter', len(self.points.pointList), 'points with distance', maxlength
+                print('filter', len(self.points.pointList), 'points with distance', maxlength)
                 points, emptycolor = self.filter_points(PointSet(self.points.pointList), maxlength)  # ,[startfrom])
                 if len(points) < 10:
                     self.showMessage("Not enough points (" + str(len(points)) + ") to apply reconstruction from " + str(startfrom) + ".")
                     return
-            from xumethod import graphcolonization_method
+            from .xumethod import graphcolonization_method
             densities = self.pointinfo.densities
             graphcolonization_method(self.mtg, startfrom, points, densities, minlength, maxlength, QuantisedFunction(radiusfunc.__deepcopy__({})))
             self.updateMTGView()
@@ -2520,7 +2520,7 @@ class GLMTGEditor(QGLViewer):
     def scaReconstruction(self, startfrom=None):
         if not self.check_input_points(): return
 
-        print 'Space Colonization Reconstruction'
+        print('Space Colonization Reconstruction')
         startfrom, points = self.getStartFrom(startfrom)
         if startfrom is None: return
 
@@ -2537,12 +2537,12 @@ class GLMTGEditor(QGLViewer):
             self.createBackup('mtg')
             self.showMessage("Apply Space Colonization reconstruction from node " + str(startfrom) + ".")
             if points is None:
-                print 'filter', len(self.points.pointList), 'points with distance', growthlength
+                print('filter', len(self.points.pointList), 'points with distance', growthlength)
                 points, emptycolor = self.filter_points(PointSet(self.points.pointList), growthlength)  # ,[startfrom])
                 if len(points) < 10:
                     self.showMessage("Not enough points (" + str(len(points)) + ") to apply reconstruction from " + str(startfrom) + ".")
                     return
-            from sca import spacecolonization_method
+            from .sca import spacecolonization_method
             spacecolonization_method(self.mtg, startfrom, points, growthlength, killratio, perceptionratio, min_nb_pt_per_bud)
             self.updateMTGView()
             self.updateGL()
@@ -2552,7 +2552,7 @@ class GLMTGEditor(QGLViewer):
         if not hasattr(self.pointinfo, 'densities'):
             self.pointRDensityMT()
 
-        print 'Adaptive Space Colonization Reconstruction'
+        print('Adaptive Space Colonization Reconstruction')
         startfrom, points = self.getStartFrom(startfrom)
         if startfrom is None: return
 
@@ -2572,12 +2572,12 @@ class GLMTGEditor(QGLViewer):
             self.createBackup('mtg')
             self.showMessage("Apply Adaptive Space Colonizatio reconstruction from node " + str(startfrom) + ".")
             if points is None:
-                print 'filter', len(self.points.pointList), 'points with distance', maxlength
+                print('filter', len(self.points.pointList), 'points with distance', maxlength)
                 points, emptycolor = self.filter_points(PointSet(self.points.pointList), maxlength)  # ,[startfrom])
                 if len(points) < 10:
                     self.showMessage("Not enough points (" + str(len(points)) + ") to apply reconstruction from " + str(startfrom) + ".")
                     return
-            from sca import adaptivespacecolonization_method
+            from .sca import adaptivespacecolonization_method
             densities = self.pointinfo.densities
 
             adaptivespacecolonization_method(self.mtg, startfrom, points, densities, minlength, maxlength, QuantisedFunction(radiusfunc.__deepcopy__({})),
@@ -2586,7 +2586,7 @@ class GLMTGEditor(QGLViewer):
             self.updateGL()
 
     def livnyReconstruction(self, startfrom=None):
-        print 'Livny Reconstruction'
+        print('Livny Reconstruction')
 
         startfrom, points = self.getStartFrom(startfrom)
         if startfrom is None: return
@@ -2603,13 +2603,13 @@ class GLMTGEditor(QGLViewer):
             self.showMessage("Apply Livny et al. reconstruction from  node " + str(startfrom) + ".")
             verbose = False
             if points is None:
-                print 'filter', len(self.points.pointList), 'points with distance', binlength
+                print('filter', len(self.points.pointList), 'points with distance', binlength)
                 points, emptycolor = self.filter_points(PointSet(self.points.pointList), binlength)  # ,[startfrom])
                 verbose = False
                 if len(points) < 10:
                     self.showMessage("Not enough points (" + str(len(points)) + ") to apply reconstruction from " + str(startfrom) + ".")
                     return
-            from livnymethod import livny_method_mtg
+            from .livnymethod import livny_method_mtg
             livny_method_mtg(self.mtg, startfrom, points, livnycontractionnb, livnyfilteringnb, livnyminedgeratio / 100.)
             self.updateMTGView()
             self.updateGL()
@@ -2617,11 +2617,11 @@ class GLMTGEditor(QGLViewer):
     # ---------------------------- Tagging ----------------------------------------
 
     def angleEstimate(self):
-        from angleanalysis import lines_estimation, phylo_angles, lines_representation, write_phylo_angles
+        from .angleanalysis import lines_estimation, phylo_angles, lines_representation, write_phylo_angles
         tdegree, ok = QInputDialog.getInt(self, 'Degree of trunk line', 'Select a degree for the trunk line estimation', 1, 1, 5)
         if ok:
             trunk_line, lateral_lines, nodelength = lines_estimation(self.mtg, tdegree)
-            print type(trunk_line), trunk_line
+            print(type(trunk_line), trunk_line)
             if hasattr(trunk_line, 'isValid') and not trunk_line.isValid():
                 QMessage.error(self, 'Invalid approximation', 'Invalid approximation')
                 return
@@ -2675,12 +2675,12 @@ class GLMTGEditor(QGLViewer):
         tagprop = self.mtg.property(self.currenttagname)
         if len(tagprop) == 0:
             mscale = self.mtg.max_scale()
-            for scale in xrange(1, mscale):
+            for scale in range(1, mscale):
                 for uvid in self.mtg.vertices(scale):
                     for vid in self.mtg.component_roots_at_scale(uvid, mscale):
-                        if not tagprop.has_key(vid):
+                        if vid not in tagprop:
                             tagprop[vid] = -(mscale - scale)
-        for cid, cpoint in self.ctrlPoints.items():
+        for cid, cpoint in list(self.ctrlPoints.items()):
             tag = tagprop.get(cid, False)
             cpoint.color = self.tagColor(tag)
 
@@ -2691,7 +2691,7 @@ class GLMTGEditor(QGLViewer):
 
     def endTagRepresentation(self):
         self.pointDisplay = self.prevVisu
-        for cid, cpoint in self.ctrlPoints.items():
+        for cid, cpoint in list(self.ctrlPoints.items()):
             cpoint.color = self.ctrlPointColor
         self.createCtrlPointRepresentation()
 
@@ -2740,15 +2740,15 @@ class GLMTGEditor(QGLViewer):
                 mi = self.tableViews[ci].selectedIndexes()
                 if mi:
                     r = mi[0].row()
-                    print r
+                    print(r)
                     self.models[ci].removeRows(r, 1)
 
             def set_properties(self, mtg, vid, model=None):
-                for propname, propval in mtg.properties().items():
+                for propname, propval in list(mtg.properties().items()):
                     if not propval is None:
                         self.add_item(propname, propval.get(vid), model)
 
-                for propname, propval in mtg.properties().items():
+                for propname, propval in list(mtg.properties().items()):
                     if propval is None:
                         self.add_item(propname, propval.get(vid), model)
 
@@ -2756,15 +2756,15 @@ class GLMTGEditor(QGLViewer):
                 props = dict()
                 for vid, model in zip(self.vids, self.models):
                     vidprops = dict()
-                    for i in xrange(model.rowCount()):
+                    for i in range(model.rowCount()):
                         propname = model.item(i, 0).text()
                         valuerepr = model.item(i, 1).text()
-                        print propname, valuerepr
+                        print(propname, valuerepr)
                         if len(valuerepr) > 0:
                             try:
                                 value = eval(valuerepr)
                                 vidprops[propname] = value
-                            except Exception, e:
+                            except Exception as e:
                                 QMessageBox.warning(self, 'Data error', 'Error with vertex ' + str(vid) + ' for ' + propname + '=' + repr(valuerepr) + '\n' + str(e))
                                 raise ValueError(e)
                         else:
@@ -2776,20 +2776,20 @@ class GLMTGEditor(QGLViewer):
                 mtg = self.main.mtg
                 try:
                     props = self.retrieve_properties()
-                    print props
+                    print(props)
                     main.createBackup('mtg')
-                    for vid, vidprop in props.items():
-                        print vid, vidprop
-                        for pname, pvalue in vidprop.items():
+                    for vid, vidprop in list(props.items()):
+                        print(vid, vidprop)
+                        for pname, pvalue in list(vidprop.items()):
                             if pvalue is None:
-                                if mtg.property(pname).has_key(vid):
+                                if vid in mtg.property(pname):
                                     del mtg.property(pname)[vid]
                             else:
                                 mtg.property(pname)[vid] = pvalue
                         if mtg.scale(vid) == mtg.max_scale():
                             self.main.__update_value__(vid)
                     return True
-                except ValueError, ve:
+                except ValueError as ve:
                     return False
 
             def create_tab_for_vertex(self, mtg, vid):
@@ -2860,12 +2860,12 @@ class GLMTGEditor(QGLViewer):
 
     def tagPropertyRepresentation(self):
         proptarget = self.propertyeditor.retrieve_properties()
-        props = [self.mtg.property(propname) for propname in proptarget.keys()]
+        props = [self.mtg.property(propname) for propname in list(proptarget.keys())]
         mscale = self.mtg.max_scale()
-        for cid, cpoint in self.ctrlPoints.items():
+        for cid, cpoint in list(self.ctrlPoints.items()):
             tag = True
             for pvalues in props:
-                if not pvalues.has_key(cid):
+                if cid not in pvalues:
                     tag = False
                     break
             cpoint.color = self.tagColor(tag)

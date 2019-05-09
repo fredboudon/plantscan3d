@@ -38,7 +38,7 @@ class SegmentEditor(QMainWindow, segmenteditor_ui.Ui_MainWindow):
         self.setupUi(self)
 
         self.gleditor.set_selectable_trees.connect(self.setTrees)
-        QObject.connect(self.actionExport_Points, SIGNAL('triggered()'), self.gleditor.exportPoints)
+        self.actionExport_Points.triggered.connect(self.gleditor.exportPoints)
 
         self.db_instance = None
 

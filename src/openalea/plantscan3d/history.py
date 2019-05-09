@@ -11,7 +11,7 @@ class FileHistory:
     def setMenu(self, menu):
         self.menu = menu
         if self.menu: 
-            QObject.connect(menu, SIGNAL('aboutToShow()'),self.updateMenu)
+            self.menu.aboutToShow.connect(self.updateMenu)
 
     def add(self, file, param = None):
         self.files[file] = param
@@ -66,7 +66,6 @@ class FileHistory:
     def retrieveSettings(self, settings):
         settings.beginGroup("FileHistory")
         files = settings.value("RecentFiles")
-        print('files:',files)
         settings.endGroup()
 
         if not files is None:

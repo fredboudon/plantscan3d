@@ -107,7 +107,7 @@ BlackTheme = {'Name': 'Black',
               'Points': (180, 180, 180),
               'ContractedPoints': (255, 0, 0),
               'CtrlPoints': (30, 250, 30),
-              # 'CtrlPoints' : (250,250,250),
+              'CtrlPoints' : (250,250,250),
               'NewCtrlPoints': (30, 250, 250),
               'SelectedCtrlPoints': (30, 250, 30),
               'EdgeInf': (255, 255, 255),
@@ -157,7 +157,12 @@ class GLMTGEditor(QGLViewer):
     # The Different selection modes
     HybridSelect, AddSelect = 1, 2
 
+    # Qt Signals
     open_file = pyqtSignal()
+    undoAvailable = pyqtSignal(bool)
+    redoAvailable = pyqtSignal(bool)
+    wireAvailable = pyqtSignal(bool)
+    PointAttributeDisplay = pyqtSignal(bool)
 
     def __init__(self, parent, pointfile=None, mtgfile=None):
         QGLViewer.__init__(self, parent)
@@ -168,15 +173,14 @@ class GLMTGEditor(QGLViewer):
 
         self.filehistory = FileHistory(None, self.openFile)
 
-        print('retrieve')
         settings = PSSettings()
         self.filehistory.retrieveSettings(settings)
         settings.beginGroup("Theme")
         themename = settings.value("Name", 'Black')
-        print(themename)
         settings.endGroup()
 
-        self.setTheme(ThemeDict[themename])
+        # The line below leads to a crash
+        self.setTheme(ThemeDict[themename], False)
 
         self.pointDisplay = True
         self.pointAttributeDisplay = True
@@ -338,10 +342,11 @@ class GLMTGEditor(QGLViewer):
             self.openFile(str(url.toLocalFile()))
         self.updateGL()
 
-    def setTheme(self, theme=BlackTheme):
+    def setTheme(self, theme=BlackTheme, setBg=True):
         self.theme = theme
 
-        self.setBackgroundColor(QColor(*self.theme['BackGround']))
+        if setBg:
+            self.setBackgroundColor(QColor(*self.theme['BackGround']))
 
         self.pointMaterial = Material(self.theme['Points'], 1)
         self.contractedpointMaterial = Material(self.theme['ContractedPoints'], 1)
@@ -370,25 +375,25 @@ class GLMTGEditor(QGLViewer):
 
     def createBackup(self, name):
         self.backup.make_backup(name)
-        self.emit(SIGNAL('undoAvailable(bool)'), True)
-        self.emit(SIGNAL('redoAvailable(bool)'), False)
+        self.undoAvailable.emit(True)
+        self.redoAvailable.emit(False)
         self.discardTempInfoDisplay()
 
     def undo(self):
         if self.backup.restore_backup():
-            self.emit(SIGNAL('redoAvailable(bool)'), True)
+            self.redoAvailable.emit(True)
             self.updateGL()
         else:
             self.showMessage("No backup available.")
-            self.emit(SIGNAL('undoAvailable(bool)'), False)
+            self.undoAvailable.emit(False)
 
     def redo(self):
         if self.backup.restore_redo():
-            self.emit(SIGNAL('undoAvailable(bool)'), True)
+            self.undoAvailable.emit(True)
             self.updateGL()
         else:
             self.showMessage("No redo available.")
-            self.emit(SIGNAL('redoAvailable(bool)'), False)
+            self.redoAvailable.emit(False)
 
     def enabledClippingPlane(self, enabled):
         self.clippigPlaneEnabled = enabled
@@ -608,7 +613,7 @@ class GLMTGEditor(QGLViewer):
     def setPointAttributeDisplay(self, enabled):
         if enabled != self.pointAttributeDisplay:
             self.pointAttributeDisplay = enabled
-            self.emit(SIGNAL("PointAttributeDisplay(bool)"), enabled)
+            self.PointAttributeDisplay.emit(enabled)
 
     def setclassicdata(self, dataedit, dataoriginal, pointname=None):
         from os.path import join, exists
@@ -1990,7 +1995,7 @@ class GLMTGEditor(QGLViewer):
                 self.pointinfo.wireStartPoints = []
                 self.createPointsRepresentation()
                 self.updateGL()
-                self.emit(SIGNAL('wireAvailable(bool)'), False)
+                self.wireAvailable.emit(False)
 
     def wireKeepPoint(self):
         if len(self.pointinfo.selectedPoint) == 0:
@@ -2003,7 +2008,7 @@ class GLMTGEditor(QGLViewer):
             self.updateGL()
 
             if len(self.pointinfo.wireStartPoints) == 2:
-                self.emit(SIGNAL('wireAvailable(bool)'), True)
+                self.wireAvailable.emit(True)
 
     def selectPole(self):
         dialog = self.createParamDialog('Parameterizing the pole selection algorithm', [

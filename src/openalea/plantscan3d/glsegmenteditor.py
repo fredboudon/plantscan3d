@@ -93,7 +93,7 @@ class GLSegmentEditor(QGLViewer):
                                             "",
                                             "Points Files (*.asc *.xyz *.pwn *.pts *.bgeom *.ply);;All Files (*.*)")
         if not fname: return
-        fname = str(fname)
+        fname = str(fname[0])
 
         points = self.points.subset(self.segmented_points[self.tree_seleted][0])
         Scene([PointSet(points)]).save(fname)

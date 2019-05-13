@@ -128,9 +128,9 @@ class Database_Item(QDialog, database_item_ui.Ui_Dialog):
                 prop.setValue(value)
                 prop.deleteButton.setIcon(QIcon(':/images/icons/delete.png'))
 
-        QObject.connect(self.buttonBox, SIGNAL('accepted()'), self.valid)
-        QObject.connect(self.addPropertiesButton, SIGNAL('clicked()'), self.addPropertiy)
-        QObject.connect(self.editTagsButton, SIGNAL('clicked()'), self.openTagsEditor)
+        self.buttonBox.accepted.connect(self.valid)
+        self.addPropertiesButton.clicked.connect(self.addPropertiy)
+        self.editTagsButton.clicked.connect(self.openTagsEditor)
 
     def openTagsEditor(self):
         if self.tag_editor.exec_():

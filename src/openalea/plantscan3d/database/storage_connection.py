@@ -44,9 +44,9 @@ class StorageConnection(QDialog, connection_ui.Ui_Dialog):
         self.username = 'anonymous'
         self.password = 'anonymous'
 
-        QObject.connect(self.usernameLineEdit, SIGNAL('textChanged(QString)'), self.set_username)
-        QObject.connect(self.passwordLineEdit, SIGNAL('textChanged(QString)'), self.set_password)
-        QObject.connect(self.buttonBox, SIGNAL('accepted()'), self.test_connection)
+        self.usernameLineEdit.textChanged.connect(self.set_username)
+        self.passwordLineEdit.textChanged.connect(self.set_password)
+        self.buttonBox.accepted.connect(self.test_connection)
 
         if self.server_address in server_info.register_id:
             self.username, self.password = server_info.register_id[self.server_address]

@@ -684,7 +684,7 @@ class GLMTGEditor(QGLViewer):
                                             initialname,
                                             "MTG Files (*.mtg;*.bmtg);;All Files (*.*)")
         if not fname: return
-        fname = str(fname)
+        fname = str(fname[0])
         self.filehistory.add(fname, 'MTG')
         self.readMTG(fname)
         self.open_file.emit()
@@ -696,7 +696,7 @@ class GLMTGEditor(QGLViewer):
                                             initialname,
                                             "MTG Files (*.mtg);;All Files (*.*)")
         if not fname: return
-        fname = str(fname)
+        fname = str(fname[0])
         self.filehistory.add(fname, 'iMTG')
         self.readMTG(fname, True)
         self.open_file.emit()
@@ -749,7 +749,8 @@ class GLMTGEditor(QGLViewer):
         if self.ctrlPointPrimitive:
             self.ctrlPointPrimitive.radius = self.nodeWidth * self.getUnitCtrlPointSize()
         print(self.sceneRadius())
-        self.showMessage('Set Node Width to ' + str(value) + ' (' + str(self.ctrlPointPrimitive.radius) + ')')
+        if self.ctrlPointPrimitive:
+            self.showMessage('Set Node Width to ' + str(value) + ' (' + str(self.ctrlPointPrimitive.radius) + ')')
         self.updateGL()
 
     def createCtrlPoints(self):
@@ -777,7 +778,7 @@ class GLMTGEditor(QGLViewer):
                                             initialname,
                                             "MTG Files (*.mtg;*.bmtg);;All Files (*.*)")
         if not fname: return
-        fname = str(fname)
+        fname = str(fname[0])
         self.filehistory.add(fname, 'MTG')
         self.writeMTG(fname)
 
@@ -897,7 +898,7 @@ class GLMTGEditor(QGLViewer):
                                             initialname,
                                             "Points Files (*.asc *.xyz *.pwn *.pts *.txt *.bgeom *.xyz *.ply);;All Files (*.*)")
         if not fname: return
-        fname = str(fname)
+        fname = str(fname[0])
         self.filehistory.add(fname, 'PTS')
         self.readPoints(fname)
         self.open_file.emit()
@@ -946,7 +947,7 @@ class GLMTGEditor(QGLViewer):
                                             initialname,
                                             "Points Files (*.asc *.xyz *.pwn *.pts *.bgeom *.ply);;All Files (*.*)")
         if not fname: return
-        fname = str(fname)
+        fname = str(fname[0])
         self.filehistory.add(fname, 'PTS')
         self.savePoints(fname, self.points)
 
@@ -959,7 +960,7 @@ class GLMTGEditor(QGLViewer):
                                             initialname,
                                             "GEOM Files (*.bgeom;*.geom);;All Files (*.*)")
         if not fname: return
-        fname = str(fname)
+        fname = str(fname[0])
         self.saveAsGeom(fname)
 
     def saveAsGeom(self, fname):
@@ -998,7 +999,7 @@ class GLMTGEditor(QGLViewer):
                                             initialname,
                                             "Txt Files (*.txt);;All Files (*.*)")
         if not fname: return
-        fname = str(fname)
+        fname = str(fname[0])
         self.saveNodeList(fname)
         self.showMessage("Export in " + fname + " done ...")
 
@@ -1128,7 +1129,7 @@ class GLMTGEditor(QGLViewer):
                     if z > 0 and not self.clippigPlaneEnabled or self.frontVisibility <= z * 2 <= self.backVisibility:
                         possibles.append((z, cCtrlPoint))
         if len(possibles) > 0:
-            possibles.sort(lambda x, y: cmp(x[0], y[0]))
+            possibles.sort(key=lambda x: x[0])
             return possibles[0][1]
         return None
 
@@ -1479,8 +1480,8 @@ class GLMTGEditor(QGLViewer):
         buttonBox = QDialogButtonBox(Dialog)
         buttonBox.setOrientation(Qt.Horizontal)
         buttonBox.setStandardButtons(QDialogButtonBox.Cancel | QDialogButtonBox.Ok)
-        QtCore.QObject.connect(buttonBox, SIGNAL("accepted()"), Dialog.accept)
-        QtCore.QObject.connect(buttonBox, SIGNAL("rejected()"), Dialog.reject)
+        buttonBox.accepted.connect(Dialog.accept)
+        buttonBox.rejected.connect(Dialog.reject)
         gridLayout.addWidget(buttonBox, row, 1, 1, 1)
 
         return Dialog
@@ -2639,7 +2640,7 @@ class GLMTGEditor(QGLViewer):
                                                 'angles.txt',
                                                 "Txt Files (*.txt);;All Files (*.*)")
             if fname:
-                write_phylo_angles(fname, phyangles, nodelength)
+                write_phylo_angles(str(fname[0]), phyangles, nodelength)
 
     # ---------------------------- Tagging ----------------------------------------
 
@@ -2732,9 +2733,9 @@ class GLMTGEditor(QGLViewer):
                 self.init(self.widget)
 
             def init(self, widget):
-                QObject.connect(widget.actionAdd, SIGNAL('clicked()'), self.add_item)
-                QObject.connect(widget.actionMinus, SIGNAL('clicked()'), self.remove_item)
-                QObject.connect(widget.buttonBox, SIGNAL('accepted()'), self.commit)
+                widget.actionAdd.clicked.connect(self.add_item)
+                widget.actionMinus.clicked.connect(self.remove_item)
+                widget.buttonBox.accepted.connect(self.commit)
 
             def add_item(self, propname='prop', value='value', model=None):
                 if model is None: model = self.models[self.widget.tabWidget.currentIndex()]
@@ -2850,7 +2851,7 @@ class GLMTGEditor(QGLViewer):
     def startTagProperty(self):
         if self.mode != self.TagProperty:
             self.createProperty()
-            QObject.connect(self.propertyeditor, SIGNAL("accepted()"), self.launchTagProperty)
+            self.propertyeditor.accepted.connect(self.launchTagProperty)
         else:
             self.endTagRepresentation()
             self.setMode(self.Rotate)

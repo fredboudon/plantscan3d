@@ -7,18 +7,8 @@ except ImportError:
     py2exe_release = False
     print('StdRelease')
 
-if not py2exe_release:
-    from openalea.plantgl.gui.qt.QtCore import *
-    from openalea.plantgl.gui.qt.QtGui import *
-
-else:
-    import sip
-
-    sip.setapi('QString', 2)
-    sip.setapi('QVariant', 2)
-
-    from PyQt5.QtCore import *
-    from PyQt5.QtGui import *
+from openalea.plantgl.gui.qt.QtCore import *
+from openalea.plantgl.gui.qt.QtGui import *
 
 import os
 
@@ -57,7 +47,7 @@ class SegmentEditor(QMainWindow, segmenteditor_ui.Ui_MainWindow):
         self.db_instance.make_thumbnail = self.make_thumbnail
         self.db_instance.saveObjectRequested.connect(self.gleditor.save_request)
         self.actionExport_To_Database.setEnabled(True)
-        self.actionExport_To_Database.triggered.connect(self.database_editor.insert_item)
+        self.actionExport_To_Database.triggered.connect(self.db_instance.insert_item)
 
     def tree_action_trigger(self):
         obj = self.sender()

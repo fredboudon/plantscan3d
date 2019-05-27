@@ -7,18 +7,8 @@ except ImportError:
     py2exe_release = False
     print('StdRelease')
 
-if not py2exe_release:
-    from openalea.plantgl.gui.qt.QtCore import *
-    from openalea.plantgl.gui.qt.QtGui import *
-
-else:
-    import sip
-
-    sip.setapi('QString', 2)
-    sip.setapi('QVariant', 2)
-
-    from PyQt5.QtCore import *
-    from PyQt5.QtGui import *
+from openalea.plantgl.gui.qt.QtCore import *
+from openalea.plantgl.gui.qt.QtGui import *
 
 import pymongo as pm
 import ftplib

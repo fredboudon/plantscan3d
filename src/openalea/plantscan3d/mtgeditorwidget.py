@@ -521,7 +521,7 @@ class GLMTGEditor(QGLViewer):
             glDisable(GL_CLIP_PLANE1)
         glDisable(GL_LIGHTING)
 
-        if self.pointDisplay and self.points:
+        if self.pointDisplay and self.pointsRep:
             self.pointsRep.apply(self.glrenderer)
 
         if self.pointAttributeDisplay and self.pointsAttributeRep:

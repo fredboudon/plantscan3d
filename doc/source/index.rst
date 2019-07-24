@@ -3,7 +3,7 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-VPlants.treeeditor3D User Guide
+PlantScan3D User Guide
 #######################################
 
 :Version: |version|
@@ -11,7 +11,7 @@ VPlants.treeeditor3D User Guide
 :Date: |today|
 
 This manual details functions, modules, and objects included in
-VPlants.treeeditor3D, describing what they are and what they do. For a complete
+PlantScan3D, describing what they are and what they do. For a complete
 reference guide, see :ref:`treeeditor3d_reference`.
 
 .. warning::

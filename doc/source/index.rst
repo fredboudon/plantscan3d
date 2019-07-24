@@ -12,7 +12,7 @@ PlantScan3D User Guide
 
 This manual details functions, modules, and objects included in
 PlantScan3D, describing what they are and what they do. For a complete
-reference guide, see :ref:`treeeditor3d_reference`.
+reference guide, see :ref:`refmanual`.
 
 .. warning::
 

@@ -42,7 +42,7 @@ build_prefix= "build-scons"
 from setuptools import setup
 import matplotlib
 
-MainScript = 'src/vplants/treeeditor3d/mtgeditor.py'
+MainScript = 'src/vplants/treeeditor3d/main_window.py'
 
 import sys
 if sys.platform =='darwin':

@@ -28,7 +28,7 @@ class GLSegmentEditor(QGLViewer):
         try:
             self.glrenderer.setGLFrame(self)
         except:
-            print('no text on GL Display')
+            print('No text on GL Display')
 
     def init(self):
         self.camera().setViewDirection(Vec(0, -1, 0))

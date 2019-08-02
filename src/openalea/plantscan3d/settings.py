@@ -1,5 +1,6 @@
-from PyQt5.QtCore import QSettings
+from openalea.plantgl.gui.qt.QtCore import QSettings
 
-class PSSettings(QSettings):
+class Settings(QSettings):
+
     def __init__(self):
-        QSettings.__init__(self,QSettings.IniFormat,QSettings.UserScope,"OpenAlea","PlantScan3D")
+        QSettings.__init__(self, QSettings.IniFormat, QSettings.UserScope, "OpenAlea", "PlantScan3D")

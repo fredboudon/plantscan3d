@@ -10,10 +10,11 @@ except ImportError:
 from openalea.plantgl.gui.qt.QtCore import *
 from openalea.plantgl.gui.qt.QtGui import *
 
+import tempfile
 import os
 
 if not py2exe_release:
-    import openalea.plantscan3d.compileUi as cui
+    import openalea.plantscan3d.ui_compiler as cui
 
     ldir = os.path.dirname(__file__)
     cui.check_ui_generation(os.path.join(ldir, 'database.ui'))
@@ -128,7 +129,7 @@ class DatabaseEditor(QDialog, database_ui.Ui_Dialog):
 
     def insert_db(self, data):
         filename = data['name'] + '.zip'
-        fname = str('/tmp/' + str(os.getpid()) + '/' + filename)
+        fname = str(tempfile.gettempdir() + '/PlantScan3D/' + str(os.getpid()) + '/' + filename)
         self.saveObjectRequested.emit(fname)
         data['nbpoint'] = self.size_callback() if self.size_callback is not None else 0
 
@@ -309,7 +310,7 @@ class DatabaseEditor(QDialog, database_ui.Ui_Dialog):
             return
 
         data = MongoDBManip.find_one({'_id': item.object_id}, {'name': 1, 'fileURL': 1})
-        fname = str('/tmp/' + str(os.getpid()) + '/' + data['name'] + '.zip')
+        fname = str(tempfile.gettempdir() + '/PlantScan3D/' + str(os.getpid()) + '/' + data['name'] + '.zip')
 
         def callback(connection):
             self.close()

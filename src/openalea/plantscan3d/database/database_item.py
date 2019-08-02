@@ -13,7 +13,7 @@ from openalea.plantgl.gui.qt.QtGui import *
 import os
 
 if not py2exe_release:
-    import openalea.plantscan3d.compileUi as cui
+    import openalea.plantscan3d.ui_compiler as cui
 
     ldir = os.path.dirname(__file__)
     cui.check_ui_generation(os.path.join(ldir, 'database_item.ui'))

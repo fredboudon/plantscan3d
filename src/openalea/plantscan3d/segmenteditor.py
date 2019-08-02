@@ -13,7 +13,7 @@ from openalea.plantgl.gui.qt.QtGui import *
 import os
 
 if not py2exe_release:
-    import src.openalea.plantscan3d.compileUi as cui
+    import src.openalea.plantscan3d.ui_compiler as cui
 
     ldir = os.path.dirname(__file__)
     cui.check_ui_generation(os.path.join(ldir, 'segmenteditor.ui'))

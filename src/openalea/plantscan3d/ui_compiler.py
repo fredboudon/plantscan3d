@@ -53,7 +53,7 @@ def check_rc_generation(rcfname):
 
 if __name__ == '__main__':
     if len(sys.argv) < 2:
-        print("Usage: python compileUi.py [filename.{ui,rc}]")
+        print("Usage: python ui_compiler.py [filename.{ui,rc}]")
         exit(-1)
     i = 1
     while i < len(sys.argv):

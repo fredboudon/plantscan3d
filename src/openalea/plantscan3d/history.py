@@ -32,10 +32,7 @@ class FileHistory:
         files = OrderedDict([])
         for file, ftype in list(self.files.items()):
             if os.path.exists(file):
-                print(file,'exists')
                 files[file] = ftype
-            else:
-                print(file,'do not exist')
 
         if len(files) != len(self.files):
             self.files = files
@@ -69,12 +66,10 @@ class FileHistory:
         settings.endGroup()
 
         if not files is None:
-            print('check files')
             files = [file.split(':',1) for file in files]
             files = OrderedDict([(str(fname),str(ftype)) for ftype,fname in files])
             self.files = files
-            print(self.files)
-            self.check()        
+            self.check()
 
     def setSettings(self, settings):
         settings.beginGroup("FileHistory")

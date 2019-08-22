@@ -65,9 +65,9 @@ def pgltree2mtg(mtg, startfrom, parents, positions, radii=None, filter_short_bra
                 langle = degrees(acos(dot(direction(pos - npositions[parent]), direction(positions[mchildren[0]] - pos))))
                 if langle > angle_between_trunk_and_lateral:
                     first_edge_type = '+'
-                edges_types = [first_edge_type] + ['+' for i in xrange(len(mchildren) - 1)]
+                edges_types = [first_edge_type] + ['+' for i in range(len(mchildren) - 1)]
                 toprocess += [(c, mtgnode, e) for c, e in zip(mchildren, edges_types)]
-    print 'Remove short nodes ', ','.join(map(str, removed))
+    print('Remove short nodes ', ','.join(map(str, removed)))
     return mtg
 
 
@@ -81,10 +81,10 @@ def gaussian_filter(mtg, propname, considerapicalonly=True):
     nprop = dict()
     gw0 = gaussian_weight(0, 1)
     gw1 = gaussian_weight(1, 1)
-    for vid, value in prop.items():
+    for vid, value in list(prop.items()):
         nvalues = [value * gw0]
         parent = mtg.parent(vid)
-        if parent and prop.has_key(parent):
+        if parent and parent in prop:
             nvalues.append(prop[parent] * gw1)
         children = mtg.children(vid)
         if considerapicalonly: children = [child for child in children if mtg.edge_type(child) == '<']
@@ -148,11 +148,11 @@ def pipemodel(mtg, rootradius, leafradius, root=None):
         if not vid in nbelems:
             nbelems[vid] = sum([nbelems[child] for child in mtg.children(vid)]) + 1
 
-    print root, nbelems[root]
+    print(root, nbelems[root])
 
     # pipeexponent = log(nbelems[root]) / (log(rootradius) - log(leafradius))
     pipeexponent = (log(rootradius) - log(leafradius)) / log(nbelems[root])
-    print pipeexponent
+    print(pipeexponent)
     invpipeexponent = 1. / pipeexponent
 
     for vid in vertices:

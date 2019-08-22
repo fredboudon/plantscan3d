@@ -2,34 +2,24 @@ try:
     import openalea.plantscan3d.py2exe_release
 
     py2exe_release = True
-    print 'Py2ExeRelease'
+    print('Py2ExeRelease')
 except ImportError:
     py2exe_release = False
-    print 'StdRelease'
+    print('StdRelease')
 
-if not py2exe_release:
-    from openalea.vpltk.qt.QtCore import *
-    from openalea.vpltk.qt.QtGui import *
-
-else:
-    import sip
-
-    sip.setapi('QString', 2)
-    sip.setapi('QVariant', 2)
-
-    from PyQt4.QtCore import *
-    from PyQt4.QtGui import *
+from openalea.plantgl.gui.qt.QtCore import *
+from openalea.plantgl.gui.qt.QtGui import *
 
 import os
 
 if not py2exe_release:
-    import openalea.plantscan3d.compileUi as cui
+    import openalea.plantscan3d.ui_compiler as cui
 
     ldir = os.path.dirname(__file__)
     cui.check_ui_generation(os.path.join(ldir, 'tags_editor.ui'))
 
-import tags_editor_ui
-from server_manip import MongoDBManip
+from . import tags_editor_ui
+from .server_manip import MongoDBManip
 
 
 class TagsEditor(QDialog, tags_editor_ui.Ui_Dialog):
@@ -44,7 +34,7 @@ class TagsEditor(QDialog, tags_editor_ui.Ui_Dialog):
 
         self.treeWidget.itemChanged.connect(self.item_changed)
         self.treeWidget.setContextMenuPolicy(Qt.CustomContextMenu)
-        QObject.connect(self.treeWidget, SIGNAL('customContextMenuRequested(QPoint)'), self.open_menu)
+        self.treeWidget.customContextMenuRequested.connect(self.open_menu)
 
     def item_changed(self, item, column):
         """
@@ -128,9 +118,9 @@ class TagsEditor(QDialog, tags_editor_ui.Ui_Dialog):
         action_add = QAction('Add', self)
         action_rename = QAction('Rename', self)
         action_del = QAction('Delete', self)
-        QObject.connect(action_add, SIGNAL('triggered()'), on_add)
-        QObject.connect(action_rename, SIGNAL('triggered()'), on_rename)
-        QObject.connect(action_del, SIGNAL('triggered()'), on_delete)
+        action_add.triggered.connect(on_add)
+        action_rename.triggered.connect(on_rename)
+        action_del.triggered.connect(on_delete)
 
         menu = QMenu(self)
         menu.addAction(action_add)

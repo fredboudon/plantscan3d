@@ -2,28 +2,18 @@ try:
     import openalea.plantscan3d.py2exe_release
 
     py2exe_release = True
-    print 'Py2ExeRelease'
+    print('Py2ExeRelease')
 except ImportError:
     py2exe_release = False
-    print 'StdRelease'
+    print('StdRelease')
 
-if not py2exe_release:
-    from openalea.vpltk.qt.QtCore import *
-    from openalea.vpltk.qt.QtGui import *
-
-else:
-    import sip
-
-    sip.setapi('QString', 2)
-    sip.setapi('QVariant', 2)
-
-    from PyQt4.QtCore import *
-    from PyQt4.QtGui import *
+from openalea.plantgl.gui.qt.QtCore import *
+from openalea.plantgl.gui.qt.QtGui import *
 
 import os
 
 if not py2exe_release:
-    import openalea.plantscan3d.compileUi as cui
+    import openalea.plantscan3d.ui_compiler as cui
 
     ldir = os.path.dirname(__file__)
     cui.check_ui_generation(os.path.join(ldir, 'create_property.ui'))
@@ -31,10 +21,10 @@ if not py2exe_release:
     cui.check_ui_generation(os.path.join(ldir, 'dateprop.ui'))
     cui.check_ui_generation(os.path.join(ldir, 'floatvalueprop.ui'))
 
-import create_property_ui
-import textprop_ui
-import dateprop_ui
-import floatvalueprop_ui
+from . import create_property_ui
+from . import textprop_ui
+from . import dateprop_ui
+from . import floatvalueprop_ui
 
 
 class Property(QWidget):
@@ -62,8 +52,8 @@ class TextProperty(Property, textprop_ui.Ui_Form):
         textprop_ui.Ui_Form.__init__(self)
         self.setupUi(self)
 
-        QObject.connect(self.deleteButton, SIGNAL('clicked()'), self.delete_property)
-        QObject.connect(self.propValue, SIGNAL('textChanged()'), self.valueChange)
+        self.deleteButton.clicked.connect(self.delete_property)
+        self.propValue.textChanged.connect(self.valueChange)
         self.propNameLabel.setText(property_name)
 
     def setValue(self, value):
@@ -82,8 +72,8 @@ class DateProperty(Property, dateprop_ui.Ui_Form):
         dateprop_ui.Ui_Form.__init__(self)
         self.setupUi(self)
 
-        QObject.connect(self.deleteButton, SIGNAL('clicked()'), self.delete_property)
-        QObject.connect(self.propValue, SIGNAL('dateChanged(QDate)'), self.valueChange)
+        self.deleteButton.clicked.connect(self.delete_property)
+        self.propValue.dateChanged.connect(self.valueChange)
         self.propNameLabel.setText(property_name)
 
     def setValue(self, value):
@@ -111,8 +101,8 @@ class FloatValueProperty(Property, floatvalueprop_ui.Ui_Form):
         floatvalueprop_ui.Ui_Form.__init__(self)
         self.setupUi(self)
 
-        QObject.connect(self.deleteButton, SIGNAL('clicked()'), self.delete_property)
-        QObject.connect(self.propValue, SIGNAL('valueChanged(double)'), self.valueChange)
+        self.deleteButton.clicked.connect(self.delete_property)
+        self.propValue.valueChanged.connect(self.valueChange)
         self.propNameLabel.setText(property_name)
 
     def setValue(self, value):
@@ -132,7 +122,7 @@ class CreateProperty(QDialog, create_property_ui.Ui_Dialog):
 
         self.prop = None
 
-        QObject.connect(self.buttonBox, SIGNAL('accepted()'), self.valid)
+        self.buttonBox.accepted.connect(self.valid)
 
     def valid(self):
         if len(self.nameLineEdit.text()) == 0:

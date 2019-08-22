@@ -2,23 +2,13 @@ try:
     import openalea.plantscan3d.py2exe_release
 
     py2exe_release = True
-    print 'Py2ExeRelease'
+    print('Py2ExeRelease')
 except ImportError:
     py2exe_release = False
-    print 'StdRelease'
+    print('StdRelease')
 
-if not py2exe_release:
-    from openalea.vpltk.qt.QtCore import *
-    from openalea.vpltk.qt.QtGui import *
-
-else:
-    import sip
-
-    sip.setapi('QString', 2)
-    sip.setapi('QVariant', 2)
-
-    from PyQt4.QtCore import *
-    from PyQt4.QtGui import *
+from openalea.plantgl.gui.qt.QtCore import *
+from openalea.plantgl.gui.qt.QtGui import *
 
 import pymongo as pm
 import ftplib
@@ -40,15 +30,18 @@ class ServerInformation:
             ids = self.settings.value('Ids')
 
             for id in str(ids).split(';'):
-                address, username, password = id.split(':')
-                self.register_id[address] = (username, password)
+                try:
+                    address, username, password = id.split(':')
+                    self.register_id[address] = (username, password)
+                except:
+                    pass
         self.settings.endGroup()
 
     def save_register_ids(self):
         self.settings.beginGroup('FileTransferIds')
         ids = ''
         index = 0
-        for rid in self.register_id.iteritems():
+        for rid in self.register_id.items():
             address, id = rid
             username, password = id
             ids += address + ':' + username + ':' + password
@@ -125,7 +118,7 @@ class MongoDBManip:
         tags_list = []
         for tree in trees:
             tags = tree['tags']
-            if type(tags) == str or type(tags) == unicode:
+            if type(tags) == str or type(tags) == str:
                 if str(tags).strip() != '':
                     separator = ' ; '
                     for t in str(tags).split(separator):
@@ -149,7 +142,7 @@ class MongoDBManip:
 
         tags_list = []
         tags = tree['tags']
-        if type(tags) == str or type(tags) == unicode:
+        if type(tags) == str or type(tags) == str:
             if str(tags).strip() != '':
                 separator = ' ; '
                 for t in str(tags).split(separator):
@@ -170,7 +163,7 @@ class MongoDBManip:
         trees = MongoDBManip.find({}, {'tags': 1})
         for tree in trees:
             tags = tree['tags']
-            if type(tags) == str or type(tags) == unicode:
+            if type(tags) == str or type(tags) == str:
                 separator = ' ; '
                 new_tag = ''
                 tags_list = str(tags).split(separator)
@@ -194,7 +187,7 @@ class MongoDBManip:
         trees = MongoDBManip.find({}, {'tags': 1})
         for tree in trees:
             tags = tree['tags']
-            if type(tags) == str or type(tags) == unicode:
+            if type(tags) == str or type(tags) == str:
                 separator = ' ; '
                 new_tag = ''
                 tags_list = str(tags).split(separator)
@@ -226,17 +219,17 @@ class MongoDBManip:
                     new_tags = c['tags']
                     if type(data['tags']) == list:
                         new_tags += data['tags']
-                    elif type(data['tags']) == str or type(data['tags']) == unicode:
+                    elif type(data['tags']) == str or type(data['tags']) == str:
                         for t in str(data['tags']).split(';'):
                             if t.strip() != '':
                                 new_tags.append(t)
-                elif type(c['tags']) == str or type(c['tags']) == unicode:
+                elif type(c['tags']) == str or type(c['tags']) == str:
                     new_tags = str(c['tags'])
                     if type(data['tags']) == list:
                         for t in data['tags']:
                             new_tags += str(t) + separator
                         new_tags = new_tags[:new_tags.rfind(separator)]
-                    elif type(data['tags']) == str or type(data['tags']) == unicode:
+                    elif type(data['tags']) == str or type(data['tags']) == str:
                         if len(new_tags) > 0:
                             new_tags += separator + data['tags']
                         else:
@@ -263,9 +256,9 @@ class WorkerTestConnection(QObject):
             client = pm.MongoClient(server_info.mongodb_uri)
             # The ismaster command is cheap and does not require auth.
             client.admin.command('ismaster')
-            print "Database connection to " + server_info.mongodb_uri + " successful"
+            print("Database connection to " + server_info.mongodb_uri + " successful")
             self.result.emit(True)
         except pm.errors.ConnectionFailure:
-            print "Database connection to " + server_info.mongodb_uri + " failed"
+            print("Database connection to " + server_info.mongodb_uri + " failed")
             self.result.emit(False)
         self.finished.emit()

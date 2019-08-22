@@ -2,33 +2,23 @@ try:
     import openalea.plantscan3d.py2exe_release
 
     py2exe_release = True
-    print 'Py2ExeRelease'
+    print('Py2ExeRelease')
 except ImportError:
     py2exe_release = False
-    print 'StdRelease'
+    print('StdRelease')
 
-if not py2exe_release:
-    from openalea.vpltk.qt.QtCore import *
-    from openalea.vpltk.qt.QtGui import *
-
-else:
-    import sip
-
-    sip.setapi('QString', 2)
-    sip.setapi('QVariant', 2)
-
-    from PyQt4.QtCore import *
-    from PyQt4.QtGui import *
+from openalea.plantgl.gui.qt.QtCore import *
+from openalea.plantgl.gui.qt.QtGui import *
 
 import os
 
 if not py2exe_release:
-    import src.openalea.plantscan3d.compileUi as cui
+    import src.openalea.plantscan3d.ui_compiler as cui
 
     ldir = os.path.dirname(__file__)
     cui.check_ui_generation(os.path.join(ldir, 'segmenteditor.ui'))
 
-import segmenteditor_ui
+from . import segmenteditor_ui
 
 
 class SegmentEditor(QMainWindow, segmenteditor_ui.Ui_MainWindow):
@@ -38,12 +28,12 @@ class SegmentEditor(QMainWindow, segmenteditor_ui.Ui_MainWindow):
         self.setupUi(self)
 
         self.gleditor.set_selectable_trees.connect(self.setTrees)
-        QObject.connect(self.actionExport_Points, SIGNAL('triggered()'), self.gleditor.exportPoints)
+        self.actionExport_Points.triggered.connect(self.gleditor.exportPoints)
 
         self.db_instance = None
 
     def make_thumbnail(self):
-        from thumbnailmaker import make_thumbnail
+        from .thumbnailmaker import make_thumbnail
         from openalea.plantgl.all import Scene
 
         if self.gleditor.tree_seleted is None:
@@ -57,7 +47,7 @@ class SegmentEditor(QMainWindow, segmenteditor_ui.Ui_MainWindow):
         self.db_instance.make_thumbnail = self.make_thumbnail
         self.db_instance.saveObjectRequested.connect(self.gleditor.save_request)
         self.actionExport_To_Database.setEnabled(True)
-        QObject.connect(self.actionExport_To_Database, SIGNAL('triggered()'), self.database_editor.insert_item)
+        self.actionExport_To_Database.triggered.connect(self.db_instance.insert_item)
 
     def tree_action_trigger(self):
         obj = self.sender()
@@ -69,6 +59,6 @@ class SegmentEditor(QMainWindow, segmenteditor_ui.Ui_MainWindow):
         for t in trees:
             action = QAction(t, self.menuTrees)
             action.index = index
-            QObject.connect(action, SIGNAL('triggered()'), self.tree_action_trigger)
+            action.triggered.connect(self.tree_action_trigger)
             self.menuTrees.addAction(action)
             index += 1

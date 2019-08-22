@@ -56,7 +56,7 @@ class Backup:
             self.set_data(data['type'], data['data'])
             if self.backupmetainfos[data['type']]['updatemethod'] is not None:
                 self.backupmetainfos[data['type']]['updatemethod']()
-            print "Undo " + data['type'] + " at " + str(id(data))
+            print("Undo " + data['type'] + " at " + str(id(data)))
             return True
         return False
 
@@ -67,6 +67,6 @@ class Backup:
             self.set_data(data['type'], data['data'])
             if self.backupmetainfos[data['type']]['updatemethod'] is not None:
                 self.backupmetainfos[data['type']]['updatemethod']()
-            print "Redo " + data['type'] + " at " + str(id(data))
+            print("Redo " + data['type'] + " at " + str(id(data)))
             return True
         return False

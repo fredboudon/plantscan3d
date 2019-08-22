@@ -1,4 +1,4 @@
-from PyQt4 import uic
+from PyQt5 import uic
 import os
 import sys
 
@@ -15,19 +15,19 @@ def get_rcfnames_from(fname):
 def compile_ui(uifname):
     """ compile a Ui """
     pyfname = get_uifnames_from(uifname)
-    fstream = file(pyfname,'w')
-    uic.compileUi(uifname,fstream)
+    fstream = open(pyfname,'w')
+    uic.compileUi(uifname,fstream,from_imports=True)
     fstream.close()
 
-def compile_rc (rcfname) :
-    """ compile a Ressource file """
+def compile_rc(rcfname):
+    """ compile a Resource file """
     pyfname = get_rcfnames_from(rcfname)
     if sys.platform == 'posix':
-        exe = 'pyrcc4'
+        exe = 'pyrcc5'
     else:
-        exe = os.path.join(sys.prefix,'pyrcc4.bat')
+        exe = os.path.join(sys.prefix,'pyrcc5.bat')
         if not os.path.exists(exe):
-            exe = 'pyrcc4'
+            exe = 'pyrcc5'
     cmd = '%s "%s" > "%s"' % (exe,rcfname, pyfname)
     os.system(cmd)
 
@@ -38,22 +38,22 @@ def check_ui_generation(uifname):
          not os.path.exists(pyfname) or
          (os.access(pyfname,os.F_OK|os.W_OK) and
          os.stat(pyfname).st_mtime < os.stat(uifname).st_mtime )) :
-         print 'Generate Ui'
+         print('Generate Ui')
          compile_ui(uifname)
 
 def check_rc_generation(rcfname):
-    """ check if a py file should regenerated from a ui """
+    """ check if a py file should regenerated from a Resource file """
     pyfname = get_rcfnames_from(rcfname)
     if (os.path.exists(rcfname) and 
         not os.path.exists(pyfname) or
         (os.access(pyfname,os.F_OK|os.W_OK) and
         os.stat(pyfname).st_mtime < os.stat(rcfname).st_mtime )) :
-        print 'Generate Rc'
+        print('Generate Rc')
         compile_rc(rcfname)
 
 if __name__ == '__main__':
     if len(sys.argv) < 2:
-        print "Usage: python compileUi.py [filename.{ui,rc}]"
+        print("Usage: python ui_compiler.py [filename.{ui,rc}]")
         exit(-1)
     i = 1
     while i < len(sys.argv):
@@ -62,5 +62,5 @@ if __name__ == '__main__':
         elif str(sys.argv[i]).rfind(".rc") >= 0 or str(sys.argv[i]).rfind(".qrc") >= 0:
             check_rc_generation(sys.argv[i])
         else:
-            print sys.argv[i] + ": not supported"
+            print(sys.argv[i] + ": not supported")
         i += 1

@@ -2,35 +2,25 @@ try:
     import openalea.plantscan3d.py2exe_release
 
     py2exe_release = True
-    print 'Py2ExeRelease'
+    print('Py2ExeRelease')
 except ImportError:
     py2exe_release = False
-    print 'StdRelease'
+    print('StdRelease')
 
-if not py2exe_release:
-    from openalea.vpltk.qt.QtCore import *
-    from openalea.vpltk.qt.QtGui import *
-
-else:
-    import sip
-
-    sip.setapi('QString', 2)
-    sip.setapi('QVariant', 2)
-
-    from PyQt4.QtCore import *
-    from PyQt4.QtGui import *
+from openalea.plantgl.gui.qt.QtCore import *
+from openalea.plantgl.gui.qt.QtGui import *
 
 import os
 
 if not py2exe_release:
-    import openalea.plantscan3d.compileUi as cui
+    import openalea.plantscan3d.ui_compiler as cui
 
     ldir = os.path.dirname(__file__)
     cui.check_ui_generation(os.path.join(ldir, 'connection.ui'))
 
-import connection_ui
+from . import connection_ui
 import ftplib
-from server_manip import server_info
+from .server_manip import server_info
 
 class StorageConnection(QDialog, connection_ui.Ui_Dialog):
     def __init__(self, server_address='', server_port=0, parent=None):
@@ -44,9 +34,9 @@ class StorageConnection(QDialog, connection_ui.Ui_Dialog):
         self.username = 'anonymous'
         self.password = 'anonymous'
 
-        QObject.connect(self.usernameLineEdit, SIGNAL('textChanged(QString)'), self.set_username)
-        QObject.connect(self.passwordLineEdit, SIGNAL('textChanged(QString)'), self.set_password)
-        QObject.connect(self.buttonBox, SIGNAL('accepted()'), self.test_connection)
+        self.usernameLineEdit.textChanged.connect(self.set_username)
+        self.passwordLineEdit.textChanged.connect(self.set_password)
+        self.buttonBox.accepted.connect(self.test_connection)
 
         if self.server_address in server_info.register_id:
             self.username, self.password = server_info.register_id[self.server_address]

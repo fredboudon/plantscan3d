@@ -285,7 +285,7 @@
   <customwidget>
    <class>MyComboBox</class>
    <extends>QComboBox</extends>
-   <header location="global">mycombobox.h</header>
+   <header location="global">.mycombobox.h</header>
   </customwidget>
  </customwidgets>
  <resources>

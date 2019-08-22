@@ -8,7 +8,6 @@ package:
 source:
   path: ..
 
-
 about:
   home: https://github.com/openalea/plantscan3d
   license: Cecill-C
@@ -24,19 +23,18 @@ requirements:
    - setuptools
    - openalea.deploy
    - openalea.plantgl
-   - openalea.vpltk
-   - qt <5
+   - qt =5
    - pyqt
   run:
    - python
    - openalea.plantgl
-   - qt <5
+   - qt =5
    - pyqt
-   - openalea.vpltk
    - pyopengl
    - pyqglviewer
    - scipy
    - matplotlib
+   - pymongo
 
 test:
   imports:

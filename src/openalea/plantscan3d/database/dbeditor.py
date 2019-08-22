@@ -2,40 +2,32 @@ try:
     import openalea.plantscan3d.py2exe_release
 
     py2exe_release = True
-    print 'Py2ExeRelease'
+    print('Py2ExeRelease')
 except ImportError:
     py2exe_release = False
-    print 'StdRelease'
+    print('StdRelease')
 
-if not py2exe_release:
-    from openalea.vpltk.qt.QtCore import *
-    from openalea.vpltk.qt.QtGui import *
+from openalea.plantgl.gui.qt.QtCore import *
+from openalea.plantgl.gui.qt.QtGui import *
 
-else:
-    import sip
-
-    sip.setapi('QString', 2)
-    sip.setapi('QVariant', 2)
-
-    from PyQt4.QtCore import *
-    from PyQt4.QtGui import *
-
+import tempfile
 import os
 
 if not py2exe_release:
-    import openalea.plantscan3d.compileUi as cui
+    import openalea.plantscan3d.ui_compiler as cui
 
     ldir = os.path.dirname(__file__)
     cui.check_ui_generation(os.path.join(ldir, 'database.ui'))
+    cui.check_rc_generation(os.path.join(ldir, 'database.qrc'))
 
-import database_ui
-import database_item
-from server_manip import MongoDBManip, Based_filter, NonBased_filter
-from storage_connection import *
+from . import database_ui
+from . import database_item
+from .server_manip import MongoDBManip, Based_filter, NonBased_filter
+from .storage_connection import *
 
 
 class DatabaseEditor(QDialog, database_ui.Ui_Dialog):
-    openObjectRequested = pyqtSignal(str, str)
+    openObjectRequested = pyqtSignal(bytes, str)
     saveObjectRequested = pyqtSignal(str)
     setCurrentObjectRequested = pyqtSignal(str)
     objectDeleted = pyqtSignal(str)
@@ -62,7 +54,7 @@ class DatabaseEditor(QDialog, database_ui.Ui_Dialog):
         self.tableWidget.setHorizontalHeaderItem(1, QTableWidgetItem('Value'))
 
         self.treeWidget.setContextMenuPolicy(Qt.CustomContextMenu)
-        QObject.connect(self.treeWidget, SIGNAL('customContextMenuRequested(QPoint)'), self.openMenu)
+        self.treeWidget.customContextMenuRequested.connect(self.openMenu)
 
     def openMenu(self, pos):
         item = self.treeWidget.itemAt(pos)
@@ -97,8 +89,8 @@ class DatabaseEditor(QDialog, database_ui.Ui_Dialog):
         delaction = QAction('Delete', self)
         modifaction = QAction('Modify', self)
 
-        QObject.connect(delaction, SIGNAL('triggered()'), on_delete)
-        QObject.connect(modifaction, SIGNAL('triggered()'), on_modify)
+        delaction.triggered.connect(on_delete)
+        modifaction.triggered.connect(on_modify)
 
         menu = QMenu(self)
         menu.addAction(modifaction)
@@ -137,7 +129,7 @@ class DatabaseEditor(QDialog, database_ui.Ui_Dialog):
 
     def insert_db(self, data):
         filename = data['name'] + '.zip'
-        fname = str('/tmp/' + str(os.getpid()) + '/' + filename)
+        fname = str(tempfile.gettempdir() + '/PlantScan3D/' + str(os.getpid()) + '/' + filename)
         self.saveObjectRequested.emit(fname)
         data['nbpoint'] = self.size_callback() if self.size_callback is not None else 0
 
@@ -220,7 +212,7 @@ class DatabaseEditor(QDialog, database_ui.Ui_Dialog):
                     item.setText(2, tree['date'].strftime('%Y/%m/%d %H:%M:%S'))
                     parent_ref[tree['_id']] = item
                 else:
-                    if not parent_ref.has_key(tree['parent']):
+                    if tree['parent'] not in parent_ref:
                         allchecked = False
                         continue
                     parent = parent_ref[tree['parent']]
@@ -303,7 +295,7 @@ class DatabaseEditor(QDialog, database_ui.Ui_Dialog):
 
         self.tableWidget.setRowCount(len(data))
         index = 0
-        for d in data.iteritems():
+        for d in data.items():
             key, value = d
             self.tableWidget.setItem(index, 0, QTableWidgetItem(str(key)))
             self.tableWidget.setItem(index, 1, QTableWidgetItem(str(value)))
@@ -318,7 +310,7 @@ class DatabaseEditor(QDialog, database_ui.Ui_Dialog):
             return
 
         data = MongoDBManip.find_one({'_id': item.object_id}, {'name': 1, 'fileURL': 1})
-        fname = str('/tmp/' + str(os.getpid()) + '/' + data['name'] + '.zip')
+        fname = str(tempfile.gettempdir() + '/PlantScan3D/' + str(os.getpid()) + '/' + data['name'] + '.zip')
 
         def callback(connection):
             self.close()

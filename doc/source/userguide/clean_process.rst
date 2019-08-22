@@ -166,29 +166,35 @@ You can also test this algorithm in a python script (See: :download:`point cloud
 
     Viewer.display(Scene([shape1, shape2]))
 
-Poles Selection
----------------
+Pole Selection
+--------------
 
-The poles selection (**Points -> Selection -> Pole**) is base on a Ransac algorithm,
-it takes two points randomly in the point cloud, construct a cylinder with this two points (direction between the points and a constant radius (see below: the first parameter)),
-check the number of points inside it and calculate a score of it. This step is repeat x times (see below: the second parameter).
-Finally the algorithm take the cylinder with the best score.
+The pole selection (**Points -> Selection -> Pole**) is based on the RANSAC algorithm.
+Using the graphical interface, you will be asked the click on each pole you want to select. When you're done, press Escape to leave the selection mode.
+Selecting a point allows the RANSAC algortihm to concentrate on a specific area of the point cloud, therefore significantly decreasing the computation time.
 
-.. image:: /images/treatment/pole_param.png
-    :scale: 50
+.. image:: /images/treatment/pole_start_selection.png
+
+.. image:: /images/treatment/pole_select_pole.png
+
+This algorithm constructs cylinders between two randomly chosen points. Each of these cylinders must pass through the previously selected point.
+Then, it counts the number of points inside and compute a score with it. This step is repeated 10.000 times.
+Finally, the algorithm selects the cylinder with the best score.
+
+.. image:: /images/treatment/pole_pole_selected.png
+
++---------------------------------------------------+-----------------------------------------------------+
+| Before                                            | After                                               |
++===================================================+=====================================================+
+| .. image:: /images/treatment/pole_select_pole.png | .. image:: /images/treatment/pole_pole_selected.png |
++---------------------------------------------------+-----------------------------------------------------+
+
+You can also use this algorithm in a Python script (See: :download:`point cloud used of this example </scans_example/winter_step_03.ply>`)
 
 The parameters are:
-    * Estimate radius of the pole : the radius of the cylinder created by the Ransac.
-    * Radius tolerance : the percent of tolerance inside and outside the cylinder to take the points.
-    * Number of algorithm iteration : this parameter change the number of cylinders generated before take the best one. This parameters impact the processing time.
-
-+---------------------------------------+----------------------------------------------+
-| Before                                | After                                        |
-+=======================================+==============================================+
-| .. image:: /images/treatment/pole.png | .. image:: /images/treatment/pole_result.png |
-+---------------------------------------+----------------------------------------------+
-
-You can also test this algorithm in a python script (See: :download:`point cloud used of this example </scans_example/winter_step_03.ply>`)
+    * The radius of the cylinder created by the Ransac.
+    * The percent of tolerance inside and outside the cylinder to take the points.
+    * The number of cylinders generated before take the best one. This parameters impact the processing time.
 
 .. code-block:: python
 

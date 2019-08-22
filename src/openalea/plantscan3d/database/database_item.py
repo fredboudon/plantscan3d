@@ -2,38 +2,27 @@ try:
     import openalea.plantscan3d.py2exe_release
 
     py2exe_release = True
-    print 'Py2ExeRelease'
+    print('Py2ExeRelease')
 except ImportError:
     py2exe_release = False
-    print 'StdRelease'
+    print('StdRelease')
 
-if not py2exe_release:
-    import openalea.vpltk.qt
-    from openalea.vpltk.qt.QtCore import *
-    from openalea.vpltk.qt.QtGui import *
-
-else:
-    import sip
-
-    sip.setapi('QString', 2)
-    sip.setapi('QVariant', 2)
-
-    from PyQt4.QtCore import *
-    from PyQt4.QtGui import *
+from openalea.plantgl.gui.qt.QtCore import *
+from openalea.plantgl.gui.qt.QtGui import *
 
 import os
 
 if not py2exe_release:
-    import openalea.plantscan3d.compileUi as cui
+    import openalea.plantscan3d.ui_compiler as cui
 
     ldir = os.path.dirname(__file__)
     cui.check_ui_generation(os.path.join(ldir, 'database_item.ui'))
 
-import database_item_ui
+from . import database_item_ui
 import datetime
-from properties.properties import *
-from server_manip import MongoDBManip, Binary, ObjectId, Already_used_key_db
-from tags_editor import TagsEditor
+from .properties.properties import *
+from .server_manip import MongoDBManip, Binary, ObjectId, Already_used_key_db
+from .tags_editor import TagsEditor
 
 class Database_Item(QDialog, database_item_ui.Ui_Dialog):
     otherProperties = None  # type: dict[str, Property]
@@ -111,14 +100,14 @@ class Database_Item(QDialog, database_item_ui.Ui_Dialog):
         self.deletedProperies = []
 
         if nonebaseData is not None:
-            for data in nonebaseData.iteritems():
+            for data in nonebaseData.items():
                 key, value = data
                 prop = None  # type: Property
                 if type(value) == datetime.datetime:
                     prop = DateProperty(key)
                 elif type(value) == int or type(value) == float:
                     prop = FloatValueProperty(key)
-                elif type(value) == str or type(value) == unicode:
+                elif type(value) == str or type(value) == str:
                     prop = TextProperty(key)
 
                 self.propertiesVLayout.addWidget(prop)
@@ -128,9 +117,9 @@ class Database_Item(QDialog, database_item_ui.Ui_Dialog):
                 prop.setValue(value)
                 prop.deleteButton.setIcon(QIcon(':/images/icons/delete.png'))
 
-        QObject.connect(self.buttonBox, SIGNAL('accepted()'), self.valid)
-        QObject.connect(self.addPropertiesButton, SIGNAL('clicked()'), self.addPropertiy)
-        QObject.connect(self.editTagsButton, SIGNAL('clicked()'), self.openTagsEditor)
+        self.buttonBox.accepted.connect(self.valid)
+        self.addPropertiesButton.clicked.connect(self.addPropertiy)
+        self.editTagsButton.clicked.connect(self.openTagsEditor)
 
     def openTagsEditor(self):
         if self.tag_editor.exec_():
@@ -196,7 +185,7 @@ class Database_Item(QDialog, database_item_ui.Ui_Dialog):
                     'thumbnail': thumbnail
                 }
             }
-            for item in self.otherProperties.iteritems():
+            for item in self.otherProperties.items():
                 key, prop = item
                 data['$set'][key] = prop.getValue()
 
@@ -227,7 +216,7 @@ class Database_Item(QDialog, database_item_ui.Ui_Dialog):
                 'tags': self.tags,
                 'date': datetime.datetime.now()
             }
-            for item in self.otherProperties.iteritems():
+            for item in self.otherProperties.items():
                 key, prop = item
                 data[key] = prop.getValue()
 

@@ -1,5 +1,5 @@
-from PyQt4.QtCore import *
-from PyQt4.QtGui import *
+from PyQt5.QtCore import *
+from PyQt5.QtGui import *
 from PyQGLViewer import *
 from OpenGL.GL import *
 
@@ -28,7 +28,7 @@ class GLSegmentEditor(QGLViewer):
         try:
             self.glrenderer.setGLFrame(self)
         except:
-            print 'no text on GL Display'
+            print('No text on GL Display')
 
     def init(self):
         self.camera().setViewDirection(Vec(0, -1, 0))
@@ -93,7 +93,7 @@ class GLSegmentEditor(QGLViewer):
                                             "",
                                             "Points Files (*.asc *.xyz *.pwn *.pts *.bgeom *.ply);;All Files (*.*)")
         if not fname: return
-        fname = str(fname)
+        fname = str(fname[0])
 
         points = self.points.subset(self.segmented_points[self.tree_seleted][0])
         Scene([PointSet(points)]).save(fname)

@@ -1,0 +1,169 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>Slider</class>
+ <widget class="QWidget" name="Slider">
+  <layout class="QVBoxLayout" name="verticalLayout">
+   <property name="spacing">
+    <number>0</number>
+   </property>
+   <property name="leftMargin">
+    <number>0</number>
+   </property>
+   <property name="topMargin">
+    <number>0</number>
+   </property>
+   <property name="rightMargin">
+    <number>0</number>
+   </property>
+   <property name="bottomMargin">
+    <number>0</number>
+   </property>
+   <item>
+    <layout class="QHBoxLayout" name="horizontalLayout">
+     <property name="spacing">
+      <number>5</number>
+     </property>
+     <property name="leftMargin">
+      <number>5</number>
+     </property>
+     <property name="rightMargin">
+      <number>5</number>
+     </property>
+     <property name="bottomMargin">
+      <number>5</number>
+     </property>
+     <item>
+      <widget class="QLabel" name="titleLabel">
+       <property name="text">
+        <string>Value :</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <spacer name="horizontalSpacer">
+       <property name="orientation">
+        <enum>Qt::Horizontal</enum>
+       </property>
+       <property name="sizeHint" stdset="0">
+        <size>
+         <width>0</width>
+         <height>0</height>
+        </size>
+       </property>
+      </spacer>
+     </item>
+     <item>
+      <widget class="QLineEdit" name="valueLineEdit">
+       <property name="minimumSize">
+        <size>
+         <width>45</width>
+         <height>19</height>
+        </size>
+       </property>
+       <property name="maximumSize">
+        <size>
+         <width>45</width>
+         <height>19</height>
+        </size>
+       </property>
+       <property name="text">
+        <string>0</string>
+       </property>
+       <property name="alignment">
+        <set>Qt::AlignCenter</set>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item>
+    <layout class="QVBoxLayout" name="sliderLayout">
+     <property name="spacing">
+      <number>0</number>
+     </property>
+     <item>
+      <widget class="QWidget" name="sliderBar" native="true">
+       <property name="minimumSize">
+        <size>
+         <width>0</width>
+         <height>3</height>
+        </size>
+       </property>
+       <property name="maximumSize">
+        <size>
+         <width>16777215</width>
+         <height>3</height>
+        </size>
+       </property>
+       <property name="styleSheet">
+        <string notr="true">QWidget {
+	background-color: rgb(176, 176, 176);
+	margin-left: 5px;
+	margin-right: 5px;
+}
+
+QWidget:disabled {
+	background-color: rgb(194, 194, 194);
+}</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <layout class="QHBoxLayout" name="handleLayout">
+       <property name="spacing">
+        <number>0</number>
+       </property>
+       <item>
+        <spacer name="handleSpacer">
+         <property name="orientation">
+          <enum>Qt::Horizontal</enum>
+         </property>
+         <property name="sizeType">
+          <enum>QSizePolicy::Maximum</enum>
+         </property>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>0</width>
+           <height>0</height>
+          </size>
+         </property>
+        </spacer>
+       </item>
+       <item>
+        <widget class="QLabel" name="handleImage">
+         <property name="minimumSize">
+          <size>
+           <width>12</width>
+           <height>11</height>
+          </size>
+         </property>
+         <property name="maximumSize">
+          <size>
+           <width>12</width>
+           <height>11</height>
+          </size>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <spacer name="horizontalSpacer_2">
+         <property name="orientation">
+          <enum>Qt::Horizontal</enum>
+         </property>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>0</width>
+           <height>0</height>
+          </size>
+         </property>
+        </spacer>
+       </item>
+      </layout>
+     </item>
+    </layout>
+   </item>
+  </layout>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>

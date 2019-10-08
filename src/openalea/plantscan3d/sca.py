@@ -1,5 +1,5 @@
 from openalea.plantgl.all import *
-from mtgmanip import pgltree2mtg
+from .mtgmanip import pgltree2mtg
 
 def adaptivespacecolonization_method(mtg, startfrom, pointList, densities, mingrowthlength, maxgrowthlength, growthlengthfunc, killradiusratio, perceptionradiusratio, min_nb_pt_per_bud, filter_short_branch = False, angle_between_trunk_and_lateral = 60):
     rootpos = Vector3(mtg.property('position')[startfrom])
@@ -12,7 +12,7 @@ def adaptivespacecolonization_method(mtg, startfrom, pointList, densities, mingr
     deltabinlength = maxgrowthlength-mingrowthlength
     binlength = lambda x: mingrowthlength + deltabinlength * normeddensity(x) 
 
-    print maxgrowthlength, maxgrowthlength*killradiusratio, maxgrowthlength*perceptionradiusratio
+    print(maxgrowthlength, maxgrowthlength*killradiusratio, maxgrowthlength*perceptionradiusratio)
 
     class CustomSCA(SpaceColonization):
         def __init__(self, *args):

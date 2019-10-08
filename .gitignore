@@ -60,9 +60,12 @@ docs/_build/
 # PyBuilder
 target/
 
-.mtgeditor.xml
-
 #Ipython Notebook
 .ipynb_checkpoints
 
-.mtgeditor.xml
+# JetBrains
+.idea
+*_ui.py
+*_rc.py
+/src/openalea/plantscan3d/.plantscan3d.xml
+/.qglviewer.xml

@@ -9,7 +9,7 @@ from openalea.deploy.metainfo import read_metainfo
 
 # Reads the metainfo file
 metadata = read_metainfo('metainfo.ini', verbose=True)
-for key,value in metadata.iteritems():
+for key,value in metadata.items():
     exec("%s = '%s'" % (key, value))
 
 # Packages list, namespace and root directory of packages
@@ -58,7 +58,7 @@ setup(
     include_package_data = True,
     # (you can provide an exclusion dictionary named exclude_package_data to remove parasites).
     # alternatively to global inclusion, list the file to include   
-    #package_data = {'' : ['*.pyd', '*.so'],},
+    package_data = {'' : ['*.ui', '*.rc', '*.qrc'],},
 
     # postinstall_scripts = ['',],
 

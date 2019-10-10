@@ -21,7 +21,6 @@ def mtg2pgltree(mtg):
     parents = [vertex2node[mtg.parent(vid)] if mtg.parent(vid) else vertex2node[vid] for vid in vertices]
     return nodes, parents, vertex2node
 
-
 def pgltree2mtg(mtg, startfrom, parents, positions, radii=None, filter_short_branch=False, angle_between_trunk_and_lateral=60, nodelabel='N'):
     from math import degrees, acos
 
@@ -44,7 +43,7 @@ def pgltree2mtg(mtg, startfrom, parents, positions, radii=None, filter_short_bra
         if len(mchildren) != len(children[root]):
             removed = list(set(children[root]) - set(mchildren))
 
-    mchildren.sort(lambda x, y: -cmp(clength[x], clength[y]))
+    mchildren.sort(key=lambda x: -clength[x])
     toprocess = [(c, startfrom, '<' if i == 0 else '+') for i, c in enumerate(mchildren)]
     while len(toprocess) > 0:
         nid, parent, edge_type = toprocess.pop(0)
@@ -60,7 +59,7 @@ def pgltree2mtg(mtg, startfrom, parents, positions, radii=None, filter_short_bra
                 if len(mchildren) != len(children[nid]):
                     removed = list(set(children[nid]) - set(mchildren))
             if len(mchildren) > 0:
-                mchildren.sort(lambda x, y: -cmp(clength[x], clength[y]))
+                mchildren.sort(key=lambda x: -clength[x])
                 first_edge_type = '<'
                 langle = degrees(acos(dot(direction(pos - npositions[parent]), direction(positions[mchildren[0]] - pos))))
                 if langle > angle_between_trunk_and_lateral:

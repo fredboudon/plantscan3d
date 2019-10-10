@@ -9,6 +9,7 @@ except ImportError:
 
 from openalea.plantgl.gui.qt.QtCore import *
 from openalea.plantgl.gui.qt.QtGui import *
+from openalea.plantgl.gui.qt.QtWidgets import *
 
 import os
 

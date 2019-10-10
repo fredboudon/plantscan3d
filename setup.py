@@ -43,7 +43,7 @@ setup(
     package_dir= package_dir,
 
     # Namespace packages creation by deploy
-    #namespace_packages = [namespace],
+    namespace_packages = ['openalea'],
     #create_namespaces = False,
     zip_safe= False,
 
@@ -68,7 +68,7 @@ setup(
         #'console_scripts': [
         #       'fake_script = openalea.fakepackage.amodule:console_script', ],
         'gui_scripts': [
-              'plantscan3d = openalea.plantscan3d.mtgeditor:main',],
+              'plantscan3d = openalea.plantscan3d.main_window:main',],
         #	'wralea': wralea_entry_points
         },
     )

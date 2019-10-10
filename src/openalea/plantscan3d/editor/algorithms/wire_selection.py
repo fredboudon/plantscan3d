@@ -23,6 +23,7 @@ class WireSelectionAlgorithm:
             'Press Escape if you want to cancel.')
 
         self.enabled = True
+        self.editor.cursor.set(self.editor.cursor.PointSelect)
 
     def stop(self):
         """
@@ -31,6 +32,7 @@ class WireSelectionAlgorithm:
         :return: None
         """
         self.wireStartPoints = []
+        self.editor.cursor.restore()
         self.enabled = False
 
     def isEnabled(self) -> bool:

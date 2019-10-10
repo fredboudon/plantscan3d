@@ -1355,7 +1355,8 @@ class MainViewer(QGLViewer):
 
         if self.mode == self.Selection:
             # Updates rectangle_ coordinates and redraws rectangle
-            self.rectangleSelect.setBottomRight(event.pos())
+            if self.rectangleSelect:
+                self.rectangleSelect.setBottomRight(event.pos())
             self.updateGL()
         else:
             QGLViewer.mouseMoveEvent(self, event)
@@ -1381,20 +1382,22 @@ class MainViewer(QGLViewer):
         elif self.mode & self.TagProperty:
             self.setMode(self.TagProperty)
         elif self.mode == self.Selection:
-            self.rectangleSelect = self.rectangleSelect.normalized()
-            # Define selection window dimensions
-            self.setSelectRegionWidth(self.rectangleSelect.width())
-            self.setSelectRegionHeight(self.rectangleSelect.height())
-            # Compute rectangle center and perform selection
+            if self.rectangleSelect:
+                self.rectangleSelect.setBottomRight(event.pos())
+                self.rectangleSelect = self.rectangleSelect.normalized()
+                # Define selection window dimensions
+                self.setSelectRegionWidth(self.rectangleSelect.width())
+                self.setSelectRegionHeight(self.rectangleSelect.height())
+                # Compute rectangle center and perform selection
 
-            if self.selectBuffSize != self.selectBufferSize():
-                print("setSelectBufferSize")
-                self.setSelectBufferSize(self.selectBuffSize)
-            self.select(self.rectangleSelect.center())
-            self.rectangleSelect = None
-            # Update display to show new selected objects
-            self.createPointsRepresentation()
-            self.glrenderer.renderingMode = self.glrenderer.Dynamic
+                if self.selectBuffSize != self.selectBufferSize():
+                    print("setSelectBufferSize")
+                    self.setSelectBufferSize(self.selectBuffSize)
+                self.select(self.rectangleSelect.center())
+                self.rectangleSelect = None
+                # Update display to show new selected objects
+                self.createPointsRepresentation()
+                self.glrenderer.renderingMode = self.glrenderer.Dynamic
             self.setMode(self.Rotate)
         else:
             self.setMode(self.Rotate)

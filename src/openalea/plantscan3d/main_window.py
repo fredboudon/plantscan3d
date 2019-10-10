@@ -9,20 +9,23 @@ except ImportError:
 
 from openalea.plantgl.gui.qt.QtCore import *
 from openalea.plantgl.gui.qt.QtGui import *
+from openalea.plantgl.gui.qt.QtWidgets import *
+
+import os
+from os.path import join
+ldir = os.path.dirname(__file__)
 
 if not py2exe_release:
     from . import ui_compiler as cui
 
-    ldir = os.path.dirname(__file__)
-    cui.check_ui_generation(os.path.join(ldir, 'main_window.ui'))
-    cui.check_rc_generation(os.path.join(ldir, 'plantscan3d.qrc'))
+    cui.check_ui_generation(join(ldir, 'main_window.ui'))
+    cui.check_rc_generation(join(ldir, 'plantscan3d.qrc'))
 
 from . import main_window_ui
 from .settings import Settings
 from .database import dbeditor, db_connection
 from .segmenteditor import SegmentEditor
 from .module_loader import ModuleLoader
-import os
 
 class MainWindow(QMainWindow, main_window_ui.Ui_MainWindow):
 
@@ -188,7 +191,7 @@ class MainWindow(QMainWindow, main_window_ui.Ui_MainWindow):
         except:
             pass
 
-        self.moduleLoader = ModuleLoader('./src/openalea/plantscan3d/modules.conf')
+        self.moduleLoader = ModuleLoader(join(ldir,'modules.conf'))
 
     def restoreWindowState(self):
         """
@@ -356,7 +359,7 @@ def main():
     window = MainWindow()
     window.loadModules()
     window.show()
-    return app.exec()
+    return app.exec_()
 
 
 if __name__ == '__main__':

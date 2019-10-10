@@ -2,18 +2,17 @@ try:
     import openalea.plantscan3d.py2exe_release
 
     py2exe_release = True
-    print('Py2ExeRelease')
 except ImportError:
     py2exe_release = False
-    print('StdRelease')
 
 from openalea.plantgl.gui.qt.QtCore import *
 from openalea.plantgl.gui.qt.QtGui import *
+from openalea.plantgl.gui.qt.QtWidgets import *
 
 import os
 
 if not py2exe_release:
-    import src.openalea.plantscan3d.ui_compiler as cui
+    from openalea.plantscan3d import ui_compiler as cui
 
     ldir = os.path.dirname(__file__)
     cui.check_ui_generation(os.path.join(ldir, 'segmenteditor.ui'))

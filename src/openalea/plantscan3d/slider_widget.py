@@ -7,14 +7,17 @@ except ImportError:
 from openalea.plantgl.gui.qt.QtCore import *
 from openalea.plantgl.gui.qt.QtGui import *
 
+ldir = os.path.dirname(__file__)
+
 if not py2exe_release:
     # Qt UI Build
     from . import ui_compiler as cui
-    ldir = os.path.dirname(__file__)
     cui.check_ui_generation(os.path.join(ldir, 'slider_widget.ui'))
 
 from . import slider_widget_ui
 import re
+
+
 
 class SliderWidget(QWidget, slider_widget_ui.Ui_Slider):
 
@@ -40,7 +43,7 @@ class SliderWidget(QWidget, slider_widget_ui.Ui_Slider):
         self.maxDecimals = 2
 
         # Handle
-        self.handleImage.setPixmap(QPixmap("src/openalea/plantscan3d/images/slider.png"))
+        self.handleImage.setPixmap(QPixmap(os.path.join(ldir,"images","slider.png")))
 
         # Events
         self.valueLineEdit.textEdited.connect(self.__onValueChanged)

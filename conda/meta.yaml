@@ -1,9 +1,9 @@
 # do not edit the following line. It will be updated automatically
-{% set version = "1.0.0" %}
+{% set data = load_setup_py_data() %}
 
 package:
   name: openalea.plantscan3d
-  version: {{ version }}
+  version: {{ data.get('version') }}
 
 source:
   path: ..
@@ -15,7 +15,7 @@ about:
 
 build:
   preserve_egg_dir: True
-  number: 3
+  number: 0
 
 requirements:
   build:

@@ -3,14 +3,16 @@ __revision__ = "$Id: $"
 
 import sys
 import os
+from os.path import join as pj
 
 from setuptools import setup, find_packages
-from openalea.deploy.metainfo import read_metainfo
 
-# Reads the metainfo file
-metadata = read_metainfo('metainfo.ini', verbose=True)
-for key,value in metadata.items():
-    exec("%s = '%s'" % (key, value))
+versioninfo = {}
+p3ddir = pj(os.path.dirname(__file__),'src', 'openalea', 'plantscan3d')
+with open(pj(p3ddir,"__version__.py")) as fp:
+    exec(fp.read(), versioninfo)
+
+globals().update(versioninfo)
 
 # Packages list, namespace and root directory of packages
 
@@ -22,11 +24,6 @@ package_dir = dict( [('',pkg_root_dir)] + [(namespace + "." + pkg, pkg_root_dir 
 
 
 
-# dependencies to other eggs
-setup_requires = ['openalea.deploy']
-
-# web sites where to find eggs
-dependency_links = ['http://openalea.gforge.inria.fr/pi']
 setup(
     name=name,
     version=version,
@@ -46,12 +43,6 @@ setup(
     namespace_packages = ['openalea'],
     #create_namespaces = False,
     zip_safe= False,
-
-    # Dependencies
-    setup_requires = setup_requires,
-    dependency_links = dependency_links,
-
-
 
     # Eventually include data in your package
     # (flowing is to include all versioned files other than .py)

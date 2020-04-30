@@ -1,17 +1,34 @@
 from openalea.plantgl.all import *
 import numpy as np
 
+class Line:
+    def __init__(self, position, direction, extend):
+        self.position = position
+        self.direction = direction
+        self.extend = extend
+    def __repr__(self):
+        return 'Line('+str(self.position)+','+str(self.direction)+','+str(self.extend)+')'
+    
+    @staticmethod
+    def estimate(positions):
+        idx = range(len(positions))
+        pos = centroid_of_group(positions, idx)
+        dir = direction(pointset_orientation(positions,idx))
+        if dot(pos-positions[0],dir) < 0: dir *= -1
+        extend = max([abs(dot(p-pos,dir)) for p in positions])
+        return Line(pos,dir,extend)
 
 def load_points(filename):
     s = Scene(filename)
     points = s[0].geometry.geometry.pointList
+    #points.translate(s[0].geometry.translation)
     return points
 
 
 def subsample(points, ptsnb):
     from random import sample
     nbPoints = len(points)
-    subset = sample(xrange(nbPoints), ptsnb)
+    subset = sample(range(nbPoints), ptsnb)
     return points.subset(subset)
 
 # Reconstrution of the mtg
@@ -35,7 +52,7 @@ def filter_points(points, densityfilterratio = 0.05, #densityradius = None,
     densitythreshold = mind + (maxd-mind) * densityfilterratio
     # Determine index of points to filter
     nbPoints = len(points)
-    subset = [i for i in xrange(nbPoints) if densities[i] < densitythreshold]
+    subset = [i for i in range(nbPoints) if densities[i] < densitythreshold]
     # Return result
     return points.opposite_subset(subset)
 
@@ -43,19 +60,27 @@ try:
     import mtgmanip as mm
     from xumethod import xu_method
     import serial
-except ImportError, ie:
+except ImportError as ie:
     import openalea.plantscan3d.mtgmanip as mm
     from openalea.plantscan3d.xumethod import xu_method
     import openalea.plantscan3d.serial as serial
 
+def find_root(points):
+    center = points.getCenter()
+    pminid,pmaxid = points.getZMinAndMaxIndex()
+    zmin = points[pminid].z
+    zmax = points[pmaxid].z
+    initp = center
+    initp.z = zmin
+    return points.findClosest(initp)[0], zmin, zmax
+
 
 def skeleton(points, binratio = 50, k = 20):
 
-    mini,maxi = points.getZMinAndMaxIndex()
-    root = Vector3(points[mini]) 
+    root, zmin, zmax = find_root(points)
 
     mtg = mm.initialize_mtg(root)
-    zdist = points[maxi].z-points[mini].z
+    zdist = zmax-zmin
     binlength = zdist / binratio
 
     vtx = list(mtg.vertices(mtg.max_scale()))
@@ -90,15 +115,20 @@ def node_length(g,n):
     else:
         return 0
    
-def node_angle(g, n ):
+def node_angle(g, n, refdir = (0,0,1) ):
     from numpy.linalg import norm
     parent = g.parent(n)
     if parent:
         p1 = node_position(g,n)
         p0 = node_position(g,parent)
-        return horizontalangle(p0,p1)
+        return angle(p1-p0, refdir)
     else:
         return 0
+    
+def axis_extremities_angle(g, n, refdir = (0,0,1) ):
+    from numpy.linalg import norm
+    p0, p1 = axis_extremities(g,n)
+    return angle(p1 - p0, refdir)
     
 def length_to_axis_begin(g, n):
     length = node_length(g,n)
@@ -118,11 +148,15 @@ def axis_extremities(g,n):
 
 # Axis characterization
 
-def horizontalangle(p1, p2):
+def horizontalangle(direction):
     from math import degrees
     from numpy.linalg import norm
-    direction = p1-p2
     refdir = np.array([direction[0],direction[1],0])
+    return angle(direction, refdir)
+ 
+def angle(direction, refdir = (0,0,1)):
+    from math import degrees
+    from numpy.linalg import norm
     cosinus = np.dot(direction,refdir)
     vy = np.cross(direction,refdir)
     sinus = norm(vy)
@@ -151,6 +185,10 @@ def axis_length_histogram(g):
     hist(dist, bins=np.arange(0, max(dist), 0.2))
     show()
 
+def trunk_direction(g):
+    positions = [node_position(g, v) for v in trunk_nodes(g)]
+    line = Line.estimate(positions)
+    return line.direction
 # Trunk Characterization
 
 def trunk_length(g):

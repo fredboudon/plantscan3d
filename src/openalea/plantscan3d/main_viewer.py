@@ -170,6 +170,8 @@ class MainViewer(QGLViewer):
         QGLViewer.__init__(self, parent)
         self.setStateFileName('.plantscan3d.xml')
 
+        self.setObjectName('PS3DMainWindow')
+
         self.mode = None
         self.selectMode = self.HybridSelect
 
@@ -2453,6 +2455,17 @@ class MainViewer(QGLViewer):
             root = Vector3(0, 0, 0)
         else:
             root = Vector3(self.points.pointList[self.points.pointList.getZMinIndex()])
+        self.addRoot(root)
+
+    def addBottomCenterRoot(self):
+        if self.points is None:
+            root = Vector3(0, 0, 0)
+        else:
+            points = self.points.pointList
+            pmin,pmax = points.getBounds()
+            initp = (pmax+pmin)/2
+            initp.z = pmin.z
+            root = points.findClosest(initp)[0]
         self.addRoot(root)
 
     def addTopRoot(self):

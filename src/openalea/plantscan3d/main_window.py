@@ -144,6 +144,7 @@ class MainWindow(QMainWindow, main_window_ui.Ui_MainWindow):
         self.actionSmoothPosition.triggered.connect(self.mtgeditor.smoothPosition)
 
         self.actionRootBottom.triggered.connect(self.mtgeditor.addBottomRoot)
+        self.actionRootBottomCenter.triggered.connect(self.mtgeditor.addBottomCenterRoot)
         self.actionRootTop.triggered.connect(self.mtgeditor.addTopRoot)
 
         self.actionXuReconstruction.triggered.connect(self.mtgeditor.xuReconstruction)

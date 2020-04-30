@@ -69,7 +69,7 @@ def mtg_to_scene(mtg, positionproperty='position', radiusproperty = 'radius'):
     section = Polyline2D.Circle(1, 30)
 
     def get_radius(nodeid):
-        val = mtg.property(radiusproperty).get(nodeID, 0)
+        val = mtg.property(radiusproperty).get(nodeid, 0)
         if val is None: val = 0
         return (val, val)
 

@@ -22,14 +22,14 @@
 #from openalea.deploy.metainfo import read_metainfo
 import os
 
+
 versioninfo = {}
-p3ddir = pj(os.path.dirname(__file__),'..','..','src', 'openalea', 'plantscan3d')
-with open(pj(p3ddir,"__version__.py")) as fp:
+p3ddir = os.path.normcase(os.path.join(os.path.dirname(__file__),'..','..','src', 'openalea', 'plantscan3d'))
+with open(os.path.join(p3ddir,"__version__.py")) as fp:
     exec(fp.read(), versioninfo)
 
 for key in ['version','release', 'name']:
     globals()[key] = versioninfo[key]
-
 project = u'PlantScan3D'
 copyright = u'2018, Frederic Boudon, Julien Benoit'
 author = u'Frederic Boudon, Julien Benoit'

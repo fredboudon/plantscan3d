@@ -11,8 +11,7 @@ PlantScan3D User Guide
 :Date: |today|
 
 This manual details functions, modules, and objects included in
-PlantScan3D, describing what they are and what they do. For a complete
-reference guide, see :ref:`refmanual`.
+PlantScan3D, describing what they are and what they do.
 
 .. warning::
 

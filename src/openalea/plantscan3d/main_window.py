@@ -356,10 +356,14 @@ class MainWindow(QMainWindow, main_window_ui.Ui_MainWindow):
 
 
 def main():
+    import sys
     app = QApplication([])
     window = MainWindow()
     window.loadModules()
     window.show()
+    if len(sys.argv) > 1:
+        for fname in sys.argv[1:]:
+            window.mtgeditor.openFile(fname)
     return app.exec_()
 
 

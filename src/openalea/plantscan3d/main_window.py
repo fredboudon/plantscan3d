@@ -5,7 +5,7 @@ try:
     print('Py2ExeRelease')
 except ImportError:
     py2exe_release = False
-    print('StdRelease')
+    #print('StdRelease')
 
 from openalea.plantgl.gui.qt.QtCore import *
 from openalea.plantgl.gui.qt.QtGui import *
@@ -354,6 +354,49 @@ class MainWindow(QMainWindow, main_window_ui.Ui_MainWindow):
         self.workerObject.result.connect(self.test_connection_callback)
         self.workerThread.start()
 
+
+def excepthook(excType, excValue, tracebackobj):
+    """
+    Global function to catch unhandled exceptions.
+    
+    @param excType exception type
+    @param excValue exception value
+    @param tracebackobj traceback object
+    """
+    separator = '-' * 80
+    logFile = "plantscan3d.log"
+    timeString = time.strftime("%Y-%m-%d, %H:%M:%S")
+    notice = \
+"""PlantScan3D v%s
+%s
+An unhandled exception occurred. The system may become unstable.
+A log has been written to "%s".
+Please report the problem at https://github.com/fredboudon/plantscan3d/issues.
+%s
+Error information:
+Date: %s
+""" % (psc_version, separator, logFile, separator, timeString)
+    
+    
+    tbinfofile = io.StringIO()
+    traceback.print_tb(tracebackobj, None, tbinfofile)
+    tbinfofile.seek(0)
+    tbinfo = tbinfofile.read()
+    errmsg = '%s: \n%s' % (str(excType), str(excValue))
+    sections = [separator, errmsg, separator, tbinfo]
+    msg = '\n'.join(sections)
+    noticelog = '\n'.join([psc_version, separator, timeString])+'\n'
+    with open(logFile, "w") as f:
+        f.write(noticelog)
+        f.write(msg)
+    errorbox = QMessageBox()
+    errorbox.setText(str(notice)+str(msg))
+    errorbox.exec_()
+
+from .__version__ import version as psc_version
+import sys, traceback, time, io
+sys._excepthook = sys.excepthook
+sys.excepthook = excepthook
 
 def main():
     import sys

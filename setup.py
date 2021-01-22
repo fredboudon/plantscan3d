@@ -17,7 +17,7 @@ globals().update(versioninfo)
 # Packages list, namespace and root directory of packages
 
 pkg_root_dir = 'src'
-pkgs = [ pkg for pkg in find_packages(pkg_root_dir)]
+pkgs = [ pkg for pkg in find_packages(pkg_root_dir)]+['openalea.plantscan3d.images','openalea.plantscan3d.images.cursors']
 top_pkgs = [pkg for pkg in pkgs if  len(pkg.split('.')) < 2]
 packages = pkgs
 package_dir = dict( [('',pkg_root_dir)] + [(namespace + "." + pkg, pkg_root_dir + "/" + pkg) for pkg in top_pkgs] )
@@ -49,7 +49,7 @@ setup(
     include_package_data = True,
     # (you can provide an exclusion dictionary named exclude_package_data to remove parasites).
     # alternatively to global inclusion, list the file to include   
-    package_data = {'' : ['*.ui', '*.rc', '*.qrc','*.conf'],},
+    package_data = {'' : ['*.ui', '*.rc', '*.qrc','*.conf','*.png'],},
 
     # postinstall_scripts = ['',],
 

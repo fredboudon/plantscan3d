@@ -468,9 +468,9 @@ class MainViewer(QGLViewer):
         # self.setHandlerKeyboardModifiers(QGLViewer.CAMERA, Qt.ControlModifier)
         # self.setMouseBinding(Qt.LeftButton,QGLViewer.FRAME,QGLViewer.TRANSLATE)
 
-        self.setMouseBindingDescription(Qt.ShiftModifier + Qt.LeftButton, "Rectangular selection")
-        self.setMouseBindingDescription(Qt.LeftButton, "Camera/Control Points manipulation")
-        self.setMouseBindingDescription(Qt.LeftButton, "When double clicking on a line, create a new line", True)
+        self.setMouseBindingDescription(Qt.ShiftModifier, Qt.LeftButton, "Rectangular selection")
+        self.setMouseBindingDescription(Qt.NoModifier, Qt.LeftButton, "Camera/Control Points manipulation")
+        self.setMouseBindingDescription(Qt.NoModifier, Qt.LeftButton, "When double clicking on a line, create a new line", True)
         self.setMode(self.Rotate)
         self.camera().setViewDirection(Vec(0, -1, 0))
         self.camera().setUpVector(Vec(0, 0, 1))
@@ -766,8 +766,8 @@ class MainViewer(QGLViewer):
                     stdmtg = convertToMyMTG(stdmtg)
                 mtg = stdmtg
 
-            self.setMTG(mtg, fname)
             self.modelRep = None
+            self.setMTG(mtg, fname)
             self.showEntireScene()
         except Exception as e:
             tb.print_exception(*sys.exc_info())
@@ -1454,12 +1454,12 @@ class MainViewer(QGLViewer):
         if self.mode != mode:
             if mode == self.Edit or mode == self.Selection:
                 self.mode = mode
-                self.setMouseBinding(Qt.LeftButton, QGLViewer.FRAME, QGLViewer.TRANSLATE)
-                self.setMouseBinding(Qt.RightButton, QGLViewer.FRAME, QGLViewer.NO_MOUSE_ACTION)
+                self.setMouseBinding(Qt.NoModifier, Qt.LeftButton, QGLViewer.FRAME, QGLViewer.TRANSLATE)
+                self.setMouseBinding(Qt.NoModifier, Qt.RightButton, QGLViewer.FRAME, QGLViewer.NO_MOUSE_ACTION)
 
-                self.setMouseBinding(Qt.ControlModifier + QtCore.Qt.LeftButton, QGLViewer.CAMERA, QGLViewer.ROTATE)
-                self.setMouseBinding(Qt.ControlModifier + QtCore.Qt.RightButton, QGLViewer.CAMERA, QGLViewer.TRANSLATE)
-                self.setMouseBinding(Qt.ControlModifier + QtCore.Qt.MiddleButton, QGLViewer.CAMERA, QGLViewer.ZOOM)
+                self.setMouseBinding(Qt.ControlModifier, QtCore.Qt.LeftButton, QGLViewer.CAMERA, QGLViewer.ROTATE)
+                self.setMouseBinding(Qt.ControlModifier, QtCore.Qt.RightButton, QGLViewer.CAMERA, QGLViewer.TRANSLATE)
+                self.setMouseBinding(Qt.ControlModifier, QtCore.Qt.MiddleButton, QGLViewer.CAMERA, QGLViewer.ZOOM)
 
                 # self.setHandlerKeyboardModifiers(QGLViewer.CAMERA, Qt.AltModifier)
                 # self.setHandlerKeyboardModifiers(QGLViewer.FRAME,  Qt.NoModifier)
@@ -1467,11 +1467,11 @@ class MainViewer(QGLViewer):
             elif mode == self.Rotate or mode == self.TagScale or mode == self.TagProperty:
                 self.mode = mode
 
-                self.setMouseBinding(QtCore.Qt.ControlModifier + QtCore.Qt.LeftButton, QGLViewer.FRAME, QGLViewer.TRANSLATE)
-                self.setMouseBinding(QtCore.Qt.ControlModifier + QtCore.Qt.RightButton, QGLViewer.FRAME, QGLViewer.NO_MOUSE_ACTION)
-                self.setMouseBinding(QtCore.Qt.LeftButton, QGLViewer.CAMERA, QGLViewer.ROTATE)
-                self.setMouseBinding(QtCore.Qt.RightButton, QGLViewer.CAMERA, QGLViewer.TRANSLATE)
-                self.setMouseBinding(QtCore.Qt.MiddleButton, QGLViewer.CAMERA, QGLViewer.ZOOM)
+                self.setMouseBinding(QtCore.Qt.ControlModifier, QtCore.Qt.LeftButton, QGLViewer.FRAME, QGLViewer.TRANSLATE)
+                self.setMouseBinding(QtCore.Qt.ControlModifier, QtCore.Qt.RightButton, QGLViewer.FRAME, QGLViewer.NO_MOUSE_ACTION)
+                self.setMouseBinding(Qt.NoModifier, QtCore.Qt.LeftButton, QGLViewer.CAMERA, QGLViewer.ROTATE)
+                self.setMouseBinding(Qt.NoModifier, QtCore.Qt.RightButton, QGLViewer.CAMERA, QGLViewer.TRANSLATE)
+                self.setMouseBinding(Qt.NoModifier, QtCore.Qt.MiddleButton, QGLViewer.CAMERA, QGLViewer.ZOOM)
 
                 # self.setHandlerKeyboardModifiers(QGLViewer.FRAME, Qt.AltModifier)
                 # self.setHandlerKeyboardModifiers(QGLViewer.CAMERA,  Qt.NoModifier)
@@ -1657,7 +1657,6 @@ class MainViewer(QGLViewer):
             # Shape(Group([Translated(ocandidates[i],Text(str(int(100*cmplist[i][1])))) for i in xrange(len(candidates))]),Material((255,255,0)))
             # ]))
             cmplist.sort(key=lambda x: x[1])
-            print(cmplist)
             npos = candidates[cmplist[0][0]]
 
         if self.mtg.is_leaf(nid):

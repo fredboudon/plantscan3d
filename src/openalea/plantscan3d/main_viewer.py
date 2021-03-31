@@ -732,6 +732,7 @@ class MainViewer(QGLViewer):
                                             "MTG Files (*.mtg;*.bmtg);;All Files (*.*)")
         if not fname: return
         fname = str(fname[0])
+        if len(fname) == 0: return
         self.filehistory.add(fname, 'MTG')
         self.readMTG(fname)
         self.open_file.emit()
@@ -742,8 +743,9 @@ class MainViewer(QGLViewer):
         fname = QFileDialog.getOpenFileName(self, "Open MTG file",
                                             initialname,
                                             "MTG Files (*.mtg);;All Files (*.*)")
-        if not fname: return
+        if not fname or len(fname): return
         fname = str(fname[0])
+        if len(fname) == 0: return
         self.filehistory.add(fname, 'iMTG')
         self.readMTG(fname, True)
         self.open_file.emit()
@@ -1998,7 +2000,7 @@ class MainViewer(QGLViewer):
     def filterPointsMin(self):
         if not self.check_input_points(): return
         if not hasattr(self.pointinfo, 'densities'):
-            self.pointRDensityMT(False)
+            self.pointKDensity()
         densityratio, ok = QInputDialog.getInt(self, 'Density Ratio', 'Select the minimum density (percentage ratio) to select points to remove', 5, 1, 100)
         if ok:
             self.createBackup('points')
@@ -2010,7 +2012,7 @@ class MainViewer(QGLViewer):
     def filterPointsMax(self):
         if not self.check_input_points(): return
         if not hasattr(self.pointinfo, 'densities'):
-            self.pointRDensityMT(False)
+            self.pointKDensity()
         densityratio, ok = QInputDialog.getInt(self, 'Density Ratio', 'Select a maximum density (percentage ratio) to select points to remove', 5, 1, 100)
 
         if ok:

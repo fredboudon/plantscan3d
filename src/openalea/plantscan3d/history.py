@@ -16,7 +16,7 @@ class FileHistory:
     def add(self, file, param = None):
         self.files[file] = param
         while len(self.files) >= self.maxsize:
-            del self.files[list(self.files.keys())[-1]]
+            del self.files[list(self.files.keys())[0]]
         self.__discardedmenu = True
 
     def remove(self, file):
@@ -55,7 +55,7 @@ class FileHistory:
                     def callback():
                         return self.callfunc(fname)
                 return callback
-            for fname, param in list(self.files.items()):
+            for fname, param in reversed(list(self.files.items())):
                 self.menu.addAction(basename(fname), callbackgenerator(fname, param))
             self.menu.addSeparator()
             self.menu.addAction('Clear', self.clear)
@@ -77,3 +77,6 @@ class FileHistory:
         settings.setValue("RecentFiles",files)
         files = settings.value("RecentFiles")
         settings.endGroup()
+
+    def __str__(self):
+        return 'FileHistory('+repr(self.files)+')'

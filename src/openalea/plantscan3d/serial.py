@@ -4,7 +4,6 @@ from openalea.plantgl.codec.asc import *
 from openalea.mtg.io import *
 
 
-
 def getpointset(fn):
     scene = Scene(fn)
     points = scene[0].geometry.geometry.pointList
@@ -48,11 +47,37 @@ def writeXYZ(fn, points):
     
     f.write(s)
     f.close()
+
+def max_heigth(g, scale = None):
+    import openalea.mtg.traversal as traversal
+    result = 0
+    if scale is None:
+        scale = g.max_scale()
+    for r in g.roots(scale):
+        mvalue = {}
+        for vid in traversal.post_order(g, r):
+            mvalue[vid] = max([mvalue[c]+1 for c in g.children(vid)]+[1])
+        result = max(mvalue[r], result)
+    return result
+
+def max_order(g, scale = None):
+    import openalea.mtg.traversal as traversal
+    result = 0
+    if scale is None:
+        scale = g.max_scale()
+    for r in g.roots(scale):
+        mvalue = {}
+        for vid in traversal.post_order(g, r):
+            mvalue[vid] = max([mvalue[c]+(1 if g.edge_type(vid) == '+' else 0) for c in g.children(vid)]+[1])
+        result = max(mvalue[r], result)
+    return result
+
     
-def writeMTGfile(fn, g, properties=[('XX','REAL'), ('YY','REAL'), ('ZZ','REAL'), ('radius','REAL')], nb_tab=20):
+def writeMTGfile(fn, g, properties=[('XX','REAL'), ('YY','REAL'), ('ZZ','REAL'), ('radius','REAL')]):
     
     if properties == []:
       properties = [(p, 'REAL') for p in g.property_names() if p not in ['edge_type', 'index', 'label']]
+    nb_tab = max_order(g)
     str = write_mtg(g, properties, nb_tab=nb_tab)
     f = open(fn, 'w')
     f.write(str)

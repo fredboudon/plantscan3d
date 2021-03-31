@@ -19,7 +19,7 @@ class PoleSelectionAlgorithm:
         """
         QMessageBox.information(self.editor, 'Pole Selection',
             'Please click on each pole you want to remove.\n'
-            'Once you\'re done, press Espace to leave the selection mode.\n\n'
+            'Once you\'re done, press Escape to leave the selection mode.\n\n'
             'You should try to click on a clear area for each pole you want to select.')
 
         self.enabled = True

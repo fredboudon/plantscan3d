@@ -399,14 +399,16 @@ sys._excepthook = sys.excepthook
 sys.excepthook = excepthook
 
 def main():
-    import sys
+    import sys, os
     app = QApplication([])
     window = MainWindow()
     window.loadModules()
     window.show()
     if len(sys.argv) > 1:
         for fname in sys.argv[1:]:
-            window.mtgeditor.openFile(fname)
+            if os.path.exists(fname):
+                fname = os.path.abspath(fname)
+                window.mtgeditor.openFile(fname)
     return app.exec_()
 
 

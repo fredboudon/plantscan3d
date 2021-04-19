@@ -823,8 +823,8 @@ class MainViewer(QGLViewer):
         fname = QFileDialog.getSaveFileName(self, "Save MTG file",
                                             initialname,
                                             "MTG Files (*.mtg;*.bmtg);;All Files (*.*)")
-        if not fname: return
         fname = str(fname[0])
+        if len(fname) == 0: return
         self.filehistory.add(fname, 'MTG')
         self.writeMTG(fname)
 
@@ -940,8 +940,8 @@ class MainViewer(QGLViewer):
         fname = QFileDialog.getOpenFileName(self, "Open Points file",
                                             initialname,
                                             "Points Files (*.asc *.xyz *.pwn *.pts *.txt *.bgeom *.xyz *.ply);;All Files (*.*)")
-        if not fname: return
         fname = str(fname[0])
+        if len(fname) == 0: return
         self.filehistory.add(fname, 'PTS')
         self.readPoints(fname)
         self.open_file.emit()
@@ -994,8 +994,8 @@ class MainViewer(QGLViewer):
         fname = QFileDialog.getSaveFileName(self, "Save Points file",
                                             initialname,
                                             "Points Files (*.asc *.xyz *.pwn *.pts *.bgeom *.ply);;All Files (*.*)")
-        if not fname: return
         fname = str(fname[0])
+        if len(fname) == 0: return
         self.filehistory.add(fname, 'PTS')
         self.savePoints(fname, self.points)
 
@@ -1004,24 +1004,31 @@ class MainViewer(QGLViewer):
 
     def exportAsGeom(self):
         initialname = 'out.bgeom'
-        fname = QFileDialog.getSaveFileName(self, "Save Geom file",
+        fname = QFileDialog.getSaveFileName(self, "Save 3D file",
                                             initialname,
-                                            "GEOM Files (*.bgeom;*.geom);;All Files (*.*)")
-        if not fname: return
+                                            "GEOM Files (*.bgeom;*.geom);;OBJ Files (*.obj);;Other formats (*.*)")
         fname = str(fname[0])
+        if len(fname) == 0: return
         self.saveAsGeom(fname)
 
     def saveAsGeom(self, fname):
         sc = Scene()
+        import os.path
 
-        if self.pointDisplay and self.points:
+        meshonly = False
+
+        ext = os.path.splitext(fname)[1][1:]
+        if ext in ['obj']:
+            meshonly = True
+
+        if self.pointDisplay and self.points and not meshonly:
             sc += self.pointsRep
             # sc += Shape(Translated(self.translation,PointSet(self.points.pointList)), self.pointMaterial)
 
-        if self.pointAttributeDisplay and self.pointsAttributeRep:
+        if self.pointAttributeDisplay and self.pointsAttributeRep and not meshonly:
             sc += self.pointsAttributeRep
 
-        if self.mtgDisplay and self.mtgrep:
+        if self.mtgDisplay and self.mtgrep and not meshonly:
             sc += self.mtgrep
             # mtgrep, mtgrepindex  = createMTGRepresentation(self.mtg,self.edgeInfMaterial,self.edgePlusMaterial, translation=self.translation)
             # sc += mtgrep
@@ -1033,7 +1040,7 @@ class MainViewer(QGLViewer):
         if self.modelDisplay and self.modelRep:
             sc += self.modelRep  # self.create3DModelRepresentation(self.translation)
 
-        if self.radiusDisplay and self.radiusRep:
+        if self.radiusDisplay and self.radiusRep and not meshonly:
             sc += self.radiusRep
 
         if self.temporaryinfo:
@@ -1046,8 +1053,8 @@ class MainViewer(QGLViewer):
         fname = QFileDialog.getSaveFileName(self, "Save Geom file",
                                             initialname,
                                             "Txt Files (*.txt);;All Files (*.*)")
-        if not fname: return
         fname = str(fname[0])
+        if len(fname) == 0: return
         self.saveNodeList(fname)
         self.showMessage("Export in " + fname + " done ...")
 
@@ -2683,8 +2690,9 @@ class MainViewer(QGLViewer):
             fname = QFileDialog.getSaveFileName(self, "Save Angles",
                                                 'angles.txt',
                                                 "Txt Files (*.txt);;All Files (*.*)")
-            if fname:
-                write_phylo_angles(str(fname[0]), phyangles, nodelength)
+            fname = str(fname[0])
+            if len(fname) == 0: return
+            write_phylo_angles(str(fname[0]), phyangles, nodelength)
 
     # ---------------------------- Tagging ----------------------------------------
 

@@ -26,6 +26,7 @@ from .settings import Settings
 from .database import dbeditor, db_connection
 from .segmenteditor import SegmentEditor
 from .module_loader import ModuleLoader
+from .__version__ import version as psc_version
 
 class MainWindow(QMainWindow, main_window_ui.Ui_MainWindow):
 
@@ -47,6 +48,8 @@ class MainWindow(QMainWindow, main_window_ui.Ui_MainWindow):
         self.actionExportPoints.triggered.connect(self.mtgeditor.exportPoints)
         self.actionExportGeom.triggered.connect(self.mtgeditor.exportAsGeom)
         self.actionExportNodeList.triggered.connect(self.mtgeditor.exportNodeList)
+        self.actionAboutPsc3d.triggered.connect(self.about)
+        self.actionDocumentation.triggered.connect(self.documentation)
         self.actionExit.triggered.connect(self.close)
 
         self.db_connection = db_connection.DatabaseConnection(self)
@@ -193,6 +196,25 @@ class MainWindow(QMainWindow, main_window_ui.Ui_MainWindow):
             pass
 
         self.moduleLoader = ModuleLoader(join(ldir,'modules.conf'))
+
+
+    def about(self):
+        if not hasattr(self,'splash'):
+            pix = QImage("images/icon.png").convertToFormat(QImage.Format_RGB32)
+            self.splash = QSplashScreen(QPixmap(pix))
+        else:
+            splash = self.splash
+        aboutTxt = """<b>PlantScan3D</b><br>
+<it>An open-source editor for reconstructing 3D plant architecture from laser scans</it>.<br><br>Version :"""+psc_version+"""<br>
+Licence: CeCILL-C<br><br><br>
+Implemented by F. Boudon et al. <br>Copyright: CIRAD-INRIA-INRA.<br>
+<br><br><br><br><br>"""
+        self.splash.showMessage(aboutTxt,Qt.AlignBottom|Qt.AlignLeft)
+        self.splash.show()
+
+    def documentation(self):
+        import webbrowser
+        webbrowser.open("https://plantscan3d.readthedocs.io/")
 
     def restoreWindowState(self):
         """
@@ -393,14 +415,17 @@ Date: %s
     errorbox.setText(str(notice)+str(msg))
     errorbox.exec_()
 
-from .__version__ import version as psc_version
 import sys, traceback, time, io
 sys._excepthook = sys.excepthook
 sys.excepthook = excepthook
 
 def main():
     import sys, os
-    app = QApplication([])
+    app = QApplication(['-qwindowtitle','PlantScan3D'])
+    app.setApplicationName('PlantScan3D')
+    app.setApplicationDisplayName('PlantScan3D')
+    app.setDesktopFileName('PlantScan3D')
+    app.setApplicationVersion(psc_version)
     window = MainWindow()
     window.loadModules()
     window.show()
@@ -409,6 +434,7 @@ def main():
             if os.path.exists(fname):
                 fname = os.path.abspath(fname)
                 window.mtgeditor.openFile(fname)
+    app.setWindowIcon(QIcon("images/icon.png"))
     return app.exec_()
 
 

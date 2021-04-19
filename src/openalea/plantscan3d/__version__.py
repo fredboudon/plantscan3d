@@ -1,4 +1,4 @@
-version = "1.2.1"
+version = "1.2.2"
 name = "OpenAlea.PlantScan3D"
 namespace = "openalea"
 package = "plantscan3d"

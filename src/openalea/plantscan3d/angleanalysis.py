@@ -110,7 +110,7 @@ def relative_angles(angles,ccw=True):
     return relangles
     
 def write_phylo_angles(output_phy,phyangles,nodelength,sep='\t'):
-    f = file(output_phy,'w')
+    f = open(output_phy,'w')
     f.write('Absolute'+sep+'Relative (CCW)'+sep+'Relative (CW)'+sep+'NodeLength'+'\n')
     f.write(str(phyangles[0])+sep+sep+sep+'\n')
     for data in zip(phyangles[1:],relative_angles(phyangles),relative_angles(phyangles,False),nodelength):

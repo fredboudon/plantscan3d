@@ -41,7 +41,7 @@ jobs:
         sudo conda config --set always_yes yes
         sudo conda config --set remote_read_timeout_secs 600
         sudo conda config --set auto_update_conda False
-        sudo conda install conda-build anaconda-client
+        # sudo conda install conda-build anaconda-client
 
     - name: Build 
       env:
@@ -62,7 +62,7 @@ jobs:
 
         export BUILD_CMD="conda build . --python=$PYTHON_VERSION"
 
-        sudo $BUILD_CMD
+        # sudo $BUILD_CMD
 
         echo "BUILD_CMD=\"$BUILD_CMD\"" >> $GITHUB_ENV
 
@@ -71,7 +71,7 @@ jobs:
           ANACONDA_LOGIN: ${{ secrets.ANACONDA_LOGIN }}
           ANACONDA_PASSWORD: ${{ secrets.ANACONDA_PASSWORD }}
       run: |
-        # Build and Deploy
+        # Login
         if [[ "$ANACONDA_LOGIN" = "" ]]; then
           echo "ANACONDA_LOGIN is not defined"
           exit -1
@@ -84,12 +84,13 @@ jobs:
           ANACONDA_OWNER: ${{ secrets.ANACONDA_OWNER }}
           BUILD_CMD: ${{ env.BUILD_CMD }}
       run: |
-        # Build and Deploy
+        # Deploy
         if [[ "$ANACONDA_OWNER" = "" ]]; then
           echo "ANACONDA_OWNER is not defined"
           exit -1
         fi
 
+        echo "BUILD_CMD:" $BUILD_CMD
         export BUILD_OUTPUT=`$BUILD_CMD --output`
         echo "PACKAGE NAME:" $BUILD_OUTPUT
         if [[ "$BUILD_OUTPUT" = "" ]]; then

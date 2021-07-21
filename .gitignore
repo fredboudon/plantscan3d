@@ -71,3 +71,6 @@ target/
 *_rc.py
 .plantscan3d.xml
 .qglviewer.xml
+
+# Various
+.DS_Store

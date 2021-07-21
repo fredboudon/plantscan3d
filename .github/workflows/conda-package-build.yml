@@ -13,7 +13,7 @@ jobs:
     strategy:
       #max-parallel: 5
       matrix:
-        os: [ubuntu-latest, macos-latest]
+        os: [ubuntu-latest] #, macos-latest]
         env:
           - CONDA_PY: "37"
             CONDA_NPY: "111" 
@@ -91,5 +91,10 @@ jobs:
         fi
 
         export BUILD_OUTPUT=`$BUILD_CMD --output`
+        echo "PACKAGE NAME:" $BUILD_OUTPUT
+        if [[ "$BUILD_OUTPUT" = "" ]]; then
+          echo "PACKAGE NAME is not defined"
+          exit -1
+        fi
         anaconda upload $BUILD_OUTPUT -u $ANACONDA_OWNER --no-progress
 

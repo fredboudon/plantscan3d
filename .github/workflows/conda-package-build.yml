@@ -45,8 +45,8 @@ jobs:
 
     - name: Build and Deploy
       env:
-          CONDA_PY: ${{ matrix.CONDA_PY }}
-          CONDA_NPY: ${{ matrix.CONDA_NPY }}
+          CONDA_PY: ${{ matrix.env.CONDA_PY }}
+          CONDA_NPY: ${{ matrix.env.CONDA_NPY }}
           ANACONDA_LOGIN: ${{ secrets.ANACONDA_LOGIN }}
           ANACONDA_OWNER: ${{ secrets.ANACONDA_OWNER }}
           ANACONDA_PASSWORD: ${{ secrets.ANACONDA_PASSWORD }}

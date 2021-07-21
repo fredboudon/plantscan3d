@@ -58,11 +58,13 @@ jobs:
           exit -1
         fi
         export PYTHON_VERSION=${CONDA_PY:0:1}.${CONDA_PY:1:1}
-        export NUMPY_VERSION=${CONDA_NPY:0:1}.${CONDA_NPY:1:1}
+        export NUMPY_VERSION=${CONDA_NPY:0:1}.${CONDA_NPY:1:2}
 
         export BUILD_CMD="conda build . --python=$PYTHON_VERSION"
 
         sudo $BUILD_CMD
+
+        echo "BUILD_CMD=\"$BUILD_CMD\"" >> $GITHUB_ENV
 
     - name: Login
       env:
@@ -86,7 +88,7 @@ jobs:
           echo "ANACONDA_OWNER is not defined"
           exit -1
         fi
-        
+
         export BUILD_OUTPUT=`$BUILD_CMD --output`
         anaconda upload $BUILD_OUTPUT -u $ANACONDA_OWNER --no-progress
 

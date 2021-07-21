@@ -14,7 +14,7 @@ jobs:
       #max-parallel: 5
       matrix:
         os: [ubuntu-latest, macos-latest]
-        include:
+        env:
           - CONDA_PY: "37"
             CONDA_NPY: "111" 
           - CONDA_PY: "38" 

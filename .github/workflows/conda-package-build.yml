@@ -82,6 +82,7 @@ jobs:
     - name: Deploy
       env:
           ANACONDA_OWNER: ${{ secrets.ANACONDA_OWNER }}
+          BUILD_CMD: ${{ env.BUILD_CMD }}
       run: |
         # Build and Deploy
         if [[ "$ANACONDA_OWNER" = "" ]]; then

@@ -41,7 +41,7 @@ jobs:
         sudo conda config --set always_yes yes
         sudo conda config --set remote_read_timeout_secs 600
         sudo conda config --set auto_update_conda False
-        # sudo conda install conda-build anaconda-client
+        sudo conda install conda-build anaconda-client
 
     - name: Build 
       env:
@@ -97,5 +97,5 @@ jobs:
           echo "PACKAGE NAME is not defined"
           exit -1
         fi
-        anaconda upload $BUILD_OUTPUT -u $ANACONDA_OWNER --no-progress
+        #anaconda upload $BUILD_OUTPUT -u $ANACONDA_OWNER --no-progress
 

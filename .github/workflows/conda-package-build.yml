@@ -62,7 +62,7 @@ jobs:
 
         export BUILD_CMD="conda build . --python=$PYTHON_VERSION"
 
-        # sudo $BUILD_CMD
+        sudo $BUILD_CMD
 
         echo "BUILD_CMD=$BUILD_CMD" >> $GITHUB_ENV
 
@@ -76,7 +76,7 @@ jobs:
           echo "ANACONDA_LOGIN is not defined"
           exit -1
         fi
-        #yes | anaconda login --password $ANACONDA_PASSWORD --username $ANACONDA_LOGIN
+        yes | anaconda login --password $ANACONDA_PASSWORD --username $ANACONDA_LOGIN
 
 
     - name: Deploy
@@ -97,5 +97,5 @@ jobs:
           echo "PACKAGE NAME is not defined"
           exit -1
         fi
-        #anaconda upload $BUILD_OUTPUT -u $ANACONDA_OWNER --no-progress
+        anaconda upload $BUILD_OUTPUT -u $ANACONDA_OWNER --no-progress
 

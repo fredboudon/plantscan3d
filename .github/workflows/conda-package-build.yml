@@ -74,7 +74,7 @@ jobs:
           echo "ANACONDA_LOGIN is not defined"
           exit -1
         fi
-        anaconda login --password $ANACONDA_PASSWORD --username $ANACONDA_LOGIN
+        yes | anaconda login --password $ANACONDA_PASSWORD --username $ANACONDA_LOGIN
 
 
     - name: Deploy
@@ -86,7 +86,7 @@ jobs:
           echo "ANACONDA_OWNER is not defined"
           exit -1
         fi
-
+        
         export BUILD_OUTPUT=`$BUILD_CMD --output`
         anaconda upload $BUILD_OUTPUT -u $ANACONDA_OWNER --no-progress
 

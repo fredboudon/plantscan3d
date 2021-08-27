@@ -43,6 +43,19 @@ jobs:
         sudo conda config --set auto_update_conda False
         sudo conda install conda-build anaconda-client
 
+    - name: Login
+      env:
+          ANACONDA_LOGIN: ${{ secrets.ANACONDA_LOGIN }}
+          ANACONDA_PASSWORD: ${{ secrets.ANACONDA_PASSWORD }}
+      run: |
+        # Login
+        if [[ "$ANACONDA_LOGIN" = "" ]]; then
+          echo "ANACONDA_LOGIN is not defined"
+          exit -1
+        fi
+        SESSION_UID=$(uuidgen)
+        anaconda login --username $ANACONDA_LOGIN --password $ANACONDA_PASSWORD --hostname $SESSION_UID
+
     - name: Build 
       env:
           CONDA_PY: ${{ matrix.env.CONDA_PY }}
@@ -65,18 +78,6 @@ jobs:
         sudo $BUILD_CMD
 
         echo "BUILD_CMD=$BUILD_CMD" >> $GITHUB_ENV
-
-    - name: Login
-      env:
-          ANACONDA_LOGIN: ${{ secrets.ANACONDA_LOGIN }}
-          ANACONDA_PASSWORD: ${{ secrets.ANACONDA_PASSWORD }}
-      run: |
-        # Login
-        if [[ "$ANACONDA_LOGIN" = "" ]]; then
-          echo "ANACONDA_LOGIN is not defined"
-          exit -1
-        fi
-        yes | anaconda login --password $ANACONDA_PASSWORD --username $ANACONDA_LOGIN
 
 
     - name: Deploy

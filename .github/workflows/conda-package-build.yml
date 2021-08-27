@@ -13,7 +13,7 @@ jobs:
     strategy:
       #max-parallel: 5
       matrix:
-        os: [ macos-latest] #, ubuntu-latest]
+        os: [ macos-latest, ubuntu-latest]
         env:
           - CONDA_PY: "37"
             CONDA_NPY: "111" 

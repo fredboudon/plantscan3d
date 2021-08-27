@@ -43,19 +43,6 @@ jobs:
         sudo conda config --set auto_update_conda False
         sudo conda install conda-build anaconda-client
 
-    - name: Login
-      env:
-          ANACONDA_LOGIN: ${{ secrets.ANACONDA_LOGIN }}
-          ANACONDA_PASSWORD: ${{ secrets.ANACONDA_PASSWORD }}
-      run: |
-        # Login
-        if [[ "$ANACONDA_LOGIN" = "" ]]; then
-          echo "ANACONDA_LOGIN is not defined"
-          exit -1
-        fi
-        SESSION_UID=$(uuidgen)
-        anaconda login --username $ANACONDA_LOGIN --password $ANACONDA_PASSWORD --hostname $SESSION_UID
-
     - name: Build 
       env:
           CONDA_PY: ${{ matrix.env.CONDA_PY }}
@@ -73,17 +60,35 @@ jobs:
         export PYTHON_VERSION=${CONDA_PY:0:1}.${CONDA_PY:1:1}
         export NUMPY_VERSION=${CONDA_NPY:0:1}.${CONDA_NPY:1:2}
 
-        export BUILD_CMD="conda build . --python=$PYTHON_VERSION"
+        export BUILD_CMD="sudo conda build . --python=$PYTHON_VERSION"
+        export BUILD_OUTPUT=`$BUILD_CMD --output`
 
-        sudo $BUILD_CMD
+        if [[ "$BUILD_OUTPUT" = "" ]]; then
+          echo "PACKAGE NAME is not defined"
+          exit -1
+        fi
+        echo "BUILD_OUTPUT=$BUILD_OUTPUT" >> $GITHUB_ENV
 
-        echo "BUILD_CMD=$BUILD_CMD" >> $GITHUB_ENV
+        $BUILD_CMD
 
+
+    - name: Login
+      env:
+          ANACONDA_LOGIN: ${{ secrets.ANACONDA_LOGIN }}
+          ANACONDA_PASSWORD: ${{ secrets.ANACONDA_PASSWORD }}
+      run: |
+        # Login
+        if [[ "$ANACONDA_LOGIN" = "" ]]; then
+          echo "ANACONDA_LOGIN is not defined"
+          exit -1
+        fi
+        SESSION_UID=$(uuidgen)
+        anaconda login --username $ANACONDA_LOGIN --password $ANACONDA_PASSWORD --hostname $SESSION_UID
 
     - name: Deploy
       env:
           ANACONDA_OWNER: ${{ secrets.ANACONDA_OWNER }}
-          BUILD_CMD: ${{ env.BUILD_CMD }}
+          BUILD_OUTPUT: ${{ env.BUILD_OUTPUT }}
       run: |
         # Deploy
         if [[ "$ANACONDA_OWNER" = "" ]]; then
@@ -91,8 +96,6 @@ jobs:
           exit -1
         fi
 
-        echo "BUILD_CMD:" $BUILD_CMD
-        export BUILD_OUTPUT=`$BUILD_CMD --output`
         echo "PACKAGE NAME:" $BUILD_OUTPUT
         if [[ "$BUILD_OUTPUT" = "" ]]; then
           echo "PACKAGE NAME is not defined"

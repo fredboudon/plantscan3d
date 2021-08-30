@@ -36,16 +36,12 @@ jobs:
           conda-build-version: "*"
           activate-environment: anaconda-client-env
 
-    - name: Setup conda
-      run: |
-        # Setup conda
-        conda config --set always_yes yes
-        conda config --set remote_read_timeout_secs 600
 
     - name: Build 
       env:
           CONDA_PY: ${{ matrix.env.CONDA_PY }}
           CONDA_NPY: ${{ matrix.env.CONDA_NPY }}
+      shell: cmd /C CALL {0}
       run: |
         # Build
         if "%CONDA_PY%" == "" (
@@ -75,6 +71,7 @@ jobs:
       env:
           ANACONDA_LOGIN: ${{ secrets.ANACONDA_LOGIN }}
           ANACONDA_PASSWORD: ${{ secrets.ANACONDA_PASSWORD }}
+      shell: cmd /C CALL {0}
       run: |
         # Login
         if "%ANACONDA_LOGIN%" == "" (
@@ -88,6 +85,7 @@ jobs:
       env:
           ANACONDA_OWNER: ${{ secrets.ANACONDA_OWNER }}
           BUILD_OUTPUT: ${{ env.BUILD_OUTPUT }}
+      shell: cmd /C CALL {0}
       run: |
         # Deploy
         if  "%ANACONDA_OWNER%" == "" (

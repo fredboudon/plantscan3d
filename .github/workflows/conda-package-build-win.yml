@@ -1,0 +1,103 @@
+name: Building Package using Conda on Windows
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      #max-parallel: 5
+      matrix:
+        os: [ windows-latest]
+        env:
+          - CONDA_PY: "37"
+            CONDA_NPY: "111" 
+          - CONDA_PY: "38" 
+            CONDA_NPY: "116"
+          - CONDA_PY: "39" 
+            CONDA_NPY: "119"
+
+    environment: anaconda_build
+
+    steps:
+    - uses: actions/checkout@v2
+    - uses: conda-incubator/setup-miniconda@v2
+        with:
+          miniconda-version: "latest"
+          auto-update-conda: false
+          channels: conda-forge, fredboudon
+          mamba-version: "*"
+          conda-build-version: "*"
+          activate-environment: anaconda-client-env
+
+    - name: Setup conda
+      run: |
+        # Setup conda
+        conda config --set always_yes yes
+        conda config --set remote_read_timeout_secs 600
+
+    - name: Build 
+      env:
+          CONDA_PY: ${{ matrix.env.CONDA_PY }}
+          CONDA_NPY: ${{ matrix.env.CONDA_NPY }}
+      run: |
+        # Build
+        if "%CONDA_PY%" == "" (
+          echo "CONDA_PY is not defined"
+          exit 1
+        )
+        if "%CONDA_NPY%" == "" (
+          echo "CONDA_NPY is not defined"
+          exit 1
+        )
+        set PYTHON_VERSION=%CONDA_PY:~0,1%.%CONDA_PY:~1,1%
+        set NUMPY_VERSION=%CONDA_NPY:~0,1%.%CONDA_NPY:~1,2%
+
+        set BUILD_CMD=conda build . --python=%PYTHON_VERSION%
+        for /f %i in ('%BUILD_CMD% --output') do set BUILD_OUTPUT=%i
+
+        if  "%BUILD_OUTPUT%" == "" (
+          echo "PACKAGE NAME is not defined"
+          exit 1
+        )
+        echo "BUILD_OUTPUT=%BUILD_OUTPUT%" >> $GITHUB_ENV
+
+        %BUILD_CMD%
+
+
+    - name: Login
+      env:
+          ANACONDA_LOGIN: ${{ secrets.ANACONDA_LOGIN }}
+          ANACONDA_PASSWORD: ${{ secrets.ANACONDA_PASSWORD }}
+      run: |
+        # Login
+        if "%ANACONDA_LOGIN%" == "" (
+          echo "ANACONDA_LOGIN is not defined"
+          exit -1
+        )
+        for /f %i in ('uuidgen') do set SESSION_UID=%i
+        anaconda login --username %ANACONDA_LOGIN% --password %ANACONDA_PASSWORD% --hostname %SESSION_UID%
+
+    - name: Deploy
+      env:
+          ANACONDA_OWNER: ${{ secrets.ANACONDA_OWNER }}
+          BUILD_OUTPUT: ${{ env.BUILD_OUTPUT }}
+      run: |
+        # Deploy
+        if  "%ANACONDA_OWNER%" == "" (
+          echo "ANACONDA_OWNER is not defined"
+          exit 1
+        )
+
+        echo "PACKAGE NAME:" %BUILD_OUTPUT%
+        if  "%BUILD_OUTPUT%" == "" (
+          echo "PACKAGE NAME is not defined"
+          exit 1
+        )
+        anaconda upload --skip-existing %BUILD_OUTPUT% -u %ANACONDA_OWNER% --no-progress
+

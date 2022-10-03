@@ -40,7 +40,7 @@ setup(
     package_dir= package_dir,
 
     # Namespace packages creation by deploy
-    namespace_packages = ['openalea'],
+    #namespace_packages = ['openalea'],
     #create_namespaces = False,
     zip_safe= False,
 

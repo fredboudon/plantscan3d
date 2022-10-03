@@ -51,6 +51,10 @@ class MainWindow(QMainWindow, main_window_ui.Ui_MainWindow):
         self.actionAboutPsc3d.triggered.connect(self.about)
         self.actionDocumentation.triggered.connect(self.documentation)
         self.actionExit.triggered.connect(self.close)
+        self.actionSetBackgroundImg.triggered.connect(self.setBackgroundImg)
+        self.actionClearBackgroundImg.triggered.connect(self.clearBackgroundImg)
+        self.actionImportCustomGeometry.triggered.connect(self.importCustomGeometry)
+        self.actionClearCustomGeometry.triggered.connect(self.mtgeditor.clearCustomGeometry)
 
         self.db_connection = db_connection.DatabaseConnection(self)
         self.actionConnect_to_Database.triggered.connect(self.db_connection.show)
@@ -73,9 +77,20 @@ class MainWindow(QMainWindow, main_window_ui.Ui_MainWindow):
         self.actionShowAll.triggered.connect(self.mtgeditor.showEntireScene)
         self.actionRecalculate_Colors.triggered.connect(self.mtgeditor.RecalculateColors)
 
-        from .main_viewer import WhiteTheme, BlackTheme
-        self.actionWhiteTheme.triggered.connect(lambda: self.mtgeditor.updateTheme(WhiteTheme))
-        self.actionBlackTheme.triggered.connect(lambda: self.mtgeditor.updateTheme(BlackTheme))
+        from .main_viewer import WhiteTheme, BlackTheme, GreyTheme, ThemeDict
+        self.menuTheme.clear()
+        def gen_updatetheme(theme):
+            def updateTheme():
+                print('Update theme', theme['Name'])
+                self.mtgeditor.updateTheme(theme)
+            return updateTheme
+
+        for name, theme in ThemeDict.items():
+            ai = QAction(name, self.menuTheme)
+            self.menuTheme.addAction(ai)
+            ai.triggered.connect(gen_updatetheme(theme))
+        #self.actionWhiteTheme.triggered.connect(lambda: self.mtgeditor.updateTheme(WhiteTheme))
+        #self.actionBlackTheme.triggered.connect(lambda: self.mtgeditor.updateTheme(BlackTheme))
 
         self.actionReorient.triggered.connect(self.mtgeditor.reorient)
         self.actionSortZ.triggered.connect(self.mtgeditor.sortZ)
@@ -197,6 +212,27 @@ class MainWindow(QMainWindow, main_window_ui.Ui_MainWindow):
 
         self.moduleLoader = ModuleLoader(join(ldir,'modules.conf'))
 
+
+
+    def setBackgroundImg(self):
+        #name, selection = QFileDialog.getOpenFileName(self, "Select an image", ".", "Images (*.png *.xpm *.jpg)");
+
+        # In case of Cancel
+        #if not name :  return
+        name = '/Users/fboudon/Desktop/oakleaf.png'
+        
+        self.mtgeditor.loadBackgroundImg(name)
+        self.mtgeditor.updateViewGL()
+        return
+
+    def clearBackgroundImg(self):
+        self.mtgeditor.clearBackgroundImg()
+
+    def importCustomGeometry(self):
+        name, selection = QFileDialog.getOpenFileName(self, "Select an 3D shape", ".", "PGL file (*.bgeom *.geom *.obj);All files (*.*)")
+        if not name :  return
+        self.mtgeditor.setCustomGeometry(name)
+        self.mtgeditor.updateViewGL()
 
     def about(self):
         if not hasattr(self,'splash'):

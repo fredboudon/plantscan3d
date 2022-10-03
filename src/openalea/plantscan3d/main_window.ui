@@ -94,6 +94,11 @@
     <addaction name="actionImportMTG"/>
     <addaction name="menuExport_MTG"/>
     <addaction name="separator"/>
+    <addaction name="actionSetBackgroundImg"/>
+    <addaction name="actionClearBackgroundImg"/>
+    <addaction name="actionImportCustomGeometry"/>
+    <addaction name="actionClearCustomGeometry"/>
+    <addaction name="separator"/>
     <addaction name="menuExport_View"/>
     <addaction name="separator"/>
     <addaction name="menuRecents"/>
@@ -1078,6 +1083,26 @@
   <action name="actionAboutPsc3d">
    <property name="text">
     <string>About</string>
+   </property>
+  </action>
+  <action name="actionSetBackgroundImg">
+   <property name="text">
+    <string>Set Background Img</string>
+   </property>
+  </action>
+  <action name="actionClearBackgroundImg">
+   <property name="text">
+    <string>Clear Background Img</string>
+   </property>
+  </action>
+  <action name="actionImportCustomGeometry">
+   <property name="text">
+    <string>Import Custom Geometry</string>
+   </property>
+  </action>
+  <action name="actionClearCustomGeometry">
+   <property name="text">
+    <string>Clear Custom Geometry</string>
    </property>
   </action>
  </widget>

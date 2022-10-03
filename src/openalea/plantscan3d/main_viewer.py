@@ -62,7 +62,7 @@ def createEdgeRepresentation(begnode, endnode, positions, material, translation=
     if begnode is None or endnode is None:
         print('Pb with node ', begnode, endnode)
         return None
-    res = Polyline([positions[begnode], positions[endnode]], width=1)
+    res = Polyline([positions[begnode], positions[endnode]], width=3)
     # res = Group([res,Translated((positions[begnode]+positions[endnode])/2,Text(str(endnode)))])
     if translation:
         res = Translated(translation, res)
@@ -145,7 +145,26 @@ WhiteTheme = {'Name': 'White',
               'UnTaggedCtrlPoint': (0, 0, 0),
               'UpscaleCtrlPoint': [(0, 255, 0), (0, 0, 255), (255, 255, 0), (255, 0, 255), (0, 255, 255)]}
 
-ThemeDict = {'Black': BlackTheme, 'White': WhiteTheme}
+GreyTheme = {'Name': 'Grey',
+              'BackGround': (255, 255, 255),
+              'Points': (180, 180, 180),
+              'ContractedPoints': (255, 0, 0),
+              'CtrlPoints': (250, 30, 30),
+              'NewCtrlPoints': (30, 250, 250),
+              'SelectedCtrlPoints': (30, 250, 30),
+              'EdgeInf': (0, 0, 0),
+              'EdgePlus': (0, 200, 0),
+              'Radius': (100, 100, 100),
+              'Direction': (0, 0, 0),
+              '3DModel': (128, 64, 0),
+              '3DHull': (0, 200, 0),
+              'LocalAttractors': (255, 255, 0),
+              'Cone': (255, 255, 0),
+              'TaggedCtrlPoint': (255, 0, 0),
+              'UnTaggedCtrlPoint': (0, 0, 0),
+              'UpscaleCtrlPoint': [(0, 255, 0), (0, 0, 255), (255, 255, 0), (255, 0, 255), (0, 255, 255)]}
+
+ThemeDict = {'Black': BlackTheme, 'White': WhiteTheme, 'Grey' : GreyTheme}
 
 
 class PointInfo:
@@ -190,6 +209,7 @@ class MainViewer(QGLViewer):
         self.mtgDisplay = True
         self.ctrlPointDisplay = True
         self.modelDisplay = True
+        self.customObjDisplay = True
         self.radiusDisplay = True
         self.pointfilter = 0
         self.rectangleSelect = None
@@ -220,6 +240,7 @@ class MainViewer(QGLViewer):
         self.shapePoints = None
         self.shapeSelection = None
         self.pointsAttributeRep = None
+        self.customObjRep = None
 
         self.k = 16
         self.pointsKDTree = None
@@ -296,6 +317,165 @@ class MainViewer(QGLViewer):
 
         self.eventListeners = deque()
 
+        self.bgimage = False
+        self.textureId = None
+
+        if not hasattr(self,'updateGL'):
+            self.updateViewGL = self.update
+        else:
+            self.updateViewGL = self.updateGL
+
+    def clearBackgroundImg(self):
+        self.setBackgroundColor(QColor(*self.theme['BackGround']))
+        self.bgimage = False
+
+    def loadBackgroundImg(self, imagefilename):
+        # code taken from the backgroundImage.cpp file that is part of the QGLViewer library
+        from math import log
+        self.u_max = 1.0
+        self.v_max = 1.0
+         
+        # load image
+        img = QImage(imagefilename)
+        
+        if img.isNull():
+            qWarning("Unable to load file, unsupported file format")
+            return
+
+        qWarning("Loading " + imagefilename + " " + str(img.width()) + "x" + str(img.height()) +" pixels")
+        self.makeCurrent()
+        glEnable(GL_TEXTURE_2D)
+
+        self.imageWidth = float(img.width())
+        self.imageHeight = float(img.height())
+        qWarning(str(self.imageWidth) + " " + str(self.imageHeight))
+
+        # 1E-3 needed. Just try with width=128 and see !
+        newWidth  = 1<<(int)(1+log(self.imageWidth -1+1E-3) / log(2.0))
+        newHeight = 1<<(int)(1+log(self.imageHeight-1+1E-3) / log(2.0))
+        
+        self.u_max = self.imageWidth  / float(newWidth)
+        self.v_max = self.imageHeight / float(newHeight)
+
+        if ((self.imageWidth!=newWidth) or (self.imageHeight!=newHeight)):
+            qWarning("Image size set to " + str(newWidth) + "x" + str(newHeight) + " pixels")
+            img = img.copy(0, 0, newWidth, newHeight)
+
+        #glImg = QImage(QGLWidget.convertToGLFormat(img)) # flipped 32bit RGBA
+        self.textureId = QOpenGLTexture(img)
+        self.textureId.setMinificationFilter(QOpenGLTexture.Linear);
+        self.textureId.setMagnificationFilter(QOpenGLTexture.Linear);
+        self.textureId.create()
+        assert self.textureId.isCreated()
+
+        # Another way to bind img texture:
+        # if self.textureId:
+        #    self.deleteTexture(self.textureId)
+        #    self.textureId = None
+        #self.textureId = glGenTextures(1) # self.bindTexture(img,GL_TEXTURE_2D,GL_RGBA)
+        #if self.textureId :
+        #    glBindTexture(GL_TEXTURE_2D, self.textureId)
+        # Bind the img texture...
+        #glTexImage2D(GL_TEXTURE_2D, 0, 4, glImg.width(), glImg.height(), 0,
+        #   GL_RGBA, GL_UNSIGNED_BYTE, glImg.bits().asstring(glImg.byteCount()))
+               
+        self.bgimage = True
+        self.doneCurrent()
+
+    def loadBackgroundImg(self, imagefilename):
+        from math import log
+        img = QImage(imagefilename)
+        
+        if img.isNull():
+            qWarning("Unable to load file, unsupported file format")
+            return
+
+        qWarning("Loading " + imagefilename + " " + str(img.width()) + "x" + str(img.height()) +" pixels")
+        self.imageWidth = float(img.width())
+        self.imageHeight = float(img.height())
+
+        centre_x = (self.width() * 0.5 - self.imageWidth*0.5)
+        centre_y = (self.height() * 0.5 - self.imageHeight*0.5)
+
+        points = [(0.0, 0.0),(0.0, 1.0),(1.0, 1.0),(1.0, 0.0)]
+        points = [(centre_x,centre_y),(centre_x,centre_y+self.imageHeight),
+                  (centre_x+self.imageWidth,centre_y+self.imageHeight), (centre_x+self.imageWidth,centre_y)]
+        points = [(x,y,0.99) for x,y in points]
+        uvs = [(0.0, 0.0),(0.0, 1.0),(1.0, 1.0),(1.0, 0.0)]
+        #uvs = [(0.0, 1.0-self.v_max),(0.0, 1.0),(self.u_max, 1.0),(self.u_max, 1.0-self.v_max)]
+        self.bgscene = Scene([Shape(QuadSet(points,[list(range(4))],texCoordList=uvs),Texture2D(ImageTexture(imagefilename)))])
+        self.bgscene.save('test.bgeom')
+        self.bgimage = True
+
+    def drawBackground(self):
+        # code taken from the backgroundImage.cpp file that is part of the QGLViewer library
+        print('drawBackground')
+        #glBindTexture(GL_TEXTURE_2D, self.textureId)
+        # set texturing for background image
+        #glTexParameterf (GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR)
+        #glTexParameterf (GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR)
+        # Nice texture coordinate interpolation
+        #glHint (GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST)
+
+        glDisable(GL_LIGHTING)
+        glColor3f(0,0,0)
+        glEnable(GL_BLEND)
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
+        glPolygonMode(GL_FRONT_AND_BACK,GL_FILL)
+        
+        # Draws the quad in (0,0) to (1.0,imageHeight/imageWidth)
+        self.startScreenCoordinatesSystem(True)
+        centre_x = self.width() * 0.5 - self.imageWidth*0.5
+        centre_y = self.height() * 0.5 - self.imageHeight*0.5
+        print((centre_x,centre_y),(centre_x+self.imageWidth,centre_y+self.imageHeight))
+
+        depth = 0.99
+        self.textureId.bind()
+        points = [(centre_x,centre_y),(centre_x,centre_y+self.imageHeight),
+                  (centre_x+self.imageWidth,centre_y+self.imageHeight), (centre_x+self.imageWidth,centre_y)]
+        uvs = [(0.0, 1.0-self.v_max),(0.0, 1.0),(self.u_max, 1.0),(self.u_max, 1.0-self.v_max)]
+        print(points)
+        print(uvs)
+        glNormal3f(0.0, 0.0, 1.0)
+        glEnable(GL_TEXTURE_2D)
+        glBegin(GL_QUADS)
+        for uv, pt in zip(uvs,points):
+          glTexCoord2f(*uv)
+          glVertex2f(*pt)
+        glEnd()
+        self.stopScreenCoordinatesSystem()
+        
+        # Depth clear is not absolutely needed. An other option would have been to draw the
+        # QUAD with a 0.999 z value (z ranges in [0, 1[ with startScreenCoordinatesSystem()).
+        glClear(GL_DEPTH_BUFFER_BIT)
+        glDisable(GL_TEXTURE_2D)
+        glEnable(GL_LIGHTING)
+
+    def drawBackground(self):
+        # code taken from the backgroundImage.cpp file that is part of the QGLViewer library
+        print('drawBackground')
+        #glBindTexture(GL_TEXTURE_2D, self.textureId)
+        # set texturing for background image
+        #glTexParameterf (GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR)
+        #glTexParameterf (GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR)
+        # Nice texture coordinate interpolation
+        #glHint (GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST)
+
+        glDisable(GL_LIGHTING)
+        glColor3f(0,0,0)
+        glEnable(GL_BLEND)
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
+        
+        self.startScreenCoordinatesSystem(True)
+        self.bgscene.apply(self.glrenderer)
+        self.stopScreenCoordinatesSystem()
+
+        # Depth clear is not absolutely needed. An other option would have been to draw the
+        # QUAD with a 0.999 z value (z ranges in [0, 1[ with startScreenCoordinatesSystem()).
+        glClear(GL_DEPTH_BUFFER_BIT)
+        glDisable(GL_TEXTURE_2D)
+        glEnable(GL_LIGHTING)
+
     def showProgress(self, message, percent):
         self.progressdialog.setLabelText(message % percent if "%.2f%%" in message else message)
         self.progressdialog.setProgress(percent)
@@ -324,7 +504,7 @@ class MainViewer(QGLViewer):
         """
         self.pointinfo.selectedPoint = Index([])
         self.setPoints(pointSet)
-        self.updateGL()
+        self.updateViewGL()
 
     def selectPoints(self, points):
         """
@@ -334,7 +514,7 @@ class MainViewer(QGLViewer):
         """
         self.pointinfo.selectedPoint = points
         self.createPointsRepresentation()
-        self.updateGL()
+        self.updateViewGL()
 
     def deselectPoints(self):
         """
@@ -383,7 +563,7 @@ class MainViewer(QGLViewer):
         urls = event.mimeData().urls()
         for url in urls:
             self.openFile(str(url.toLocalFile()))
-        self.updateGL()
+        self.updateViewGL()
 
     def setTheme(self, theme=BlackTheme, setBg=True):
         self.theme = theme
@@ -405,7 +585,7 @@ class MainViewer(QGLViewer):
     def updateTheme(self, theme=BlackTheme):
         self.setTheme(theme)
         if self.mtg: self.updateMTGView()
-        self.updateGL()
+        self.updateViewGL()
 
     def getparamcache(self, name, defaultvalue):
         if name in self.paramcache:
@@ -425,7 +605,7 @@ class MainViewer(QGLViewer):
     def undo(self):
         if self.backup.restore_backup():
             self.redoAvailable.emit(True)
-            self.updateGL()
+            self.updateViewGL()
         else:
             self.showMessage("No backup available.")
             self.undoAvailable.emit(False)
@@ -433,7 +613,7 @@ class MainViewer(QGLViewer):
     def redo(self):
         if self.backup.restore_redo():
             self.undoAvailable.emit(True)
-            self.updateGL()
+            self.updateViewGL()
         else:
             self.showMessage("No redo available.")
             self.redoAvailable.emit(False)
@@ -444,15 +624,15 @@ class MainViewer(QGLViewer):
             self.showMessage('Enabled Clipping Plane')
         else:
             self.showMessage('Disabled Clipping Plane')
-        if self.isVisible(): self.updateGL()
+        if self.isVisible(): self.updateViewGL()
 
     def setFrontVisibility(self, value):
         self.frontVisibility = value
-        if self.isVisible(): self.updateGL()
+        if self.isVisible(): self.updateViewGL()
 
     def setBackVisibility(self, value):
         self.backVisibility = value
-        if self.isVisible(): self.updateGL()
+        if self.isVisible(): self.updateViewGL()
 
     def applySelectionTrigger(self, node):
         if self.selectionTrigger:
@@ -532,6 +712,9 @@ class MainViewer(QGLViewer):
 
     def fastDraw(self):
         """ paint in opengl """
+        if self.bgimage :
+            self.drawBackground()
+
         glDisable(GL_LIGHTING)
 
         if self.pointDisplay and self.points:
@@ -546,6 +729,9 @@ class MainViewer(QGLViewer):
 
     def draw(self):
         """ paint in opengl """
+        if self.bgimage :
+            self.drawBackground()
+
         if self.clippigPlaneEnabled:
             glPushMatrix()
             glLoadIdentity()
@@ -587,11 +773,15 @@ class MainViewer(QGLViewer):
         if self.radiusDisplay and self.radiusRep:
             self.radiusRep.apply(self.glrenderer)
 
+
         glEnable(GL_LIGHTING)
         glEnable(GL_BLEND)
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
         if self.modelDisplay and self.modelRep:
             self.modelRep.apply(self.glrenderer)
+
+        if self.customObjDisplay and self.customObjRep:
+            self.customObjRep.apply(self.glrenderer)
 
         glDisable(GL_BLEND)
         glDisable(GL_LIGHTING)
@@ -652,6 +842,16 @@ class MainViewer(QGLViewer):
     def discardTempInfoDisplay(self):
         self.temporaryinfo2D = None
         self.temporaryinfo = None
+
+    def setCustomGeometry(self, sc):
+        if isinstance(sc,str):
+            sc = Scene(sc)
+        self.customObjRep = sc
+        self.customObjDisplay = True
+
+    def clearCustomGeometry(self):
+        self.customObjRep = None
+        self.customObjDisplay = False
 
     def setPointAttribute(self, sc):
         self.pointsAttributeRep = sc
@@ -797,7 +997,7 @@ class MainViewer(QGLViewer):
         self.nodeWidth = value
         if self.ctrlPointPrimitive:
             self.ctrlPointPrimitive.radius = self.nodeWidth * self.getUnitCtrlPointSize()
-        self.updateGL()
+        self.updateViewGL()
 
     def createCtrlPoints(self):
         self.ctrlPoints = createCtrlPoints(self.mtg, self.ctrlPointColor, self.propertyposition, self.__update_value__)
@@ -841,7 +1041,7 @@ class MainViewer(QGLViewer):
             writeMTGfile(fname, stdmtg)
         self.mtgfile = fname
         self.showMessage("Write MTG in " + repr(fname))
-        self.updateGL()
+        self.updateViewGL()
 
     def filter_points(self, pointset, pointfilter=None, ignorednodes=None):
         if pointfilter is None:
@@ -892,7 +1092,7 @@ class MainViewer(QGLViewer):
     def setPointFilter(self, value):
         self.pointfilter = self.sceneRadius() * value / 10.
         if self.points: self.createPointsRepresentation()
-        if self.isVisible(): self.updateGL()
+        if self.isVisible(): self.updateViewGL()
 
     def setPointWidth(self, value):
         self.pointinfo.pointWidth = value
@@ -900,12 +1100,12 @@ class MainViewer(QGLViewer):
             self.pointsRep[0].geometry.width = value
             if len(self.pointinfo.selectedPoint) > 0:
                 self.pointsRep[1].geometry.width = value + 2
-        self.updateGL()
+        self.updateViewGL()
 
     def show3DModel(self):
         self.create3DModelRepresentation()
         self.modelDisplay = True
-        self.updateGL()
+        self.updateViewGL()
 
     def create3DModelRepresentation(self, translation=None):
         scene = Scene()
@@ -969,7 +1169,7 @@ class MainViewer(QGLViewer):
     def RecalculateColors(self):
         self.points.colorList = generate_point_color(self.points)
         self.createPointsRepresentation()
-        self.updateGL()
+        self.updateViewGL()
 
     def setPoints(self, points, keepInfo=False):
         self.points = points
@@ -1122,32 +1322,32 @@ class MainViewer(QGLViewer):
     def enablePointDisplay(self, enabled):
         if self.pointDisplay != enabled:
             self.pointDisplay = enabled
-            self.updateGL()
+            self.updateViewGL()
 
     def enablePointAttributeDisplay(self, enabled):
         if self.pointAttributeDisplay != enabled:
             self.pointAttributeDisplay = enabled
-            self.updateGL()
+            self.updateViewGL()
 
     def enableMTGDisplay(self, enabled):
         if self.mtgDisplay != enabled:
             self.mtgDisplay = enabled
-            self.updateGL()
+            self.updateViewGL()
 
     def enableControlPointsDisplay(self, enabled):
         if self.ctrlPointDisplay != enabled:
             self.ctrlPointDisplay = enabled
-            self.updateGL()
+            self.updateViewGL()
 
     def enable3DModelDisplay(self, enabled):
         if self.modelDisplay != enabled:
             self.modelDisplay = enabled
-            self.updateGL()
+            self.updateViewGL()
 
     def enableRadiusDisplay(self, enabled):
         if self.radiusDisplay != enabled:
             self.radiusDisplay = enabled
-            self.updateGL()
+            self.updateViewGL()
 
     def isPointDisplayEnabled(self):
         return self.pointDisplay
@@ -1259,6 +1459,7 @@ class MainViewer(QGLViewer):
             else:
                 QGLViewer.keyPressEvent(self, event)
         else:
+            print('default key press')
             QGLViewer.keyPressEvent(self, event)
 
     def mousePressEvent(self, event):
@@ -1276,12 +1477,12 @@ class MainViewer(QGLViewer):
                 self.setSelection(cCtrlPoint)
                 if event.button() == Qt.RightButton:
                     self.setSelection(cCtrlPoint)
-                    self.updateGL()
+                    self.updateViewGL()
                     self.contextMenu(event.globalPos())
                     nompe = True
                 else:
                     self.tagScaleToNode()
-                    self.updateGL()
+                    self.updateViewGL()
             else:
                 self.setMode(self.Rotate | self.TagScale)
 
@@ -1291,12 +1492,12 @@ class MainViewer(QGLViewer):
                 self.setSelection(cCtrlPoint)
                 if event.button() == Qt.RightButton:
                     self.setSelection(cCtrlPoint)
-                    self.updateGL()
+                    self.updateViewGL()
                     self.contextMenu(event.globalPos())
                     nompe = True
                 else:
                     self.tagPropertyToNode()
-                    self.updateGL()
+                    self.updateViewGL()
             else:
                 self.setMode(self.Rotate | self.TagProperty)
 
@@ -1327,7 +1528,7 @@ class MainViewer(QGLViewer):
             cCtrlPoint = self.getSelection(event.pos())
             if cCtrlPoint:
                 self.setSelection(cCtrlPoint)
-                self.updateGL()
+                self.updateViewGL()
                 self.contextMenu(event.globalPos())
                 nompe = True
             else:
@@ -1344,7 +1545,7 @@ class MainViewer(QGLViewer):
                 self.showMessage("Move point " + str(cCtrlPoint.id))
                 # move manipulated frame
                 self.setMode(self.Edit)
-                self.updateGL()
+                self.updateViewGL()
             else:  # if no point is selected, then move camera
                 self.setMode(self.Rotate)
         if not nompe:
@@ -1368,7 +1569,7 @@ class MainViewer(QGLViewer):
             # Updates rectangle_ coordinates and redraws rectangle
             if self.rectangleSelect:
                 self.rectangleSelect.setBottomRight(event.pos())
-            self.updateGL()
+            self.updateViewGL()
         else:
             QGLViewer.mouseMoveEvent(self, event)
 
@@ -1412,7 +1613,7 @@ class MainViewer(QGLViewer):
             self.setMode(self.Rotate)
         else:
             self.setMode(self.Rotate)
-        self.updateGL()
+        self.updateViewGL()
 
     def contextMenu(self, pos):
         menu = QMenu(self)
@@ -1602,7 +1803,7 @@ class MainViewer(QGLViewer):
         self.showMessage("Remove subtree rooted in " + str(nid) + ". Repaint.")
         self.mtg.remove_tree(nid)
         self.updateMTGView()
-        self.updateGL()
+        self.updateViewGL()
 
     def removeSelection(self):
         assert not self.selection is None
@@ -1624,7 +1825,7 @@ class MainViewer(QGLViewer):
         self.selection = None
         self.focus = None
         self.__update_value__(parent)
-        self.updateGL()
+        self.updateViewGL()
 
     def newChild(self):
         assert not self.selection is None
@@ -1682,7 +1883,7 @@ class MainViewer(QGLViewer):
         self.setSelection(ctrlPoint)
         if self.points is None and len(self.mtg.vertices(scale=self.mtg.max_scale())) < 100:
             self.refreshView()
-        self.updateGL()
+        self.updateViewGL()
 
     def splitEdge(self):
         assert not self.selection is None
@@ -1704,7 +1905,7 @@ class MainViewer(QGLViewer):
         self.mtgrepindex[cid] = len(self.mtgrep) - 1
         self.__update_value__(cid)
         self.setSelection(ctrlPoint)
-        self.updateGL()
+        self.updateViewGL()
 
     def beginReparentSelection(self):
         self.setSelectionTrigger(self.endReparentSelection)
@@ -1729,7 +1930,7 @@ class MainViewer(QGLViewer):
         self.mtg.property('label')[nid] = self.nodelabel
         self.showMessage("Parent selected : " + str(node.id) + ".")
         self.__update_value__(nid)
-        self.updateGL()
+        self.updateViewGL()
         # self.updateMTGView()
 
     def setBranchingPoint(self):
@@ -1739,7 +1940,7 @@ class MainViewer(QGLViewer):
         self.mtg.property('edge_type')[nid] = '+'
         self.mtg.property('label')[nid] = self.nodelabel
         self.__update_value__(nid)
-        self.updateGL()
+        self.updateViewGL()
 
     def setAxialPoint(self):
         assert not self.selection is None
@@ -1756,7 +1957,7 @@ class MainViewer(QGLViewer):
                 self.mtg.property('label')[sib] = self.nodelabel
                 self.__update_value__(sib)
 
-        self.updateGL()
+        self.updateViewGL()
 
     def stickPosToPoints(self, initpos):
         if not self.pointsRep: return initpos, ()
@@ -1783,7 +1984,7 @@ class MainViewer(QGLViewer):
         nbg = self.stickNodeToPoints(nid)
         self.setTempInfoDisplay(Scene([Shape(PointSet(self.pointsRep[0].geometry.pointList.subset(nbg), width=self.pointinfo.pointWidth + 2), Material((255, 0, 255)))]))
         self.showMessage("Stick " + str(nid) + " to points.")
-        self.updateGL()
+        self.updateViewGL()
 
     def stickSubtree(self):
         assert not self.selection is None
@@ -1797,7 +1998,7 @@ class MainViewer(QGLViewer):
             nbg += self.stickNodeToPoints(ci)
         self.setTempInfoDisplay(Scene([Shape(PointSet(self.pointsRep[0].geometry.pointList.subset(nbg), width=self.pointinfo.pointWidth + 2), Material((255, 0, 255)))]))
         self.showMessage("Stick subtree of " + str(nid) + " to points.")
-        self.updateGL()
+        self.updateViewGL()
 
     def smoothPosition(self):
         from .mtgmanip import gaussian_filter
@@ -1805,7 +2006,7 @@ class MainViewer(QGLViewer):
         self.showMessage("Applied gaussian filter to positions.")
         gaussian_filter(self.mtg, self.propertyposition)
         self.__update_all_mtg__()
-        self.updateGL()
+        self.updateViewGL()
 
     def revolveAroundSelection(self):
         self.camera().setRevolveAroundPoint(toVec(self.selection.position()))
@@ -1830,14 +2031,14 @@ class MainViewer(QGLViewer):
         self.points.pointList.swapCoordinates(1, 2)
         if self.pointsRep[0].geometry.pointList.getPglId() != self.points.pointList.getPglId():
             self.pointsRep[0].geometry.pointList.swapCoordinates(1, 2)
-        self.updateGL()
+        self.updateViewGL()
 
     def sortZ(self):
         if not self.check_input_points(): return
         self.createBackup('points')
         self.points.pointList.sortZ()
         self.setPoints(PointSet(self.points.pointList))
-        self.updateGL()
+        self.updateViewGL()
 
     def estimateKDensity(self):
         if not self.check_input_points(): return
@@ -1910,7 +2111,7 @@ class MainViewer(QGLViewer):
         self.points.colorList = apply_colormap(cmap, densities)
 
         self.createPointsRepresentation()
-        self.updateGL()
+        self.updateViewGL()
 
     def pointKDensity(self):
         if not self.check_input_points(): return
@@ -1986,7 +2187,7 @@ class MainViewer(QGLViewer):
             dl = zdist / 200
             s = Scene([Shape(Group([Polyline([p + d * dl, p - d * dl]) for p, d in zip(self.points.pointList, directions)]), Material(self.theme['Direction'], 1))])
             self.setPointAttribute(s)
-            self.updateGL()
+            self.updateViewGL()
             return True
         else:
             return False
@@ -2002,7 +2203,7 @@ class MainViewer(QGLViewer):
         dl = zdist / 200
         s = Scene([Shape(Group([Polyline([p + d * dl, p - d * dl]) for p, d in zip(self.points.pointList, directions)]), Material(self.theme['Direction'], 1))])
         self.setPointAttribute(s)
-        self.updateGL()
+        self.updateViewGL()
 
     def filterPointsMin(self):
         if not self.check_input_points(): return
@@ -2013,7 +2214,7 @@ class MainViewer(QGLViewer):
             self.createBackup('points')
             subset = filter_min_densities(self.pointinfo.densities, densityratio)
             self.setPoints(PointSet(self.points.pointList.opposite_subset(subset), self.points.colorList.opposite_subset(subset)))
-            self.updateGL()
+            self.updateViewGL()
             self.showMessage("Applied density filtering. Nb of points : " + str(len(self.points.pointList)) + ".")
 
     def filterPointsMax(self):
@@ -2026,7 +2227,7 @@ class MainViewer(QGLViewer):
             self.createBackup('points')
             subset = filter_max_densities(self.pointinfo.densities, densityratio)
             self.setPoints(PointSet(self.points.pointList.opposite_subset(subset), self.points.colorList.opposite_subset(subset)))
-            self.updateGL()
+            self.updateViewGL()
             self.showMessage("Applied density filtering. Nb of points : " + str(len(self.points.pointList)) + ".")
 
     def subSampling(self):
@@ -2041,7 +2242,7 @@ class MainViewer(QGLViewer):
             subset = sample(range(nbPoints), int(nbPoints * pointratio / 100))
             self.createBackup('points')
             self.setPoints(PointSet(self.points.pointList.subset(subset), self.points.colorList.subset(subset)))
-            self.updateGL()
+            self.updateViewGL()
             self.showMessage("Sub-sampling applied. Number of points: " + str(len(self.points.pointList)) + ".")
 
     def displaySelectedPoint(self, position):
@@ -2053,7 +2254,7 @@ class MainViewer(QGLViewer):
         material = Material((0, 255, 0))
         scene = Scene([Shape(PointSet([position], width=10), material)])
         self.pointsAttributeRep = scene
-        self.updateGL()
+        self.updateViewGL()
 
     def getNearestSelectedPoint(self, selection):
         """
@@ -2078,7 +2279,7 @@ class MainViewer(QGLViewer):
             self.points.pointList = contract_point3(self.points.pointList, radius)
             t = time() - t
             self.setPoints(self.points, True)
-            self.updateGL()
+            self.updateViewGL()
             self.showMessage("Applied contraction in {} sec.".format(t))
 
     def riemannianContraction(self):
@@ -2094,7 +2295,7 @@ class MainViewer(QGLViewer):
             self.points.pointList = centroids_of_groups(self.points.pointList, rnbgs)
             t = time() - t
             self.setPoints(self.points, True)
-            self.updateGL()
+            self.updateViewGL()
             self.showMessage("Applied contraction in {} sec.".format(t))
 
     def laplacianContraction(self):
@@ -2107,7 +2308,7 @@ class MainViewer(QGLViewer):
         self.points.pointList = centroids_of_groups(points, kclosests)
         t = time() - t
         self.setPoints(self.points)
-        self.updateGL()
+        self.updateViewGL()
         self.showMessage("Applied contraction in {} sec.".format(t))
 
     def adaptiveRadialContraction(self):
@@ -2149,7 +2350,7 @@ class MainViewer(QGLViewer):
             self.points.pointList = cpoints2
             t = time() - t
             self.setPoints(self.points, True)
-            self.updateGL()
+            self.updateViewGL()
             self.showMessage("Applied contraction in {} sec.".format(t))
 
     def pathBasedContraction(self):
@@ -2177,7 +2378,7 @@ class MainViewer(QGLViewer):
             self.points.pointList = newPointList
             t = time() - t
             self.setPoints(self.points, True)
-            self.updateGL()
+            self.updateViewGL()
             self.showMessage("Applied contraction in {} sec.".format(t))
 
     def rosaContraction(self):
@@ -2212,7 +2413,7 @@ class MainViewer(QGLViewer):
             t = time() - t
             self.setPoints(self.points, True)
             self.pointinfo.directions = directions
-            self.updateGL()
+            self.updateViewGL()
             self.showMessage("Applied contraction in {} sec.".format(t))
 
     # ---------------------------- Align ----------------------------------------
@@ -2244,7 +2445,7 @@ class MainViewer(QGLViewer):
             self.modelRep = Scene([sh])
 
         self.modelDisplay = True
-        self.updateGL()
+        self.updateViewGL()
 
     def removeHullOfSelection(self):
         if not self.check_input_data(): return
@@ -2259,7 +2460,7 @@ class MainViewer(QGLViewer):
             pass
 
         self.modelRep = Scene([sh for sh in self.modelRep if sh.id != nid])
-        self.updateGL()
+        self.updateViewGL()
 
     # ---------------------------- Align ----------------------------------------
 
@@ -2280,7 +2481,7 @@ class MainViewer(QGLViewer):
             func(self.points.pointList, self.mtg)
 
         self.__update_all_mtg__()
-        self.updateGL()
+        self.updateViewGL()
 
     def alignGlobally(self):
         self.applyAlignement('alignGlobally')
@@ -2343,7 +2544,7 @@ class MainViewer(QGLViewer):
         self.mtg.property(self.propertyradius)[sid] = self.determine_radius(sid)
 
         self.__update_radius__(sid)
-        self.updateGL()
+        self.updateViewGL()
 
     def estimateMaxRadius(self):
         assert not self.selection is None
@@ -2352,7 +2553,7 @@ class MainViewer(QGLViewer):
         self.mtg.property(self.propertyradius)[sid] = self.determine_radius(sid, False)
 
         self.__update_radius__(sid)
-        self.updateGL()
+        self.updateViewGL()
 
     def estimateAllRadius(self, maxmethod=True, overwrite=True):
         if not self.check_input_data(): return
@@ -2369,7 +2570,7 @@ class MainViewer(QGLViewer):
                 radii[vid] = estimatedradii[nid]
 
         self.radiusRep, self.radiusRepIndex = createRadiiRepresentation(self.mtg, self.radiusMaterial, positionproperty=self.propertyposition, radiusproperty=self.propertyradius)
-        self.updateGL()
+        self.updateViewGL()
 
     def smoothRadius(self):
         from .mtgmanip import gaussian_filter
@@ -2377,7 +2578,7 @@ class MainViewer(QGLViewer):
         self.showMessage("Applied gaussian filter to radius.")
         gaussian_filter(self.mtg, self.propertyradius, False)
         self.__update_all_mtg__()
-        self.updateGL()
+        self.updateViewGL()
 
     def thresholdRadius(self):
         from .mtgmanip import threshold_filter
@@ -2385,7 +2586,7 @@ class MainViewer(QGLViewer):
         self.showMessage("Applied threshold filter to radius.")
         threshold_filter(self.mtg, self.propertyradius)
         self.__update_all_mtg__()
-        self.updateGL()
+        self.updateViewGL()
 
     def pipeModel(self, startfrom=None):
         from .mtgmanip import get_first_param_value, pipemodel
@@ -2407,7 +2608,7 @@ class MainViewer(QGLViewer):
             self.mtg.property(self.propertyradius).update(estimatedradii)
 
             self.radiusRep, self.radiusRepIndex = createRadiiRepresentation(self.mtg, self.radiusMaterial, positionproperty=self.propertyposition, radiusproperty=self.propertyradius)
-            self.updateGL()
+            self.updateViewGL()
 
     def pipeModelOnSelection(self):
         assert not self.selection is None
@@ -2433,7 +2634,7 @@ class MainViewer(QGLViewer):
             print(estimatedradii[0])
 
             self.radiusRep, self.radiusRepIndex = createRadiiRepresentation(self.mtg, self.radiusMaterial, positionproperty=self.propertyposition, radiusproperty=self.propertyradius)
-            self.updateGL()
+            self.updateViewGL()
 
     # ---------------------------- Check MTG ----------------------------------------
 
@@ -2538,7 +2739,7 @@ class MainViewer(QGLViewer):
             from .xumethod import xu_method
             xu_method(self.mtg, startfrom, points, binlength)
             self.updateMTGView()
-            self.updateGL()
+            self.updateViewGL()
 
     def graphColonization(self, startfrom=None):
         if not self.check_input_points(): return
@@ -2572,7 +2773,7 @@ class MainViewer(QGLViewer):
             densities = self.pointinfo.densities
             graphcolonization_method(self.mtg, startfrom, points, densities, minlength, maxlength, QuantisedFunction(radiusfunc.__deepcopy__({})))
             self.updateMTGView()
-            self.updateGL()
+            self.updateViewGL()
 
     def scaReconstruction(self, startfrom=None):
         if not self.check_input_points(): return
@@ -2602,7 +2803,7 @@ class MainViewer(QGLViewer):
             from .sca import spacecolonization_method
             spacecolonization_method(self.mtg, startfrom, points, growthlength, killratio, perceptionratio, min_nb_pt_per_bud)
             self.updateMTGView()
-            self.updateGL()
+            self.updateViewGL()
 
     def adaptivescaReconstruction(self, startfrom=None):
         if not self.check_input_points(): return
@@ -2640,7 +2841,7 @@ class MainViewer(QGLViewer):
             adaptivespacecolonization_method(self.mtg, startfrom, points, densities, minlength, maxlength, QuantisedFunction(radiusfunc.__deepcopy__({})),
                                              killratio, perceptionratio, min_nb_pt_per_bud)
             self.updateMTGView()
-            self.updateGL()
+            self.updateViewGL()
 
     def livnyReconstruction(self, startfrom=None):
         print('Livny Reconstruction')
@@ -2669,7 +2870,7 @@ class MainViewer(QGLViewer):
             from .livnymethod import livny_method_mtg
             livny_method_mtg(self.mtg, startfrom, points, livnycontractionnb, livnyfilteringnb, livnyminedgeratio / 100.)
             self.updateMTGView()
-            self.updateGL()
+            self.updateViewGL()
 
     # ---------------------------- Tagging ----------------------------------------
 
@@ -2683,10 +2884,10 @@ class MainViewer(QGLViewer):
                 QMessageBox.error(self, 'Invalid approximation', 'Invalid approximation')
                 return
             self.setTempInfoDisplay(lines_representation(trunk_line, lateral_lines))
-            self.updateGL()
+            self.updateViewGL()
             phyangles = phylo_angles(trunk_line, lateral_lines)
             self.setTempInfoDisplay(lines_representation(trunk_line, lateral_lines, phyangles))
-            self.updateGL()
+            self.updateViewGL()
             fname = QFileDialog.getSaveFileName(self, "Save Angles",
                                                 'angles.txt',
                                                 "Txt Files (*.txt);;All Files (*.*)")
@@ -2727,7 +2928,7 @@ class MainViewer(QGLViewer):
         else:
             self.endTagRepresentation()
             self.setMode(self.Rotate)
-        self.updateGL()
+        self.updateViewGL()
 
     def tagScaleRepresentation(self):
         tagprop = self.mtg.property(self.currenttagname)
@@ -2770,7 +2971,7 @@ class MainViewer(QGLViewer):
         self.showMessage("New scale " + str(self.mtg.max_scale() - 1) + " commited in the MTG.")
         self.tagScaleRepresentation()
         self.createCtrlPointRepresentation()
-        self.updateGL()
+        self.updateViewGL()
 
     def createProperty(self, vid=None):
         from . import propwidget_ui
@@ -2907,7 +3108,7 @@ class MainViewer(QGLViewer):
         else:
             self.endTagRepresentation()
             self.setMode(self.Rotate)
-        self.updateGL()
+        self.updateViewGL()
 
     def launchTagProperty(self):
         self.setMode(self.TagProperty)

@@ -38,6 +38,7 @@ jobs:
     - name: Setup conda
       run: |
         # Setup conda
+        sudo conda update -n base -c defaults conda
         sudo conda config --add channels conda-forge
         sudo conda config --add channels fredboudon
         sudo conda config --set always_yes yes
@@ -45,7 +46,7 @@ jobs:
         sudo conda config --set auto_update_conda False
         sudo conda install conda-build anaconda-client
         sudo conda install boa
-        
+
     - name: Build 
       env:
           CONDA_PY: ${{ matrix.env.CONDA_PY }}

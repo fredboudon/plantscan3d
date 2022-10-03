@@ -19,15 +19,14 @@ build:
 
 requirements:
   build:
-   - python
+   - python x.x
    - setuptools
    - openalea.deploy
    - openalea.plantgl
    - openalea.mtg
-   - qt 
    - pyqt
   run:
-   - python
+   - python x.x
    - openalea.plantgl
    - openalea.mtg
    - qt 

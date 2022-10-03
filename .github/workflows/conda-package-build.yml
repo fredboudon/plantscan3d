@@ -41,10 +41,11 @@ jobs:
         sudo conda config --add channels conda-forge
         sudo conda config --add channels fredboudon
         sudo conda config --set always_yes yes
-        sudo conda config --set remote_read_timeout_secs 600
+        # sudo conda config --set remote_read_timeout_secs 600
         sudo conda config --set auto_update_conda False
         sudo conda install conda-build anaconda-client
-
+        sudo conda install boa
+        
     - name: Build 
       env:
           CONDA_PY: ${{ matrix.env.CONDA_PY }}

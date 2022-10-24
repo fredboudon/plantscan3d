@@ -73,7 +73,7 @@ jobs:
         fi
         echo "BUILD_OUTPUT=$BUILD_OUTPUT" >> $GITHUB_ENV
 
-        $BUILD_CMD
+        $BUILD_CMD --no-test
 
 
     - name: Login

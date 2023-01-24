@@ -75,8 +75,8 @@ jobs:
         %BUILD_CMD%
 
     - name: Set UUID
-        id: generate-uuid
-        uses: filipstefansson/uuid-action@v1
+      id: generate-uuid
+      uses: filipstefansson/uuid-action@v1
 
     - name: Login
       env:

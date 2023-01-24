@@ -39,7 +39,6 @@ jobs:
       run: |
         ECHO "Install conda build"
 
-        conda install conda-build anaconda-client
 
     - name: Build 
       env:
@@ -48,16 +47,18 @@ jobs:
       run: |
         ECHO "Conda build with CMD"
 
+        conda install conda-build
+
         IF not defined CONDA_PY (
           ECHO "CONDA_PY is not defined"
           EXIT 1
         )
 
         SET PYTHON_VERSION=%CONDA_PY:~0,1%.%CONDA_PY:~1,3%
-        ECHO "PYTHON_VERSION=%PYTHON_VERSION%""
+        ECHO PYTHON_VERSION=%PYTHON_VERSION%
 
         SET BUILD_CMD=conda build . --python=%PYTHON_VERSION% --no-test
-        ECHO "BUILD_CMD=%BUILD_CMD%""
+        ECHO BUILD_CMD="%BUILD_CMD%"
 
         FOR /f "tokens=* USEBACKQ" %%i IN ('%BUILD_CMD% --output') DO (
           SET BUILD_OUTPUT=%%i
@@ -67,11 +68,11 @@ jobs:
           ECHO "PACKAGE NAME is not defined"
           EXIT 1
         )
-        ECHO "PACKAGE NAME=%BUILD_OUTPUT%""
+        ECHO PACKAGE NAME="%BUILD_OUTPUT%"
 
         ECHO "BUILD_OUTPUT=%BUILD_OUTPUT%" >> $GITHUB_ENV
 
-        ECHO "BUILD"
+        ECHO BUILD
         %BUILD_CMD%
 
     - name: Set UUID
@@ -93,9 +94,11 @@ jobs:
           echo "SESSION_UID is not defined"
           exit -1
         )
-        ECHO "SESSION_UID=%SESSION_UID%"
+        ECHO SESSION_UID=%SESSION_UID%
 
-        ECHO "LOGIN"
+        conda install anaconda-client
+
+        ECHO LOGIN
         anaconda login --username %ANACONDA_LOGIN% --password %ANACONDA_PASSWORD% --hostname %SESSION_UID%
 
     - name: Deploy
@@ -114,6 +117,7 @@ jobs:
           echo "PACKAGE NAME is not defined"
           exit 1
         )
-        ECHO "DEPLOY"
+
+        ECHO DEPLOY
         anaconda upload --skip-existing %BUILD_OUTPUT% -u %ANACONDA_OWNER% --no-progress
 

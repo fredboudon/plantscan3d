@@ -22,9 +22,11 @@ jobs:
     environment: anaconda_build
 
     steps:
-    - uses: actions/checkout@v2
+    - name: Checkout sources
+      uses: actions/checkout@v2
 
-    - uses: conda-incubator/setup-miniconda@v2
+    - name: Setup miniconda
+      uses: conda-incubator/setup-miniconda@v2
       with:
           miniconda-version: "latest"
           auto-update-conda: true
@@ -32,6 +34,12 @@ jobs:
           auto-activate-base: true
           activate-environment: ""
 
+    - name: Setup conda build
+      shell: cmd /C CALL {0} 
+      run: |
+        ECHO "Install conda build"
+
+        conda install conda-build anaconda-client
 
     - name: Build 
       env:
@@ -40,50 +48,54 @@ jobs:
       run: |
         ECHO "Conda build with CMD"
 
-        conda install conda-build
-
         IF not defined CONDA_PY (
           ECHO "CONDA_PY is not defined"
           EXIT 1
         )
-        ECHO %CONDA_PY%
 
         SET PYTHON_VERSION=%CONDA_PY:~0,1%.%CONDA_PY:~1,3%
-        ECHO %PYTHON_VERSION%
+        ECHO "PYTHON_VERSION=%PYTHON_VERSION%""
 
         SET BUILD_CMD=conda build . --python=%PYTHON_VERSION% --no-test
-        ECHO %BUILD_CMD%
-
-        %BUILD_CMD% --output
-
-        ECHO "cmd done"
+        ECHO "BUILD_CMD=%BUILD_CMD%""
 
         FOR /f "tokens=* USEBACKQ" %%i IN ('%BUILD_CMD% --output') DO (
           SET BUILD_OUTPUT=%%i
         )
 
-        ECHO %BUILD_OUTPUT%
-
         IF  not defined BUILD_OUTPUT (
           ECHO "PACKAGE NAME is not defined"
           EXIT 1
         )
+        ECHO "PACKAGE NAME=%BUILD_OUTPUT%""
+
         ECHO "BUILD_OUTPUT=%BUILD_OUTPUT%" >> $GITHUB_ENV
 
+        ECHO "BUILD"
         %BUILD_CMD%
 
+    - name: Set UUID
+        id: generate-uuid
+        uses: filipstefansson/uuid-action@v1
 
     - name: Login
       env:
           ANACONDA_LOGIN: ${{ secrets.ANACONDA_LOGIN }}
           ANACONDA_PASSWORD: ${{ secrets.ANACONDA_PASSWORD }}
+          SESSION_UID: ${{ steps.generate-uuid.outputs.uuid }}
       shell: cmd /C CALL {0}
       run: |
         IF not defined ANACONDA_LOGIN (
           echo "ANACONDA_LOGIN is not defined"
           exit -1
         )
-        FOR /f %%i IN ('uuidgen') DO SET SESSION_UID=%%i
+        IF not defined SESSION_UID (
+          echo "SESSION_UID is not defined"
+          exit -1
+        )
+        ECHO "SESSION_UID=%SESSION_UID%"
+
+        ECHO "LOGIN"
         anaconda login --username %ANACONDA_LOGIN% --password %ANACONDA_PASSWORD% --hostname %SESSION_UID%
 
     - name: Deploy
@@ -97,10 +109,11 @@ jobs:
           exit 1
         )
 
-        echo "PACKAGE NAME:" %BUILD_OUTPUT%
+        echo "PACKAGE NAME=%BUILD_OUTPUT%"
         if not defined BUILD_OUTPUT (
           echo "PACKAGE NAME is not defined"
           exit 1
         )
+        ECHO "DEPLOY"
         anaconda upload --skip-existing %BUILD_OUTPUT% -u %ANACONDA_OWNER% --no-progress
 

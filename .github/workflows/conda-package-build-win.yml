@@ -29,7 +29,6 @@ jobs:
           miniconda-version: "latest"
           auto-update-conda: true
           channels: conda-forge, fredboudon
-          conda-build-version: "*"
           auto-activate-base: true
           activate-environment: ""
 
@@ -40,6 +39,8 @@ jobs:
       shell: cmd /C CALL {0} 
       run: |
         ECHO "Conda build with CMD"
+
+        conda install conda-build
 
         IF not defined CONDA_PY (
           ECHO "CONDA_PY is not defined"

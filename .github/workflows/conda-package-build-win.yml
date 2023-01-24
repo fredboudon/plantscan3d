@@ -53,7 +53,14 @@ jobs:
         SET BUILD_CMD=conda build . --python=%PYTHON_VERSION% --no-test
         ECHO %BUILD_CMD%
 
-        FOR /f %%i IN ('%BUILD_CMD% --output') DO SET BUILD_OUTPUT=%%i
+        %BUILD_CMD% --output
+
+        ECHO "cmd done"
+
+        FOR /f "tokens=* USEBACKQ" %%i IN ('%BUILD_CMD% --output') DO (
+          SET BUILD_OUTPUT=%%i
+        )
+
         ECHO %BUILD_OUTPUT%
 
         IF  not defined BUILD_OUTPUT (

@@ -51,7 +51,10 @@ jobs:
         ECHO %PYTHON_VERSION%
 
         SET BUILD_CMD=conda build . --python=%PYTHON_VERSION%
-        FOR /f %i IN ('%BUILD_CMD% --output') DO SET BUILD_OUTPUT=%i
+        ECHO %BUILD_CMD%
+
+        FOR /f %%i IN ('%BUILD_CMD% --output') DO SET BUILD_OUTPUT=%%i
+        ECHO %BUILD_OUTPUT%
 
         IF  not defined BUILD_OUTPUT (
           ECHO "PACKAGE NAME is not defined"
@@ -72,7 +75,7 @@ jobs:
           echo "ANACONDA_LOGIN is not defined"
           exit -1
         )
-        FOR /f %i IN ('uuidgen') DO SET SESSION_UID=%i
+        FOR /f %%i IN ('uuidgen') DO SET SESSION_UID=%%i
         anaconda login --username %ANACONDA_LOGIN% --password %ANACONDA_PASSWORD% --hostname %SESSION_UID%
 
     - name: Deploy

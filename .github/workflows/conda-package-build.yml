@@ -24,23 +24,23 @@ jobs:
     steps:
     - uses: actions/checkout@v2
 
-    - name: Add conda to system path
-      run: |
-        # Add conda to system path
-        # $CONDA is an environment variable pointing to the root of the miniconda directory
-        echo $CONDA/bin >> $GITHUB_PATH
+    - name: Setup miniconda
+      uses: conda-incubator/setup-miniconda@v2
+      with:
+          miniconda-version: "latest"
+          auto-update-conda: true
+          channels: conda-forge, fredboudon
+          auto-activate-base: true
+          activate-environment: ""
+          conda-build-version: "*"
+          mamba-version: "*"
 
-    - name: Setup conda
+    - name: Setup anaconda-client
+      shell: cmd /C CALL {0} 
       run: |
-        # Setup conda
-        sudo conda update -n base -c defaults conda
-        sudo conda config --add channels conda-forge
-        sudo conda config --add channels fredboudon
-        sudo conda config --set always_yes yes
-        # sudo conda config --set remote_read_timeout_secs 600
-        sudo conda config --set auto_update_conda False
-        sudo conda install conda-build anaconda-client
-        # sudo conda install boa
+        echo "Install anaconda-client"
+        conda install -y -q anaconda-client
+
 
     - name: Build 
       env:
@@ -53,8 +53,10 @@ jobs:
           exit -1
         fi
         export PYTHON_VERSION=${CONDA_PY:0:1}.${CONDA_PY:1:3}
+
+        sudo conda activate base
         
-        export BUILD_CMD="sudo conda build . --python=$PYTHON_VERSION  --no-test"
+        export BUILD_CMD="sudo conda build .  --no-test --python=$PYTHON_VERSION "
         export BUILD_OUTPUT=`$BUILD_CMD --output`
 
         if [[ "$BUILD_OUTPUT" = "" ]]; then
@@ -76,6 +78,9 @@ jobs:
           echo "ANACONDA_LOGIN is not defined"
           exit -1
         fi
+
+        sudo conda activate base
+
         SESSION_UID=$(uuidgen)
         anaconda login --username $ANACONDA_LOGIN --password $ANACONDA_PASSWORD --hostname $SESSION_UID
 
@@ -95,5 +100,8 @@ jobs:
           echo "PACKAGE NAME is not defined"
           exit -1
         fi
+
+        sudo conda activate base
+
         anaconda upload --skip-existing $BUILD_OUTPUT -u $ANACONDA_OWNER --no-progress
 

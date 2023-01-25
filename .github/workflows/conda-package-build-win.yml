@@ -60,6 +60,10 @@ jobs:
         SET BUILD_CMD=conda build . --python=%PYTHON_VERSION% --no-test
         ECHO BUILD_CMD="%BUILD_CMD%"
 
+        ECHO BUILD
+        %BUILD_CMD%
+
+        ECHO Check output
         FOR /f  %%i IN ('%BUILD_CMD% --output') DO (
           SET BUILD_OUTPUT=%%i
         )
@@ -72,8 +76,6 @@ jobs:
 
         ECHO BUILD_OUTPUT="%BUILD_OUTPUT%" >> $GITHUB_OUTPUT
 
-        ECHO BUILD
-        %BUILD_CMD%
 
     - name: Set UUID
       id: generate-uuid

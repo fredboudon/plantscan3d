@@ -61,10 +61,8 @@ jobs:
 
         ECHO CWD="%cd%"
 
-        conda activate base
-        
         ECHO BUILD
-        %BUILD_CMD%
+        conda activate base & %BUILD_CMD%
 
         ECHO Check output
         FOR /f  %%i IN ('%BUILD_CMD% --output') DO (

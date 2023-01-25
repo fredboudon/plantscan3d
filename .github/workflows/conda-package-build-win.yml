@@ -6,6 +6,8 @@ on:
   pull_request:
     branches: [ master ]
 
+env:
+  BUILD_CMD_PREFIX: "conda build . --no-test --python="
 
 jobs:
   build:
@@ -45,8 +47,8 @@ jobs:
       id: build
       env:
           CONDA_PY: ${{ matrix.env.CONDA_PY }}
-          BUILD_CMD: "conda build . --python=${{ matrix.env.CONDA_PY }} --no-test"
-      shell: cmd /D /S /C CALL {0} 
+          BUILD_CMD: "${{ BUILD_CMD_PREFIX }}${{ matrix.env.CONDA_PY }}"
+      shell: cmd /C CALL {0} 
       run: |
         ECHO "Conda build with CMD"
 
@@ -62,10 +64,11 @@ jobs:
         ECHO CWD="%cd%"
 
         ECHO BUILD
-        conda activate base & %BUILD_CMD%
+        call conda activate base 
+        call %BUILD_CMD%
 
         ECHO Check output
-        FOR /f  %%i IN ('%BUILD_CMD% --output') DO (
+        FOR /f  %%i IN ('call %BUILD_CMD% --output') DO (
           SET BUILD_OUTPUT=%%i
         )
 
@@ -98,8 +101,6 @@ jobs:
           exit -1
         )
         ECHO SESSION_UID=%SESSION_UID%
-
-        conda install  -y -q anaconda-client
 
         ECHO LOGIN
         anaconda login --username %ANACONDA_LOGIN% --password %ANACONDA_PASSWORD% --hostname %SESSION_UID%

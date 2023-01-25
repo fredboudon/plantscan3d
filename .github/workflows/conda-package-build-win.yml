@@ -60,6 +60,8 @@ jobs:
         SET BUILD_CMD=conda build . --python=%PYTHON_VERSION% --no-test
         ECHO BUILD_CMD="%BUILD_CMD%"
 
+        ECHO CWD="%cd%"
+        
         ECHO BUILD
         %BUILD_CMD%
 

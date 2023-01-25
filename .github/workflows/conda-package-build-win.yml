@@ -34,7 +34,7 @@ jobs:
           auto-update-conda: true
           channels: conda-forge, fredboudon
           auto-activate-base: true
-          activate-environment: ""
+          activate-environment: "base"
 
     - name: Setup conda build
       shell: cmd /C CALL {0} 
@@ -64,8 +64,8 @@ jobs:
         ECHO CWD="%cd%"
 
         ECHO BUILD
-        call conda activate base 
         call %BUILD_CMD%
+        if errorlevel 1 exit 1
 
         ECHO Check output
         FOR /f  %%i IN ('call %BUILD_CMD% --output') DO (

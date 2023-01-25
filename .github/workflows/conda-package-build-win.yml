@@ -48,7 +48,7 @@ jobs:
       run: |
         ECHO "Conda build with CMD"
 
-        conda install conda-build
+        conda install -y -q conda-build
 
         IF not defined CONDA_PY (
           ECHO "CONDA_PY is not defined"
@@ -97,7 +97,7 @@ jobs:
         )
         ECHO SESSION_UID=%SESSION_UID%
 
-        conda install anaconda-client
+        conda install  -y -q anaconda-client
 
         ECHO LOGIN
         anaconda login --username %ANACONDA_LOGIN% --password %ANACONDA_PASSWORD% --hostname %SESSION_UID%

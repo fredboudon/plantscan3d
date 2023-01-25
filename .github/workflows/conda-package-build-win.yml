@@ -40,7 +40,8 @@ jobs:
         ECHO "Install conda build"
 
 
-    - name: Build 
+    - name: Build
+      id: build
       env:
           CONDA_PY: ${{ matrix.env.CONDA_PY }}
       shell: cmd /C CALL {0} 
@@ -70,7 +71,7 @@ jobs:
         )
         ECHO PACKAGE NAME="%BUILD_OUTPUT%"
 
-        ECHO "BUILD_OUTPUT=%BUILD_OUTPUT%" >> $GITHUB_ENV
+        ECHO BUILD_OUTPUT="%BUILD_OUTPUT%" >> $GITHUB_OUTPUT
 
         ECHO BUILD
         %BUILD_CMD%
@@ -104,7 +105,7 @@ jobs:
     - name: Deploy
       env:
           ANACONDA_OWNER: ${{ secrets.ANACONDA_OWNER }}
-          BUILD_OUTPUT: ${{ env.BUILD_OUTPUT }}
+          BUILD_OUTPUT: ${{ steps.build.outputs.BUILD_OUTPUT }}
       shell: cmd /C CALL {0}
       run: |
         if not defined ANACONDA_OWNER (

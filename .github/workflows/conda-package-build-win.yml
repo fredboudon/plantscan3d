@@ -38,6 +38,7 @@ jobs:
       shell: cmd /C CALL {0} 
       run: |
         ECHO "Install conda build"
+        conda install -y -q conda-build anaconda-client
 
 
     - name: Build
@@ -47,8 +48,6 @@ jobs:
       shell: cmd /C CALL {0} 
       run: |
         ECHO "Conda build with CMD"
-
-        conda install -y -q conda-build
 
         IF not defined CONDA_PY (
           ECHO "CONDA_PY is not defined"

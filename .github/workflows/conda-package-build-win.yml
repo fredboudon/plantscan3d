@@ -47,7 +47,7 @@ jobs:
       id: build
       env:
           CONDA_PY: ${{ matrix.env.CONDA_PY }}
-          BUILD_CMD: "${{ BUILD_CMD_PREFIX }}${{ matrix.env.CONDA_PY }}"
+          BUILD_CMD: "${{ env.BUILD_CMD_PREFIX }}${{ matrix.env.CONDA_PY }}"
       shell: cmd /C CALL {0} 
       run: |
         ECHO "Conda build with CMD"

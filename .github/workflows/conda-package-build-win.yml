@@ -82,7 +82,7 @@ jobs:
         ECHO PACKAGE NAME="%BUILD_OUTPUT%"
 
         ECHO BUILD_OUTPUT="%BUILD_OUTPUT%" >> $GITHUB_OUTPUT
-
+        more < $GITHUB_OUTPUT
 
     - name: Set UUID
       id: generate-uuid
@@ -120,7 +120,7 @@ jobs:
           exit 1
         )
 
-        echo "PACKAGE NAME=%BUILD_OUTPUT%"
+        echo PACKAGE NAME="%BUILD_OUTPUT%"
         if not defined BUILD_OUTPUT (
           echo "PACKAGE NAME is not defined"
           exit 1

@@ -15,9 +15,9 @@ jobs:
       matrix:
         os: [ windows-latest]
         env:
-          - CONDA_PY: "38" 
-          - CONDA_PY: "39" 
-          - CONDA_PY: "310" 
+          - CONDA_PY: "3.8" 
+          - CONDA_PY: "3.9" 
+          - CONDA_PY: "3.10" 
 
     environment: anaconda_build
 
@@ -45,6 +45,7 @@ jobs:
       id: build
       env:
           CONDA_PY: ${{ matrix.env.CONDA_PY }}
+          BUILD_CMD: "conda build . --python=${{ matrix.env.CONDA_PY }} --no-test"
       shell: cmd /D /S /C CALL {0} 
       run: |
         ECHO "Conda build with CMD"
@@ -54,13 +55,13 @@ jobs:
           EXIT 1
         )
 
-        SET PYTHON_VERSION=%CONDA_PY:~0,1%.%CONDA_PY:~1,3%
-        ECHO PYTHON_VERSION=%PYTHON_VERSION%
+        ECHO CONDA_PY=%CONDA_PY%
 
-        SET BUILD_CMD=conda build . --python=%PYTHON_VERSION% --no-test
         ECHO BUILD_CMD="%BUILD_CMD%"
 
         ECHO CWD="%cd%"
+
+        conda activate base
         
         ECHO BUILD
         %BUILD_CMD%

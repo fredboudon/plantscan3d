@@ -13,7 +13,6 @@ jobs:
   build:
     runs-on: ${{ matrix.os }}
     strategy:
-      #max-parallel: 5
       matrix:
         os: [ windows-latest]
         env:
@@ -42,8 +41,8 @@ jobs:
       shell: cmd /C CALL {0} 
       run: |
         ECHO "Install anaconda-client"
-        conda install -y -q anaconda-client
-
+        call conda activate base
+        mamba install -y -q anaconda-client
 
     - name: Build
       id: build
@@ -52,37 +51,12 @@ jobs:
           BUILD_CMD: "${{ env.BUILD_CMD_PREFIX }}${{ matrix.env.CONDA_PY }}"
       shell: cmd /C CALL {0} 
       run: |
-        ECHO "Conda build with CMD"
-
-        IF not defined CONDA_PY (
-          ECHO "CONDA_PY is not defined"
-          EXIT 1
-        )
-
-        ECHO CONDA_PY=%CONDA_PY%
-
-        ECHO BUILD_CMD="%BUILD_CMD%"
-
-        ECHO CWD="%cd%"
+        ECHO Conda build with CMD and Python %CONDA_PY%
+        call conda activate base
 
         ECHO BUILD
-        call conda activate base
-        call %BUILD_CMD%
-        if errorlevel 1 exit 1
-
-        ECHO Check output
-        FOR /f  %%i IN ('call %BUILD_CMD% --output') DO (
-          SET BUILD_OUTPUT=%%i
-        )
-
-        IF  not defined BUILD_OUTPUT (
-          ECHO "PACKAGE NAME is not defined"
-          EXIT 1
-        )
-        ECHO PACKAGE NAME="%BUILD_OUTPUT%"
-
-        ECHO BUILD_OUTPUT="%BUILD_OUTPUT%" >> $GITHUB_OUTPUT
-        more < $GITHUB_OUTPUT
+        ECHO BUILD_CMD="%BUILD_CMD%"
+        %BUILD_CMD%
 
     - name: Set UUID
       id: generate-uuid
@@ -112,7 +86,8 @@ jobs:
     - name: Deploy
       env:
           ANACONDA_OWNER: ${{ secrets.ANACONDA_OWNER }}
-          BUILD_OUTPUT: ${{ steps.build.outputs.BUILD_OUTPUT }}
+          BUILD_CMD: "${{ env.BUILD_CMD_PREFIX }}${{ matrix.env.CONDA_PY }}"
+
       shell: cmd /C CALL {0}
       run: |
         if not defined ANACONDA_OWNER (
@@ -120,13 +95,19 @@ jobs:
           exit 1
         )
 
-        echo PACKAGE NAME="%BUILD_OUTPUT%"
-        if not defined BUILD_OUTPUT (
-          echo "PACKAGE NAME is not defined"
-          exit 1
+        call conda activate base
+        ECHO Retrieve output
+
+        FOR /f  %%i IN ('call %BUILD_CMD% --output') DO (
+          SET PACKAGE_NAME=%%i
         )
 
+        IF  not defined PACKAGE_NAME (
+          ECHO "PACKAGE_NAME is not defined"
+          EXIT 1
+        )
+        ECHO PACKAGE_NAME="%PACKAGE_NAME%"
+
         ECHO DEPLOY
-        call conda activate base
-        anaconda upload --skip-existing %BUILD_OUTPUT% -u %ANACONDA_OWNER% --no-progress
+        anaconda upload --skip-existing %PACKAGE_NAME% -u %ANACONDA_OWNER% --no-progress
 

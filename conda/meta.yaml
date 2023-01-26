@@ -21,7 +21,7 @@ requirements:
   build:
    - python x.x
    - setuptools
-   - openalea.deploy
+   #- openalea.deploy
    - openalea.plantgl
    - openalea.mtg
    - pyqt

@@ -6,6 +6,9 @@ on:
   pull_request:
     branches: [ master ]
 
+env:
+  BUILD_CMD_PREFIX: "conda build . --no-test --python="
+
 
 jobs:
   build:
@@ -15,9 +18,9 @@ jobs:
       matrix:
         os: [ macos-latest, ubuntu-latest]
         env:
-          - CONDA_PY: "38" 
-          - CONDA_PY: "39" 
-          - CONDA_PY: "310" 
+          - CONDA_PY: "3.8" 
+          - CONDA_PY: "3.9" 
+          - CONDA_PY: "3.10" 
 
     environment: anaconda_build
 
@@ -36,58 +39,57 @@ jobs:
           mamba-version: "*"
 
     - name: Setup anaconda-client
-      shell: cmd /C CALL {0} 
       run: |
         echo "Install anaconda-client"
-        conda install -y -q anaconda-client
+        sudo conda activate base
+        sudo conda install -y -q anaconda-client
 
 
     - name: Build 
+      id: build
       env:
           CONDA_PY: ${{ matrix.env.CONDA_PY }}
-          CONDA_NPY: ${{ matrix.env.CONDA_NPY }}
+          BUILD_CMD: "${{ env.BUILD_CMD_PREFIX }}${{ matrix.env.CONDA_PY }}"
       run: |
         # Build
         if [[ "$CONDA_PY" = "" ]]; then
           echo "CONDA_PY is not defined"
           exit -1
         fi
-        export PYTHON_VERSION=${CONDA_PY:0:1}.${CONDA_PY:1:3}
 
         sudo conda activate base
-        
-        export BUILD_CMD="sudo conda build .  --no-test --python=$PYTHON_VERSION "
-        export BUILD_OUTPUT=`$BUILD_CMD --output`
-
-        if [[ "$BUILD_OUTPUT" = "" ]]; then
-          echo "PACKAGE NAME is not defined"
-          exit -1
-        fi
-        echo "BUILD_OUTPUT=$BUILD_OUTPUT" >> $GITHUB_ENV
-
         $BUILD_CMD
 
+    - name: Set UUID
+      id: generate-uuid
+      uses: filipstefansson/uuid-action@v1
 
     - name: Login
       env:
           ANACONDA_LOGIN: ${{ secrets.ANACONDA_LOGIN }}
           ANACONDA_PASSWORD: ${{ secrets.ANACONDA_PASSWORD }}
+          SESSION_UID: ${{ steps.generate-uuid.outputs.uuid }}
       run: |
         # Login
         if [[ "$ANACONDA_LOGIN" = "" ]]; then
           echo "ANACONDA_LOGIN is not defined"
           exit -1
         fi
+        if [[ "$SESSION_UID" = "" ]]; then
+          echo "SESSION_UID is not defined"
+          exit -1
+        fi
+
+        echo "SESSION_UID=$SESSION_UID"
 
         sudo conda activate base
 
-        SESSION_UID=$(uuidgen)
         anaconda login --username $ANACONDA_LOGIN --password $ANACONDA_PASSWORD --hostname $SESSION_UID
 
     - name: Deploy
       env:
           ANACONDA_OWNER: ${{ secrets.ANACONDA_OWNER }}
-          BUILD_OUTPUT: ${{ env.BUILD_OUTPUT }}
+          BUILD_OUTPUT_CMD: "${{ env.BUILD_CMD_PREFIX }}${{ matrix.env.CONDA_PY }} --output"
       run: |
         # Deploy
         if [[ "$ANACONDA_OWNER" = "" ]]; then
@@ -95,13 +97,14 @@ jobs:
           exit -1
         fi
 
-        echo "PACKAGE NAME:" $BUILD_OUTPUT
+        sudo conda activate base
+
+        export PACKAGE_NAME=`$BUILD_OUTPUT_CMD`
+
         if [[ "$BUILD_OUTPUT" = "" ]]; then
-          echo "PACKAGE NAME is not defined"
+          echo "PACKAGE_NAME is not defined"
           exit -1
         fi
 
-        sudo conda activate base
-
-        anaconda upload --skip-existing $BUILD_OUTPUT -u $ANACONDA_OWNER --no-progress
+        anaconda upload --skip-existing $PACKAGE_NAME -u $ANACONDA_OWNER --no-progress
 

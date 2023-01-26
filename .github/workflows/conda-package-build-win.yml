@@ -86,7 +86,7 @@ jobs:
     - name: Deploy
       env:
           ANACONDA_OWNER: ${{ secrets.ANACONDA_OWNER }}
-          BUILD_CMD: "${{ env.BUILD_CMD_PREFIX }}${{ matrix.env.CONDA_PY }}"
+          BUILD_OUTPUT_CMD: "${{ env.BUILD_CMD_PREFIX }}${{ matrix.env.CONDA_PY }} --output"
 
       shell: cmd /C CALL {0}
       run: |
@@ -98,7 +98,7 @@ jobs:
         call conda activate base
         ECHO Retrieve output
 
-        FOR /f  %%i IN ('call %BUILD_CMD% --output') DO (
+        FOR /f  %%i IN ('call %BUILD_OUTPUT_CMD%') DO (
           SET PACKAGE_NAME=%%i
         )
 

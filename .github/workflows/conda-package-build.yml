@@ -108,7 +108,6 @@ jobs:
         anaconda upload --skip-existing $PACKAGE_NAME -u $ANACONDA_OWNER --no-progress
 
   build-win:
-    if: ${{ false }}  # disable for now
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:

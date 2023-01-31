@@ -10,5 +10,5 @@ on:
 jobs:
   build:
     uses: fredboudon/github-action-conda-build/.github/workflows/conda-package-build.yml@main
-    with:
+    secrets:
       token: ${{ secrets.ANACONDA_TOKEN }}

@@ -25,10 +25,10 @@ jobs:
     environment: anaconda_build
 
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
 
-    - name: Setup miniconda
-      uses: conda-incubator/setup-miniconda@v2
+    - name: Setup Miniconda
+      uses: conda-incubator/setup-miniconda@v2.2.0
       with:
           miniconda-version: "latest"
           auto-update-conda: true
@@ -41,8 +41,8 @@ jobs:
     - name: Setup anaconda-client
       run: |
         echo "Install anaconda-client"
-        sudo conda activate base
-        sudo conda install -y -q anaconda-client
+        conda activate base
+        mamba install -y -q anaconda-client
 
 
     - name: Build 
@@ -57,12 +57,12 @@ jobs:
           exit -1
         fi
 
-        sudo conda activate base
+        conda activate base
         $BUILD_CMD
 
     - name: Set UUID
       id: generate-uuid
-      uses: filipstefansson/uuid-action@v1
+      uses: filipstefansson/uuid-action@v1.1
 
     - name: Login
       env:
@@ -82,7 +82,7 @@ jobs:
 
         echo "SESSION_UID=$SESSION_UID"
 
-        sudo conda activate base
+        conda activate base
 
         anaconda login --username $ANACONDA_LOGIN --password $ANACONDA_PASSWORD --hostname $SESSION_UID
 
@@ -97,7 +97,7 @@ jobs:
           exit -1
         fi
 
-        sudo conda activate base
+        conda activate base
 
         export PACKAGE_NAME=`$BUILD_OUTPUT_CMD`
 

@@ -24,10 +24,10 @@ jobs:
 
     steps:
     - name: Checkout sources
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
 
-    - name: Setup miniconda
-      uses: conda-incubator/setup-miniconda@v2
+    - name: Setup Miniconda
+      uses: conda-incubator/setup-miniconda@v2.2.0
       with:
           miniconda-version: "latest"
           auto-update-conda: true
@@ -60,7 +60,7 @@ jobs:
 
     - name: Set UUID
       id: generate-uuid
-      uses: filipstefansson/uuid-action@v1
+      uses: filipstefansson/uuid-action@v1.1
 
     - name: Login
       env:

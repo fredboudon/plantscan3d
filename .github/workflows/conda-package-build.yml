@@ -100,7 +100,7 @@ jobs:
 
         export PACKAGE_NAME=`$BUILD_OUTPUT_CMD`
 
-        if [[ "$BUILD_OUTPUT" = "" ]]; then
+        if [[ "$PACKAGE_NAME" = "" ]]; then
           echo "PACKAGE_NAME is not defined"
           exit -1
         fi

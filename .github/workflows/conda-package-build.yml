@@ -11,7 +11,7 @@ env:
 
 
 jobs:
-  buildunix:
+  build-unix:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -24,7 +24,8 @@ jobs:
     environment: anaconda_build
 
     steps:
-    - uses: actions/checkout@v3
+    - name: Checkout sources
+      uses: actions/checkout@v3
 
     - name: Setup Miniconda
       uses: conda-incubator/setup-miniconda@v2.2.0
@@ -100,11 +101,11 @@ jobs:
 
         anaconda upload --skip-existing $PACKAGE_NAME -u $ANACONDA_OWNER --no-progress
 
-  buildwin:
+  build-win:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ windows-latest]
+        os: [ windows-2019]
         env:
           - CONDA_PY: "3.8" 
           - CONDA_PY: "3.9" 

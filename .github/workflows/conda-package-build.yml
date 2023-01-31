@@ -33,12 +33,13 @@ jobs:
           miniconda-version: "latest"
           auto-update-conda: true
           channels: conda-forge, fredboudon
-          auto-activate-base: false
-          activate-environment: "build"
+          auto-activate-base: true
+          activate-environment: ""
           conda-build-version: "*"
           mamba-version: "*"
 
     - name: Setup anaconda-client
+      shell: bash -l {0}
       run: |
         echo "Install anaconda-client"
         conda info
@@ -47,6 +48,7 @@ jobs:
 
     - name: Build 
       id: build
+      shell: bash -l {0}
       env:
           CONDA_PY: ${{ matrix.env.CONDA_PY }}
           BUILD_CMD: "${{ env.BUILD_CMD_PREFIX }}${{ matrix.env.CONDA_PY }}"
@@ -64,6 +66,7 @@ jobs:
       uses: filipstefansson/uuid-action@v1.1
 
     - name: Login
+      shell: bash -l {0}
       env:
           ANACONDA_LOGIN: ${{ secrets.ANACONDA_LOGIN }}
           ANACONDA_PASSWORD: ${{ secrets.ANACONDA_PASSWORD }}
@@ -84,6 +87,7 @@ jobs:
         anaconda login --username $ANACONDA_LOGIN --password $ANACONDA_PASSWORD --hostname $SESSION_UID
 
     - name: Deploy
+      shell: bash -l {0}
       env:
           ANACONDA_OWNER: ${{ secrets.ANACONDA_OWNER }}
           BUILD_OUTPUT_CMD: "${{ env.BUILD_CMD_PREFIX }}${{ matrix.env.CONDA_PY }} --output"

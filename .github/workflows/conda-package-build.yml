@@ -40,11 +40,7 @@ jobs:
     - name: Setup anaconda-client
       run: |
         echo "Install anaconda-client"
-        conda init bash
-        bash
-        conda activate base
         mamba install -y -q anaconda-client
-        exit
 
     - name: Build 
       id: build
@@ -58,7 +54,6 @@ jobs:
           exit -1
         fi
 
-        conda activate base
         $BUILD_CMD
 
     - name: Set UUID
@@ -83,8 +78,6 @@ jobs:
 
         echo "SESSION_UID=$SESSION_UID"
 
-        conda activate base
-
         anaconda login --username $ANACONDA_LOGIN --password $ANACONDA_PASSWORD --hostname $SESSION_UID
 
     - name: Deploy
@@ -97,8 +90,6 @@ jobs:
           echo "ANACONDA_OWNER is not defined"
           exit -1
         fi
-
-        conda activate base
 
         export PACKAGE_NAME=`$BUILD_OUTPUT_CMD`
 
@@ -142,6 +133,11 @@ jobs:
         ECHO "Install anaconda-client"
         call conda activate base
         mamba install -y -q anaconda-client
+
+    - name: Setup Visual Studio
+      uses: ilammy/msvc-dev-cmd@v1
+      with:
+          vsversion: "2019"
 
     - name: Build
       id: build

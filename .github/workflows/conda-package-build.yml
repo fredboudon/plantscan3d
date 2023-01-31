@@ -33,6 +33,8 @@ jobs:
           miniconda-version: "latest"
           auto-update-conda: true
           channels: conda-forge, fredboudon
+          auto-activate-base: false
+          activate-environment: "build"
           conda-build-version: "*"
           mamba-version: "*"
 

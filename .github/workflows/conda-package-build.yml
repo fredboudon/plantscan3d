@@ -41,7 +41,9 @@ jobs:
     - name: Setup anaconda-client
       run: |
         echo "Install anaconda-client"
+        conda info
         mamba install -y -q anaconda-client
+        anaconda --version
 
     - name: Build 
       id: build
@@ -102,6 +104,7 @@ jobs:
         anaconda upload --skip-existing $PACKAGE_NAME -u $ANACONDA_OWNER --no-progress
 
   build-win:
+    if: ${{ false }}  # disable for now
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:

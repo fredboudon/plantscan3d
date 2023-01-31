@@ -33,7 +33,6 @@ jobs:
           miniconda-version: "latest"
           auto-update-conda: true
           channels: conda-forge, fredboudon
-          activate-environment: "buildenv"
           conda-build-version: "*"
           mamba-version: "*"
 
@@ -41,7 +40,6 @@ jobs:
       run: |
         echo "Install anaconda-client"
         conda info
-        conda activate buildenv
         mamba install -y -q anaconda-client
         anaconda --version
 

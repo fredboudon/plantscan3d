@@ -34,7 +34,7 @@ jobs:
           auto-update-conda: true
           channels: conda-forge, fredboudon
           auto-activate-base: true
-          activate-environment: ""
+          activate-environment: "buildenv"
           conda-build-version: "*"
           mamba-version: "*"
 

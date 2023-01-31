@@ -41,6 +41,7 @@ jobs:
       run: |
         echo "Install anaconda-client"
         conda info
+        conda activate buildenv
         mamba install -y -q anaconda-client
         anaconda --version
 

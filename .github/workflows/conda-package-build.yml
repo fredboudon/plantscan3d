@@ -41,8 +41,10 @@ jobs:
       run: |
         echo "Install anaconda-client"
         conda init bash
+        bash
         conda activate base
         mamba install -y -q anaconda-client
+        exit
 
     - name: Build 
       id: build

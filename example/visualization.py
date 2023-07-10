@@ -1,4 +1,5 @@
 from openalea.plantgl.all import *
+import pipeline as pp
 
 def points_to_scene(points):
     pset = PointSet(points)
@@ -67,20 +68,27 @@ def nodemtg_to_scene(mtg, segment_inf_color = (0, 0, 0),
 def mtg_to_scene(mtg, positionproperty='position', radiusproperty = 'radius'):
     scene = Scene()
     section = Polyline2D.Circle(1, 30)
+    shortaxis, longaxis = pp.trunk_lateral_axes(mtg)
 
     def get_radius(nodeid):
         val = mtg.property(radiusproperty).get(nodeid, 0)
         if val is None: val = 0
         return (val, val)
 
+    defaultmat = Material((128, 64, 0))
+    defaultshmat = Material((60, 60, 60))
     for vid in mtg.vertices(scale=mtg.max_scale()):
         if mtg.parent(vid) is None or mtg.edge_type(vid) == "+":
             axe = mtg.Axis(vid)
-            if not mtg.parent(vid) is None: axe.insert(0, mtg.parent(vid))
+            if not mtg.parent(vid) is None: 
+                axe.insert(0, mtg.parent(vid))
+            mat = defaultmat
+            if vid in shortaxis:
+                mat = defaultshmat
             if len(axe) > 2:
                 points = [mtg.property(positionproperty)[nodeID] for nodeID in axe]
                 radius = [get_radius(nodeID) for nodeID in axe]
                 geometry = Extrusion(Polyline(points), section, radius)
-                scene += Shape(geometry, Material((128, 64, 0)), vid)
+                scene += Shape(geometry, mat, vid)
 
     return scene    

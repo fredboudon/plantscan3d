@@ -1,3 +1,9 @@
-This file can be used to document future development
+TODO LIST 10/07/2023
 
- * document the Sconstruct file of the VPlants.treeeditor3D package 
+* Command line pipeline resconstruction
+* Resolve bug in MTG saving
+* Output in QSM format
+* Output with estimated information (internode length, angles, ...)
+* Review of diameter estimation methods
+* Integration of convexhull filtering for diameter estimation
+* Integration of specific graphical editor for diameter (and position) manual edition in close view.

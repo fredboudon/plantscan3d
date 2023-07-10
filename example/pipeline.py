@@ -1,5 +1,6 @@
 from openalea.plantgl.all import *
 import numpy as np
+import os
 
 class Line:
     def __init__(self, position, direction, extend):
@@ -19,7 +20,11 @@ class Line:
         return Line(pos,dir,extend)
 
 def load_points(filename):
+    # Check if file exists
+    assert os.path.exists(filename)
     s = Scene(filename)
+    # Check if pointList is on the loaded file
+    assert len(s) == 1
     points = s[0].geometry.geometry.pointList
     #points.translate(s[0].geometry.translation)
     return points
@@ -116,7 +121,6 @@ def node_length(g,n):
         return 0
    
 def node_angle(g, n, refdir = (0,0,1) ):
-    from numpy.linalg import norm
     parent = g.parent(n)
     if parent:
         p1 = node_position(g,n)
@@ -126,10 +130,10 @@ def node_angle(g, n, refdir = (0,0,1) ):
         return 0
     
 def axis_extremities_angle(g, n, refdir = (0,0,1) ):
-    from numpy.linalg import norm
     p0, p1 = axis_extremities(g,n)
     return angle(p1 - p0, refdir)
-    
+
+   
 def length_to_axis_begin(g, n):
     length = node_length(g,n)
     while g.edge_type(n) == '<':
@@ -171,6 +175,41 @@ def axis_chord_length(g, n):
 def axis_length(g, n):
     return sum(map(lambda vid : node_length(g,vid),g.Axis(n)))
 
+def axis_nodes_normedposition(g, axisroot):
+    data = [(node,node_length(g,node)) for node in g.Axis(axisroot)]
+    length = 0
+    for i in range(len(data)):
+        length += data[i][1]      
+        data[i] = (data[i][0],length)
+    res = [(node,l/length) for node,l in data]
+    if not g.parent(axisroot) is None:
+        res = [(g.parent(axisroot),0)]+res
+    return res
+
+def axis_subpart(g, axisroot, beglengthratio, endlengthratio):
+    data = axis_nodes_normedposition(g, axisroot)
+    beg = 0
+    end = len(data)-1
+    while data[beg][1] < beglengthratio:
+        if beg+1 == end or data[beg+1][1] >= endlengthratio: 
+            break
+        else:
+            beg += 1
+    while data[end][1] > endlengthratio:
+        if end-1 == beg or data[end-1][1] <= beglengthratio: 
+            break
+        else:
+            end -= 1
+    return  [node for node,l in data[beg:end+1]]
+
+def axis_subpart_angle(g, axisroot, beglengthratio, endlengthratio, refdir = (0,0,1) ):
+    nodes = axis_subpart(g,axisroot,beglengthratio,endlengthratio)
+    positions = [node_position(g, n) for n in nodes]
+    if len(positions) > 2:
+        return angle(Line.estimate(positions).direction, refdir)
+    return angle(positions[1] - positions[0], refdir)
+
+
 def axis_length_distribution(g):
     axislengths = []
     for node in g.vertices(scale=g.max_scale()):
@@ -185,19 +224,22 @@ def axis_length_histogram(g):
     hist(dist, bins=np.arange(0, max(dist), 0.2))
     show()
 
-def trunk_direction(g):
-    positions = [node_position(g, v) for v in trunk_nodes(g)]
-    line = Line.estimate(positions)
-    return line.direction
 # Trunk Characterization
 
+def trunk_root(g):
+    return g.roots(scale=g.max_scale())[0]
+
 def trunk_length(g):
-    rootpoint = g.roots(scale=g.max_scale())[0]
-    return axis_length(g,rootpoint)
+    return axis_length(g,trunk_root(g))
 
 def trunk_nodes(g):
-    rootpoint = g.roots(scale=g.max_scale())[0]
-    return g.Axis(rootpoint)
+    return g.Axis(trunk_root(g))
+
+def trunk_direction(g, trunkratio = 1):
+    nodes = axis_subpart(g, trunk_root(g), 0, trunkratio)
+    positions = [node_position(g, v) for v in nodes]
+    line = Line.estimate(positions)
+    return line.direction
     
 def lateral_children(g, vid):
     return [cid for cid in g.children(vid) if g.edge_type(cid) == '+']
@@ -206,51 +248,57 @@ def nb_lateral_children(g, vid):
     return sum(lateral_children(g, vid))
 
 def trunk_branching_zone_start(g):
-    trunknode = trunk_nodes(g)
+    trunknodes = trunk_nodes(g)
     firstidpos = None
-    for i,vid in enumerate(trunknode):
+    for i,vid in enumerate(trunknodes):
         if nb_lateral_children(g,vid) > 0:
             firstidpos = i
             break
-            
-    trunknode = trunknode[:firstidpos+1]
-    return sum([node_length(g,n) for n in trunknode])
+    if firstidpos is None:
+        return None
+    trunknodes = trunknodes[:firstidpos+1]
+    return sum([node_length(g,n) for n in trunknodes])
 
 def trunk_branching_zone_end(g):
-    trunknode = trunk_nodes(g)
+    trunknodes = trunk_nodes(g)
     
     lastidpos = None
-    for i,vid in enumerate(reversed(trunknode)):
+    for i,vid in enumerate(reversed(trunknodes)):
         if nb_lateral_children(g, vid) > 0:
             lastidpos = i
             break
-    trunknode = trunknode[:-lastidpos]    
-    return sum([node_length(g,n) for n in trunknode])
+    if lastidpos is None:
+        return None
+    trunknodes = trunknodes[:-lastidpos]    
+    return sum([node_length(g,n) for n in trunknodes])
 
 def trunk_branching_zone_length(g):
-    trunknode = trunk_nodes(g)
-    
+    trunknodes = trunk_nodes(g)
     firstidpos = None
-    for i,vid in enumerate(trunknode):
+    for i,vid in enumerate(trunknodes):
         if nb_lateral_children(g,vid) > 0:
             firstidpos = i
             break
-    trunknode = trunknode[firstidpos+1:]
+    if firstidpos is None:
+        return None
+    trunknodes = trunknodes[firstidpos+1:]
     lastidpos = None
-    for i,vid in enumerate(reversed(trunknode)):
+    for i,vid in enumerate(reversed(trunknodes)):
         if nb_lateral_children(g, vid) > 0:
             lastidpos = i
             break
-    trunknode = trunknode[:-lastidpos]
+    if lastidpos is None:
+        return 0
+    trunknodes = trunknodes[:-lastidpos]
     
-    return sum([node_length(g,n) for n in trunknode])
+    return sum([node_length(g,n) for n in trunknodes])
 
 # First order characterization
 
 def trunk_lateral_axes(g, length_threshold = 0.05):
-    trunknode = trunk_nodes(g)
+    trunknodes = trunk_nodes(g)
     shortaxis, longaxis = [],[]
-    for n in trunknode:
+    for n in trunknodes:
         for l in lateral_children(g,n):
             if axis_length(g,l) >= length_threshold:
                 longaxis.append(l)
@@ -270,3 +318,36 @@ def angles_first_order(g):
     shortaxis, longaxis = trunk_lateral_axes(g)
     return [node_angle(g,l) for l in longaxis]
 
+def trunk_radii(g, begratio = 0.1, endratio = 0.1 ):
+    begtrunk = axis_subpart(g, trunk_root(g), 0, begratio)
+    endtrunk = axis_subpart(g, trunk_root(g), 1-endratio, 1)
+    radii = g.property('radius')
+    return max([radii[n] for n in begtrunk]), max([radii[n] for n in endtrunk])
+
+def retrieve_axis_radii(g,vid):
+    radii = g.property('radius')
+    axis = g.Axis(vid)
+    axis = [vid for vid in axis if vid in radii]
+    nbnodes = len(axis)
+    if nbnodes == 0:
+        return None, None, None
+    elif nbnodes == 1:
+        r = radii[axis[0]]
+        return r,r,r
+    elif nbnodes == 2:
+        r0 = radii[axis[0]]
+        r1 = radii[axis[1]]
+        return r0,(r0+r1)/2,r1
+    elif nbnodes == 3:
+        r0 = radii[axis[0]]
+        r1 = radii[axis[1]]
+        r2 = radii[axis[2]]
+        return r0,r2,r1
+    else:
+        radius = lambda v : radii[v]
+        lradii = list(map(radius,axis))
+        lradii.sort()
+        meanradius = lradii[int(len(lradii)/2)] 
+        return (radii[axis[0]],
+                meanradius,
+                radii[axis[-2]])

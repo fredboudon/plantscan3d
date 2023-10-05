@@ -1642,6 +1642,7 @@ class MainViewer(QGLViewer):
             submenu = menu.addMenu("Estimate radius")
             submenu.addAction("As Mean Point Distance", self.estimateMeanRadius)
             submenu.addAction("As Max Point Distance", self.estimateMaxRadius)
+            submenu.addAction("As Convex Hull Distance", self.estimateConvexHullRadius)
             submenu.addSeparator()
             submenu.addAction("Using Pipe Model", self.pipeModelOnSelection)
             menu.addSeparator()
@@ -2503,7 +2504,7 @@ class MainViewer(QGLViewer):
 
     # ---------------------------- Radius Reconstruction ----------------------------------------
 
-    def determine_radius(self, pid, mean=True):
+    def determine_radius(self, pid, strategy='mean'):
         if not self.check_input_data(): return
 
         mtg = self.mtg
@@ -2530,18 +2531,61 @@ class MainViewer(QGLViewer):
                 else:
                     dir = (0, 0, 1)
 
-            if mean:
+            if strategy=='mean':
                 radius = pointset_mean_radial_distance(spos, dir, self.points.pointList, selection)
-            else:
+                return radius
+            elif strategy=='max':
                 radius = pointset_max_radial_distance(spos, dir, self.points.pointList, selection)
+                return radius
+            elif strategy=='convexhull':
+                from openalea.plantgl.all import Fit
+                from numpy import dot
+                # Get subsample selection of points
+                points_subset = self.points.pointList.subset(selection)
+                # Define a 2D plane, with a normal dir defined above
+                # Apply a projection of points on this plance
+                dir = dir.normed()
+                i = direction(dir.anOrthogonalVector())
+                j = dir ^ i
+                points_subset_projected = Point2Array([(dot(i, p-spos), dot(j, p-spos)) for p in points_subset])
+                # Compute the convexhull on this plance
+                contour = Fit.convexPolyline(points_subset_projected)
+                # Compute the circle and radius from this convexhull
+                x_c, y_c, radius = self.computeCircle(contour)
+                # Reproject the new center onto the 3D space
+                c = spos + x_c * i + y_c * j
+                return c, radius
+            else:
+                print('unknown radius reconstruction strategy')
             print('radius[', pid, ']:', radius)
-            return radius
+    
+    def computeCircle(self, contour):
+        
+        def getXMinXMaxYMinYMax(contour):
+            points = [(p[0], p[1]) for p in contour]
+            xmin = min(points, key=lambda p: p[0])[0]
+            xmax = max(points, key=lambda p: p[0])[0]
+            ymin = min(points, key=lambda p: p[1])[1]
+            ymax = max(points, key=lambda p: p[1])[1]    
+            return xmin, xmax, ymin, ymax
+
+        perimeter = contour.getLength()
+        xmin, xmax, ymin, ymax = getXMinXMaxYMinYMax(contour)
+        x_c, y_c = [(xmin + xmax) / 2., (ymin + ymax) / 2.]
+        r = (perimeter / (2*pi))
+        return x_c, y_c, r
+
+##    def computeCircle(self, contour):
+##        area = contour.surface()
+##        x_c, y_c = [(contour.xmin() + contour.xmax()) / 2., (contour.ymin() + contour.ymax()) / 2.]
+##        r = (area / pi)**0.5
+##        return x_c, y_c, r
 
     def estimateMeanRadius(self):
         assert not self.selection is None
         sid = self.selection.id
 
-        self.mtg.property(self.propertyradius)[sid] = self.determine_radius(sid)
+        self.mtg.property(self.propertyradius)[sid] = self.determine_radius(sid, 'mean')
 
         self.__update_radius__(sid)
         self.updateViewGL()
@@ -2550,7 +2594,16 @@ class MainViewer(QGLViewer):
         assert not self.selection is None
         sid = self.selection.id
 
-        self.mtg.property(self.propertyradius)[sid] = self.determine_radius(sid, False)
+        self.mtg.property(self.propertyradius)[sid] = self.determine_radius(sid, 'max')
+
+        self.__update_radius__(sid)
+        self.updateViewGL()
+
+    def estimateConvexHullRadius(self):
+        assert not self.selection is None
+        sid = self.selection.id
+
+        self.mtg.property(self.propertyposition)[sid], self.mtg.property(self.propertyradius)[sid] = self.determine_radius(sid, 'convexhull')
 
         self.__update_radius__(sid)
         self.updateViewGL()

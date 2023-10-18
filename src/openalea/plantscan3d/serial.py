@@ -78,7 +78,7 @@ def writeMTGfile(fn, g, properties=[('XX','REAL'), ('YY','REAL'), ('ZZ','REAL'),
     if properties == []:
       properties = [(p, 'REAL') for p in g.property_names() if p not in ['edge_type', 'index', 'label']]
     nb_tab = max_order(g)
-    str = write_mtg(g, properties, nb_tab=nb_tab)
+    str = write_mtg(g, properties, nb_tab=nb_tab+1)
     f = open(fn, 'w')
     f.write(str)
     f.close()

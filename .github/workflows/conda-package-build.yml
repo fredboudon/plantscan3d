@@ -2,13 +2,17 @@ name: Building Package
 
 on:
   push:
-    branches: [ master ]
+    branches: 
+      - '**'
+    tags:
+      - 'v*'
   pull_request:
-    branches: [ master ]
+    branches: 
+      - '**'
 
 
 jobs:
   build:
     uses: fredboudon/github-action-conda-build/.github/workflows/conda-package-build.yml@main
-    secrets:
+    secrets: 
       token: ${{ secrets.ANACONDA_TOKEN }}

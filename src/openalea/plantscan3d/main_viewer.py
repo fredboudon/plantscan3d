@@ -1456,6 +1456,12 @@ class MainViewer(QGLViewer):
             elif event.key() == Qt.Key_Delete:
                 self.setSelection(cCtrlPoint)
                 self.removeSelection()
+            elif event.key() == Qt.Key_A:
+                self.setSelection(cCtrlPoint)
+                self.increaseSelectionRadius()
+            elif event.key() == Qt.Key_Q:
+                self.setSelection(cCtrlPoint)
+                self.decreaseSelectionRadius()
             else:
                 QGLViewer.keyPressEvent(self, event)
         else:
@@ -1634,12 +1640,17 @@ class MainViewer(QGLViewer):
         menu.addSeparator()
         menu.addAction("Set Branching Points", self.setBranchingPoint)
         menu.addAction("Set Axial Points (M)", self.setAxialPoint)
+        menu.addSeparator()
         if self.points and not self.mode in [self.TagScale, self.TagProperty]:
-            menu.addSeparator()
             menu.addAction("S&tick to points (T)", self.stickToPoints)
             menu.addAction("Stick subtree (G)", self.stickSubtree)
             menu.addSeparator()
             submenu = menu.addMenu("Estimate radius")
+            if self.selection.id in self.mtg.property(self.propertyradius):
+                submenu.addAction("Increase (A)", self.increaseSelectionRadius)
+                submenu.addAction("Decrease (Q)", self.decreaseSelectionRadius)
+            submenu.addAction("Set", self.setSelectionRadius)
+            submenu.addSeparator()
             submenu.addAction("As Mean Point Distance", self.estimateMeanRadius)
             submenu.addAction("As Max Point Distance", self.estimateMaxRadius)
             submenu.addAction("As Convex Hull Distance", self.estimateConvexHullRadius)
@@ -1649,6 +1660,13 @@ class MainViewer(QGLViewer):
             submenu = menu.addMenu("Hull")
             submenu.addAction("Convex Hull", self.convexHullOfSelection)
             submenu.addAction("Remove", self.removeHullOfSelection)
+        else:
+            submenu = menu.addMenu("Estimate radius")
+            if self.selection.id in self.mtg.property(self.propertyradius):
+                submenu.addAction("Increase (A)", self.increaseSelectionRadius)
+                submenu.addAction("Decrease (Q)", self.decreaseSelectionRadius)
+            submenu.addAction("Set", self.setSelectionRadius)
+
         menu.addSeparator()
         menu.addAction("Revolve Around (R)", self.revolveAroundSelection)
         menu.addSeparator()
@@ -2580,6 +2598,39 @@ class MainViewer(QGLViewer):
 ##        x_c, y_c = [(contour.xmin() + contour.xmax()) / 2., (contour.ymin() + contour.ymax()) / 2.]
 ##        r = (area / pi)**0.5
 ##        return x_c, y_c, r
+
+    def increaseSelectionRadius(self):
+        assert not self.selection is None
+        sid = self.selection.id
+
+        currentRadius = self.mtg.property(self.propertyradius)[sid]
+        self.mtg.property(self.propertyradius)[sid] = currentRadius*1.05
+
+        self.__update_radius__(sid)
+        self.updateViewGL()
+
+    def decreaseSelectionRadius(self):
+        assert not self.selection is None
+        sid = self.selection.id
+
+        currentRadius = self.mtg.property(self.propertyradius)[sid]
+        self.mtg.property(self.propertyradius)[sid] = currentRadius*0.95
+
+        self.__update_radius__(sid)
+        self.updateViewGL()
+
+    def setSelectionRadius(self):
+        assert not self.selection is None
+        sid = self.selection.id
+
+        currentRadius = self.mtg.property(self.propertyradius)[sid]
+        dialog = self.createParamDialog('Set Radius', [('Radius', float, currentRadius)])
+        if dialog.exec_():
+            currentRadius = dialog.getParams()[0]
+            self.mtg.property(self.propertyradius)[sid] = currentRadius
+
+        self.__update_radius__(sid)
+        self.updateViewGL()
 
     def estimateMeanRadius(self):
         assert not self.selection is None

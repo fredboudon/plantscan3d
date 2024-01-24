@@ -1,12 +1,3 @@
-try:
-    import openalea.plantscan3d.py2exe_release
-
-    py2exe_release = True
-    print('Py2ExeRelease')
-except ImportError:
-    py2exe_release = False
-    print('StdRelease')
-
 from openalea.plantgl.gui.qt.QtCore import *
 from openalea.plantgl.gui.qt.QtGui import *
 from openalea.plantgl.gui.qt.QtWidgets import *

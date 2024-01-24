@@ -5,7 +5,7 @@ import sys
 import os
 from os.path import join as pj
 
-from setuptools import setup, find_packages
+from setuptools import setup, find_namespace_packages
 
 versioninfo = {}
 p3ddir = pj(os.path.dirname(__file__),'src', 'openalea', 'plantscan3d')
@@ -17,11 +17,7 @@ globals().update(versioninfo)
 # Packages list, namespace and root directory of packages
 
 pkg_root_dir = 'src'
-pkgs = [ pkg for pkg in find_packages(pkg_root_dir)]+['openalea.plantscan3d.images','openalea.plantscan3d.images.cursors']
-top_pkgs = [pkg for pkg in pkgs if  len(pkg.split('.')) < 2]
-packages = pkgs
-package_dir = dict( [('',pkg_root_dir)] + [(namespace + "." + pkg, pkg_root_dir + "/" + pkg) for pkg in top_pkgs] )
-
+pkgs = [ pkg for pkg in find_namespace_packages(pkg_root_dir)]
 
 
 setup(
@@ -36,8 +32,10 @@ setup(
     keywords = '',	
 
     # package installation
-    packages= packages,	
-    package_dir= package_dir,
+    packages= pkgs,	
+    package_dir = {
+        '' : 'src'
+    },
 
     # Namespace packages creation by deploy
     #namespace_packages = ['openalea'],

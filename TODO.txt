@@ -7,3 +7,4 @@ TODO LIST 10/07/2023
 * Review of diameter estimation methods
 * Integration of convexhull filtering for diameter estimation
 * Integration of specific graphical editor for diameter (and position) manual edition in close view.
+* Fitting of open curves as profile instead of circle.

@@ -5,7 +5,7 @@ try:
     print('Py2ExeRelease')
 except ImportError:
     py2exe_release = False
-    print('StdRelease')
+    #print('StdRelease')
 
 from openalea.plantgl.gui.qt.QtCore import *
 from openalea.plantgl.gui.qt.QtGui import *
